@@ -66,7 +66,6 @@ root = tk.Tk()
 root.count = 0
 app = Application(master=root)
 app.master.title("Testing")
-
 while app.continue_plotting is True:
     x = np.random.rand(app.num)
     y = np.random.rand(app.num)
