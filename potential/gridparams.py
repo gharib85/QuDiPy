@@ -35,13 +35,13 @@ class GridParameters:
         None.
 
         '''
-        self.xx = xx
-        self.yy = yy
+        self.xx = np.array(xx)
+        self.yy = np.array(yy)
         
-        self.XX, self.YY= meshgrid(xx, yy, sparse=False, indexing='xy');
-        self.nx, self.ny = np.shape(self.XX);
+        self.XX, self.YY= np.meshgrid(xx, yy, sparse=False, indexing='xy');
+        self.ny, self.nx = np.shape(self.XX);
         
-        self.VV = potential;
+        self.VV = np.array(potential);
         
         
     def convert_MG_to_NO(self, data_MG):
@@ -51,24 +51,48 @@ class GridParameters:
 
         Parameters
         ----------
-        dataMG : meshgrid array
-            data to convert to n.
+        dataMG : 2D array in meshgrid format
+            data to convert.
 
         Returns
         -------
-        None.
+        data_NO : 1D array in natrual order format
+            converted data.
 
         '''
         
+        data_MG = np.transpose(data_MG)
+        data_NO = np.reshape(data_MG, (self.nx*self.ny, 1), order='F');
+
+        return data_NO
+        
         
     def convert_NO_to_MG(self, data_NO):
-        data_MG = np.reshape(data_NO,);
-        # MG = np.reshape(vNO,[nx,ny]).';
+        '''
+        
+        Method for converting data from natural order to meshgrid format
+
+        Parameters
+        ----------
+        data_NO : 1D array in natural order format
+            data to convert.
+
+        Returns
+        -------
+        data_MG : 2D array in meshgrid format
+            converted data.
+
+        '''
+        
+        data_MG = np.reshape(data_NO, (self.nx,self.ny), order='F');
+        data_MG = np.transpose(data_MG)
         
         return data_MG
         
         
-    def slice_potential(self, slice_coordinate, slice_axis)
+    def slice_potential(self, slice_coordinate, slice_axis):
+        
+        return
         
         
         
