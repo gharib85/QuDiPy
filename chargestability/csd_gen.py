@@ -72,15 +72,16 @@ class CSD:
         -------
         Energy of system in joules
         '''
-        return 1/2 * n_1**2 * self.e_c1 + 1/2 * n_2**2 * self.e_c2 + n_1 * n_2 * self.e_cm - 1/abs(e) * (
+        # This is formula A12 from Appendix 3 of the paper references at the top of the file
+        f = - 1/abs(e) * (
             self.c_g1 * v_g1 * (n_1 * self.e_c1 + n_2 * self.e_cm) + self.c_g2 * v_g2 * (
                 n_1 * self.e_cm + n_2 * self.e_c2)) + 1/e**2 * (1/2 * self.c_g1**2 * v_g1**2 * self.e_c1 + 1/2 * self.c_g2**2 *
                                                                 v_g2**2 * self.e_c2 + self.c_g1 * v_g1 * self.c_g2 * v_g2 * self.e_cm)
 
-    def lowest_energy(self, v_g1, v_g2):
-        '''Returns occupation (n_1, n_2) with lowest energy for applied gate voltages v_g1, v_g2, with the
-        approximation that c_m << c_l, c_2. Dependent on c_l, c_r, c_m, c_g1 and c_g2
-        defined when object is initialized.
+        return 1/2 * n_1**2 * self.e_c1 + 1/2 * n_2**2 * self.e_c2 + n_1 * n_2 * self.e_cm + f
+    def _lowest_energy(self, v_g1, v_g2):
+        '''Returns occupation (n_1, n_2) with lowest energy for applied gate voltages v_g1, v_g2. 
+        Dependent on c_l, c_r, c_m, c_g1 and c_g2 defined when object is initialized.
 
         Parameters
         ----------
@@ -136,10 +137,14 @@ class CSD:
         None
         '''
         # Generates the charge stability diagram as measured by a charge sensor
-        data = [[round(v_g1_min + i/num * (v_g1_max - v_g1_min), 4), round(v_g2_min + j/num * (v_g2_max - v_g2_min), 4),
-                (self.lowest_energy(v_g1_min + i/num * (v_g1_max - v_g1_min), v_g2_min + j/num * (
-                 v_g2_max - v_g2_min))[0] * c_cs_1 + self.lowest_energy(v_g1_min + i/num * (v_g1_max - v_g1_min),
-                 v_g2_min + j/num * (v_g2_max - v_g2_min))[1] * c_cs_2) * 10**9] for i in range(num) for j in range(num)
+        # First and second elements are the applied volategs on gate 1 and 2, 
+        # third element is formula to calculate what current the charge sensor would see
+        data = [
+                [round(v_g1_min + i/num * (v_g1_max - v_g1_min), 4), round(v_g2_min + j/num * (v_g2_max - v_g2_min), 4),
+                (self._lowest_energy(v_g1_min + i/num * (v_g1_max - v_g1_min), v_g2_min + j/num * (
+                 v_g2_max - v_g2_min))[0] * c_cs_1 + self._lowest_energy(v_g1_min + i/num * (v_g1_max - v_g1_min),
+                 v_g2_min + j/num * (v_g2_max - v_g2_min))[1] * c_cs_2) * 10**9
+                 ] for i in range(num) for j in range(num)
                 ]
 
         # Create DataFrame from data and pivot into num by num array

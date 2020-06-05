@@ -39,7 +39,7 @@ class CSDAnalysis:
         None
 
         '''
-        self.csd_bitmap = self.csd.mask(abs(self.csd) > threshold, other=1).mask(abs(self.csd) =< threshold, other=0)
+        self.csd_bitmap = self.csd.mask(abs(self.csd) > threshold, other=1).mask(abs(self.csd) <= threshold, other=0)
 
 
     def hough_transform(self, num_thetas=180, rho_num=100):
