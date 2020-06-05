@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 e = 1.602176634 * 10**-19  # TODO figure out relative imports for common constants
 
 
-class Csd:
+class CSD:
     '''
     Initialize the charge stability diagram class which generates charge stability diagrams based on given capacitance parameters. 
     This class is intended for testing of the analysis module and comparing extracted input parameter with known input parameters.
@@ -22,11 +22,11 @@ class Csd:
          
         Parameters
         ----------
-        c_l : Capacitance between the left resevoir and dot 1
-        c_r : Capacitance between the right resevoir dot 2
-        c_m : Capacitance between dot 1 and 2
-        c_g1 : Capacitance between gate 1 and dot 1
-        c_g2 :  Capacitance between gate 2 and dot 2
+        c_l: Capacitance between the left resevoir and dot 1
+        c_r: Capacitance between the right resevoir dot 2
+        c_m: Capacitance between dot 1 and 2
+        c_g1: Capacitance between gate 1 and dot 1
+        c_g2:  Capacitance between gate 2 and dot 2
 
         Returns
         -------
@@ -63,10 +63,10 @@ class Csd:
 
         Parameters
         ----------
-        n_1 : Occupation on dot 1
-        n_2 : Occupation on dot 2
-        v_g1 : voltage on plunger gate 1
-        v_g2 : voltage on plunger gate 2
+        n_1: Occupation on dot 1
+        n_2: Occupation on dot 2
+        v_g1: voltage on plunger gate 1
+        v_g2: voltage on plunger gate 2
 
         Returns
         -------
@@ -84,8 +84,8 @@ class Csd:
 
         Parameters
         ----------
-        v_g1 : voltage on plunger gate 1
-        v_g2 : voltage on plunger gate 2
+        v_g1: voltage on plunger gate 1
+        v_g2: voltage on plunger gate 2
 
         Returns
         -------
@@ -119,17 +119,17 @@ class Csd:
 
         Parameters
         ----------
-        v_g1_max : maximum voltage on plunger gate 1
-        v_g2_max : maximum voltage on plunger gate 2
-        c_cs_1 : coupling between charge sensor and dot 1
-        c_cs_2 : coupling between charge sensor and dot 2
+        v_g1_max: maximum voltage on plunger gate 1
+        v_g2_max: maximum voltage on plunger gate 2
+        c_cs_1: coupling between charge sensor and dot 1
+        c_cs_2: coupling between charge sensor and dot 2
 
         Keyword Arguments
         -----------------
-        v_g1_max (default 0): minimum voltage on plunger gate 1
-        v_g2_max (default 0): minimum voltage on plunger gate 2
-        num (default 100): number of voltage point in 1d, which leads to a num^2 charge stability diagram
-        plotting (default False): flag indicating whether charge stability diagram should be plotted after completion
+        v_g1_max: minimum voltage on plunger gate 1 (default 0)
+        v_g2_max: minimum voltage on plunger gate 2 (default 0)
+        num: number of voltage point in 1d, which leads to a num^2 charge stability diagram (default 100)
+        plotting: flag indicating whether charge stability diagram should be plotted after completion (default False)
 
         Returns
         -------
@@ -154,6 +154,7 @@ class Csd:
 
         # Show plots if flag is set to True
         if plotting is True:
+
             # Plot the chagre stability diagram
             p1 = sb.heatmap(self.csd, xticklabels=int(
                 num/5), yticklabels=int(num/5), cbar_kws={'label': 'Current (arb.)'})
