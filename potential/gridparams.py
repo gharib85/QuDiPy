@@ -12,52 +12,72 @@ class GridParameters:
     
     Initialize the grid parameter class. Handles all things related to the 
     grid settings for the simulations.
-    
-    TODO: Add class variables to account for 1D and 2D data types (might be
-    useful to have something like that for shuttling simulations later)
-    
+        
     '''
     
-    def __init__(self, xx, yy, potential):
+    def __init__(self, xx, yy=None, potential=None):
         '''
         
         Parameters
         ----------
         xx : array
-            grid coordinates along x.
+            Grid coordinates along x with uniform spacing.
         yy : array
-            grid coordinates along y.
-        potential : meshgrid array
-            potential values along x-y coordinates where 2DEG is formed.
+            Grid coordinates along y with uniform spacing.
+        potential : array
+            Potential values along x-y coordinates where 2DEG is formed. Must
+            be in meshgrid format (y,x).
 
         Returns
         -------
         None.
 
         '''
-        self.xx = np.array(xx)
-        self.yy = np.array(yy)
-        
-        self.XX, self.YY= np.meshgrid(xx, yy, sparse=False, indexing='xy');
-        self.ny, self.nx = np.shape(self.XX);
-        
         self.VV = np.array(potential);
+        
+        self.xx = np.array(xx)
+        self.dx = xx[1] - xx[0]
+        self.nx = len(xx)  
+                
+        # Check if y coordinates were inputted as an argument
+        if yy is None:
+            self.grid_type = '1D'
+            
+            # Check that coordinate data matches potential
+            if self.nx != self.VV.shape[0]:
+                raise ValueError("x coordinate grid points do not match number"\
+                                " of potential x-coordinates.")
+        # y coordinates were inputted
+        else:         
+            self.grid_type = '2D'
+            self.yy = np.array(yy)
+            self.dy = yy[1] - yy[0]
+            self.XX, self.YY= np.meshgrid(xx, yy, sparse=False, indexing='xy')
+            self.ny, self.nx = np.shape(self.XX)
+            
+            # Check that coordinate data matches potential
+            if self.nx != self.VV.shape[1]:
+                raise ValueError("x coordinate grid points do not match number"\
+                                " of potential x-coordinates.")
+            if self.nx != self.VV.shape[1]:
+                raise ValueError("y coordinate grid points do not match number"\
+                                " of potential y-coordinates.")
         
         
     def convert_MG_to_NO(self, data_MG):
         '''
         
-        Method for converting data from meshgrid to natural order format       
+        Converts data from meshgrid to natural order format       
 
         Parameters
         ----------
-        dataMG : 2D array in meshgrid format
-            data to convert.
+        dataMG : 2D array
+            Data to convert in meshgrid format.
 
         Returns
         -------
-        data_NO : 1D array in natrual order format
-            converted data.
+        data_NO : 1D array
+            Converted data in natural order format.
 
         '''
         
@@ -70,17 +90,17 @@ class GridParameters:
     def convert_NO_to_MG(self, data_NO):
         '''
         
-        Method for converting data from natural order to meshgrid format
+        Converts data from natural order to meshgrid format
 
         Parameters
         ----------
-        data_NO : 1D array in natural order format
-            data to convert.
+        data_NO : 1D array
+            Data to convert in natural order format
 
         Returns
         -------
-        data_MG : 2D array in meshgrid format
-            converted data.
+        data_MG : 2D array
+            Converted data in meshgrid order format.
 
         '''
         
@@ -88,11 +108,29 @@ class GridParameters:
         data_MG = np.transpose(data_MG)
         
         return data_MG
+    
+    def update_potential(self, new_pot):
+        '''
+        
+        Assign a new potential to the class
+
+        Parameters
+        ----------
+        new_pot : 2D array in meshgrid format
+            New potential to assign.
+
+        Returns
+        -------
+        None.
+
+        '''
+        
+        self.VV = new_pot
         
         
     def slice_potential(self, slice_coordinate, slice_axis):
         
-        return
+        pass
         
         
         
