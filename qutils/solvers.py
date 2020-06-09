@@ -35,11 +35,11 @@ def build_1DSE_hamiltonian(sparams, gparams):
     '''
     
     # Build potential energy hamiltonian term
-    PE_1D = sparse.diags(gparams.VV)
+    PE_1D = sparse.diags(gparams.potential)
     
     # Build the kinetic energy hamiltonian term
     
-    # Construct B matrix
+    # Construct dummy block matrix B
     KE_1D = sparse.eye(gparams.nx)*(-2/(gparams.dx**2))
     # Add the +/-1 off diagonal entries for the 1/dx^2 elements
     KE_1D = KE_1D + sparse.diags(np.ones(gparams.nx-1)/(gparams.dx**2),-1)
@@ -81,7 +81,7 @@ def build_2DSE_hamiltonian(sparams, gparams):
     '''
     
     # Build potential energy hamiltonian term
-    PE_2D = sparse.diags(gparams.convert_MG_to_NO(gparams.VV))
+    PE_2D = sparse.diags(gparams.convert_MG_to_NO(gparams.potential))
     
     # Build the kinetic energy hamiltonian term
     
@@ -147,7 +147,7 @@ def solve_schrodinger_eq(sparams, gparams, n_sols=1):
         
     # Solve the schrodinger equation (eigenvalue problem)
     eig_ens, eig_vecs = eigs(hamiltonian.tocsc(), k=n_sols, M=None,
-                                           sigma=gparams.VV.min())
+                                           sigma=gparams.potential.min())
     
     # Sort the eigenvalues in ascending order (if not already)
     idx = eig_ens.argsort()   
@@ -156,26 +156,7 @@ def solve_schrodinger_eq(sparams, gparams, n_sols=1):
     
     return eig_ens, eig_vecs
 
-if __name__ == "__main__":
-    import sys
-    sys.path.insert(1, '/Users/simba/Documents/GitHub/Silicon-Modelling')
-    import potential as pot
-    
-    x = np.linspace(-120,120,401)*1E-9
-    
-    class SimulationParameters():
-        pass
-    sparams = SimulationParameters()
-    sparams.units = 'SI'
-    sparams.me = 9.11E-31*0.191
-    omega = 5E12
-    sparams.hbar = 6.626E-34/2/3.14159
-    # print(1/(m*omega/hbar)**(1/2))
-    harm_pot = 1/2*sparams.me*omega**2*np.square(x)
-    
-    gparams = pot.GridParameters(x, potential=harm_pot)
-    
-    e_ens, e_vecs = solve_schrodinger_eq(sparams, gparams, 4)
+
         
 
     

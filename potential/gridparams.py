@@ -15,14 +15,14 @@ class GridParameters:
         
     '''
     
-    def __init__(self, xx, yy=None, potential=None):
+    def __init__(self, x, y=None, potential=None):
         '''
         
         Parameters
         ----------
-        xx : array
+        x : array
             Grid coordinates along x with uniform spacing.
-        yy : array
+        y : array
             Grid coordinates along y with uniform spacing.
         potential : array
             Potential values along x-y coordinates where 2DEG is formed. Must
@@ -33,33 +33,33 @@ class GridParameters:
         None.
 
         '''
-        self.VV = np.array(potential);
+        self.potential = np.array(potential);
         
-        self.xx = np.array(xx)
-        self.dx = xx[1] - xx[0]
-        self.nx = len(xx)  
+        self.x = np.array(x)
+        self.dx = x[1] - x[0]
+        self.nx = len(x)  
                 
         # Check if y coordinates were inputted as an argument
-        if yy is None:
+        if y is None:
             self.grid_type = '1D'
             
             # Check that coordinate data matches potential
-            if self.nx != self.VV.shape[0]:
+            if self.nx != self.potential.shape[0]:
                 raise ValueError("x coordinate grid points do not match number"\
                                 " of potential x-coordinates.")
         # y coordinates were inputted
         else:         
             self.grid_type = '2D'
-            self.yy = np.array(yy)
-            self.dy = yy[1] - yy[0]
-            self.XX, self.YY= np.meshgrid(xx, yy, sparse=False, indexing='xy')
-            self.ny, self.nx = np.shape(self.XX)
+            self.y = np.array(y)
+            self.dy = y[1] - y[0]
+            self.x_mesh, self.y_mesh = np.meshgrid(x, y, sparse=False, indexing='xy')
+            self.ny, self.nx = np.shape(self.x_mesh)
             
             # Check that coordinate data matches potential
-            if self.nx != self.VV.shape[1]:
+            if self.nx != self.potential.shape[1]:
                 raise ValueError("x coordinate grid points do not match number"\
                                 " of potential x-coordinates.")
-            if self.nx != self.VV.shape[1]:
+            if self.nx != self.potential.shape[1]:
                 raise ValueError("y coordinate grid points do not match number"\
                                 " of potential y-coordinates.")
         
@@ -125,7 +125,7 @@ class GridParameters:
 
         '''
         
-        self.VV = new_pot
+        self.potential = new_pot
         
         
     def slice_potential(self, slice_coordinate, slice_axis):

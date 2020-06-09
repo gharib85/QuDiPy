@@ -31,10 +31,10 @@ def inner_prod(gparams, wf1, wf2):
     '''
     
     if gparams.unitType == '1D':
-        inn_prod = np.trapz(np.multiply(wf1.conj(),wf2), x=gparams.xx)
+        inn_prod = np.trapz(np.multiply(wf1.conj(),wf2), x=gparams.x)
     elif gparams.unitType == '2D':
         inn_prod = np.trapz(np.trapz(np.multiply(wf1.conj(),wf2), 
-                                     x=gparams.xx, axis=1),gparams.yy)
+                                     x=gparams.x, axis=1),gparams.y)
             
     return inn_prod
 
