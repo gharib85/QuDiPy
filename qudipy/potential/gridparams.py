@@ -15,7 +15,7 @@ class GridParameters:
         
     '''
     
-    def __init__(self, x, y=None, potential=None):
+    def __init__(self, x, y=None, potential=np.array([])):
         '''
         
         Parameters
@@ -43,25 +43,31 @@ class GridParameters:
         if y is None:
             self.grid_type = '1D'
             
-            # Check that coordinate data matches potential
-            if self.nx != self.potential.shape[0]:
-                raise ValueError("x coordinate grid points do not match number"\
-                                " of potential x-coordinates.")
+            # Check that coordinate data matches potential but ignore if the 
+            # potential is not defined
+            if potential.shape[0] != 0:
+                if self.nx != self.potential.shape[0]:
+                    raise ValueError("x coordinate grid points do not match"\
+                                    " number of potential x-coordinates.")
+                        
         # y coordinates were inputted
         else:         
             self.grid_type = '2D'
             self.y = np.array(y)
             self.dy = y[1] - y[0]
             self.x_mesh, self.y_mesh = np.meshgrid(x, y, sparse=False, indexing='xy')
-            self.ny, self.nx = np.shape(self.x_mesh)
+            self.ny, self.nx = self.x_mesh.shape
             
-            # Check that coordinate data matches potential
-            if self.nx != self.potential.shape[1]:
-                raise ValueError("x coordinate grid points do not match number"\
-                                " of potential x-coordinates.")
-            if self.nx != self.potential.shape[1]:
-                raise ValueError("y coordinate grid points do not match number"\
-                                " of potential y-coordinates.")
+            # Check that coordinate data matches potential but ignore if the 
+            # potential is not defined
+            if potential.shape[0] != 0:
+                # Check that coordinate data matches potential
+                if self.nx != self.potential.shape[1]:
+                    raise ValueError("x coordinate grid points do not match"\
+                                    " number of potential x-coordinates.")
+                if self.nx != self.potential.shape[1]:
+                    raise ValueError("y coordinate grid points do not match"\
+                                    " number of potential y-coordinates.")
         
         
     def convert_MG_to_NO(self, data_MG):

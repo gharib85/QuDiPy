@@ -1,10 +1,5 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Wed Jun  3 16:31:53 2020
-
-@author: simba
-"""
+__all__ = [
+    'inner_prod','partial_trace']
 
 import numpy as np
 
@@ -30,9 +25,9 @@ def inner_prod(gparams, wf1, wf2):
 
     '''
     
-    if gparams.unitType == '1D':
+    if gparams.grid_type == '1D':
         inn_prod = np.trapz(np.multiply(wf1.conj(),wf2), x=gparams.x)
-    elif gparams.unitType == '2D':
+    elif gparams.grid_type == '2D':
         inn_prod = np.trapz(np.trapz(np.multiply(wf1.conj(),wf2), 
                                      x=gparams.x, axis=1),gparams.y)
             
