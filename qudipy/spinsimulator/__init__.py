@@ -1,0 +1,3 @@
+'''
+Spin simulation module
+'''

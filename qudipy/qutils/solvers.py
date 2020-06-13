@@ -1,14 +1,10 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Mon Jun  1 21:58:04 2020
-
-@author: simba
-"""
+__all__ = [
+    'build_1DSE_hamiltonian','build_2DSE_hamiltonian','solve_schrodinger_eq']
 
 import numpy as np
 from scipy import sparse
 from scipy.sparse.linalg import eigs
+from qudipy.qutils.math import inner_prod
 
 def build_1DSE_hamiltonian(sparams, gparams):
     '''
@@ -81,7 +77,8 @@ def build_2DSE_hamiltonian(sparams, gparams):
     '''
     
     # Build potential energy hamiltonian term
-    PE_2D = sparse.diags(gparams.convert_MG_to_NO(gparams.potential))
+    PE_2D = sparse.diags(
+        np.squeeze(gparams.convert_MG_to_NO(gparams.potential)))
     
     # Build the kinetic energy hamiltonian term
     
@@ -95,9 +92,9 @@ def build_2DSE_hamiltonian(sparams, gparams):
     KE_2D = sparse.kron(sparse.eye(gparams.ny), B)
     # Now set the off diagonal entries for the 1/dy^2 elements
     KE_2D = KE_2D + sparse.kron(sparse.diags(np.ones(gparams.ny-1),-1),
-                                sparse.eye(gparams.nx)/gparams.dy**2)
+                                sparse.eye(gparams.nx)/(gparams.dy**2))
     KE_2D = KE_2D + sparse.kron(sparse.diags(np.ones(gparams.ny-1),1),
-                                sparse.eye(gparams.nx)/gparams.dy**2)
+                                sparse.eye(gparams.nx)/(gparams.dy**2))
     
     # Multiply by appropriate unit coefficients
     if sparams.units == 'Rydberg':
@@ -153,6 +150,30 @@ def solve_schrodinger_eq(sparams, gparams, n_sols=1):
     idx = eig_ens.argsort()   
     eig_ens = eig_ens[idx]
     eig_vecs = eig_vecs[:,idx]
+    
+    # Normalize the wavefunctions and convert to meshgrid format if it's a 2D
+    # grid system
+    if gparams.grid_type == '2D':
+        eig_vecs_mesh = np.zeros((gparams.ny, gparams.nx, n_sols),
+                                 dtype=complex)
+    for idx in range(n_sols):
+        curr_wf = eig_vecs[:,idx]
+        
+        if gparams.grid_type == '1D':
+            norm_val = inner_prod(gparams, curr_wf, curr_wf)
+        
+            eig_vecs[:,idx] = curr_wf/norm_val
+        
+        if gparams.grid_type == '2D':
+            norm_val = inner_prod(gparams, gparams.convert_NO_to_MG(
+                curr_wf), gparams.convert_NO_to_MG(curr_wf))
+        
+            curr_wf = curr_wf/norm_val
+            
+            eig_vecs_mesh[:,:,idx] = gparams.convert_NO_to_MG(curr_wf)
+            
+    if gparams.grid_type == "2D":
+        eig_vecs = eig_vecs_mesh
     
     return eig_ens, eig_vecs
 

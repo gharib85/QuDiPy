@@ -1,0 +1,3 @@
+'''
+Helper utility functions module
+'''
