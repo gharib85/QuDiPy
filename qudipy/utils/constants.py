@@ -19,6 +19,8 @@ class Constants:
         None.
 
         '''
+        # Default units are SI
+        self.units = "SI"
         
         # Mathematical constants
         self.pi = 3.141592653589793         # pi
@@ -31,7 +33,7 @@ class Constants:
         self.c = 2.99792458E8               # speed of light [m/s]
         self.muB = 9.274009994E-24          # Bohr magneton [J/T]
         self.eps0 = 8.85418782E-12          # Vacuum permitivity [F/m]
-        
+                  
         # Material system constants
         # Supported material systems include [Si/SiO2, Si/SiGe, GaAs]
         self.material_system = material_system
@@ -51,7 +53,7 @@ class Constants:
         else:
             raise ValueError("Material system either not recognized or defined.\n\
                              Allowed material are: [""Si/SiO2"", ""Si/SiGe"", ""GaAs""]")
-            
+                
         def convert_Ry_to_SI(self, data):
             pass
         

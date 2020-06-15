@@ -6,7 +6,7 @@ from scipy import sparse
 from scipy.sparse.linalg import eigs
 from qudipy.qutils.math import inner_prod
 
-def build_1DSE_hamiltonian(sparams, gparams):
+def build_1DSE_hamiltonian(consts, gparams):
     '''
     
     Build a single electron Hamilonian for the 1-dimensional potential 
@@ -16,8 +16,8 @@ def build_1DSE_hamiltonian(sparams, gparams):
 
     Parameters
     ----------
-    sparams : SimParameters class
-        Contains simulation information
+    consts : Constants class
+        Contains constants value for material system.
     
     gparams : GridParameters class
         Contains grid and potential information
@@ -42,17 +42,17 @@ def build_1DSE_hamiltonian(sparams, gparams):
     KE_1D = KE_1D + sparse.diags(np.ones(gparams.nx-1)/(gparams.dx**2),1)
     
     # Multiply by unit coefficients
-    if sparams.units == 'Rydberg':
+    if consts.units == 'Rydberg':
         KE_1D = -KE_1D
     else:
-        KE_1D = -sparams.hbar**2/(2*sparams.me)*KE_1D    
+        KE_1D = -consts.hbar**2/(2*consts.me)*KE_1D    
         
     # Assemble the full Hamiltonian with potential and kinetic terms
     ham_1D = PE_1D + KE_1D
     
     return ham_1D
 
-def build_2DSE_hamiltonian(sparams, gparams):
+def build_2DSE_hamiltonian(consts, gparams):
     '''
     
     Build a single electron Hamilonian for the 2-dimensional potential 
@@ -62,8 +62,8 @@ def build_2DSE_hamiltonian(sparams, gparams):
 
     Parameters
     ----------
-    sparams : SimParameters class
-        Contains simulation information
+    consts : Constants class
+        Contains constants value for material system.
     
     gparams : GridParameters class
         Contains grid and potential information
@@ -97,17 +97,17 @@ def build_2DSE_hamiltonian(sparams, gparams):
                                 sparse.eye(gparams.nx)/(gparams.dy**2))
     
     # Multiply by appropriate unit coefficients
-    if sparams.units == 'Rydberg':
+    if consts.units == 'Rydberg':
         KE_2D = -KE_2D
     else:
-        KE_2D = -sparams.hbar**2/(2*sparams.me)*KE_2D    
+        KE_2D = -consts.hbar**2/(2*consts.me)*KE_2D    
         
     # Assemble the full Hamiltonian with potential and kinetic terms
     ham_2D = PE_2D + KE_2D
     
     return ham_2D
 
-def solve_schrodinger_eq(sparams, gparams, n_sols=1):
+def solve_schrodinger_eq(consts, gparams, n_sols=1):
     '''
     
     Solve the time-independent Schrodinger-Equation H|Y> = E|Y> where H is
@@ -115,8 +115,8 @@ def solve_schrodinger_eq(sparams, gparams, n_sols=1):
 
     Parameters
     ----------
-    sparams : SimParameters class
-        Contains simulation information.
+    consts : Constants class
+        Contains constants value for material system.
     
     gparams : GridParameters class
         Contains grid and potential information.
@@ -138,9 +138,9 @@ def solve_schrodinger_eq(sparams, gparams, n_sols=1):
     
     # Determine if a 1D or 2D grid and build the respective Hamiltonian
     if gparams.grid_type == '1D':
-        hamiltonian = build_1DSE_hamiltonian(sparams, gparams)
+        hamiltonian = build_1DSE_hamiltonian(consts, gparams)
     elif gparams.grid_type == '2D':
-        hamiltonian = build_2DSE_hamiltonian(sparams, gparams)   
+        hamiltonian = build_2DSE_hamiltonian(consts, gparams)   
         
     # Solve the schrodinger equation (eigenvalue problem)
     eig_ens, eig_vecs = eigs(hamiltonian.tocsc(), k=n_sols, M=None,

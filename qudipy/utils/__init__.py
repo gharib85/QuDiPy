@@ -1,6 +1,6 @@
 '''
 
-Code for helper functions, classes and core functions for code
+Code for utilit functions, classes and core functions for code
 
 '''
 
