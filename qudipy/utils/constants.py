@@ -24,7 +24,7 @@ class Constants:
         
         # Mathematical constants
         self.pi = 3.141592653589793         # pi
-        self.h = 6.62607015-34              # Planck's constant [J*s]
+        self.h = 6.62607015E-34              # Planck's constant [J*s]
         self.hbar = self.h/(2*self.pi)      # Reduced Planck's constant [J*s]
         
         # Physical constants
