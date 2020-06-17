@@ -42,7 +42,7 @@ def build_1DSE_hamiltonian(consts, gparams):
     KE_1D = KE_1D + sparse.diags(np.ones(gparams.nx-1)/(gparams.dx**2),1)
     
     # Multiply by unit coefficients
-    if consts.units == 'Rydberg':
+    if consts.units == 'Ry':
         KE_1D = -KE_1D
     else:
         KE_1D = -consts.hbar**2/(2*consts.me)*KE_1D    
@@ -97,7 +97,7 @@ def build_2DSE_hamiltonian(consts, gparams):
                                 sparse.eye(gparams.nx)/(gparams.dy**2))
     
     # Multiply by appropriate unit coefficients
-    if consts.units == 'Rydberg':
+    if consts.units == 'Ry':
         KE_2D = -KE_2D
     else:
         KE_2D = -consts.hbar**2/(2*consts.me)*KE_2D    

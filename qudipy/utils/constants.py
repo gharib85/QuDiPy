@@ -19,15 +19,15 @@ class Constants:
         None.
 
         '''
-        # Default units are SI
+        # Default units are SI [International system]
         self.units = "SI"
         
         # Mathematical constants
         self.pi = 3.141592653589793         # pi
-        self.h = 6.62607015E-34              # Planck's constant [J*s]
-        self.hbar = self.h/(2*self.pi)      # Reduced Planck's constant [J*s]
         
         # Physical constants
+        self.h = 6.62607015E-34              # Planck's constant [J*s]
+        self.hbar = self.h/(2*self.pi)      # Reduced Planck's constant [J*s]
         self.e = 1.602176634*1E-19          # electron charge [C]
         self.m0 = 9.10938356E-31            # free electron mass [kg]
         self.c = 2.99792458E8               # speed of light [m/s]
@@ -51,13 +51,12 @@ class Constants:
             self.eps = self.eps0*self.epsR  # Permitivity [F/m]
             self.me = self.m0*0.067         # Effective mass [kg]
         else:
-            raise ValueError("Material system either not recognized or defined.\n\
-                             Allowed material are: [""Si/SiO2"", ""Si/SiGe"", ""GaAs""]")
-                
-        def convert_Ry_to_SI(self, data):
-            pass
+            # If no material system specified assume "air"
+            self.epsR = 1                   # Dielectric constant
+            self.eps = self.eps0*self.epsR  # Permitivity [F/m]
+            self.me = self.m0               # Effective mass [kg]
+            print("WARNING: Material system either not recognized or defined.\n\
+                  Assuming ""air"" as the material system.\n\
+                  Allowed material systems are: [""Si/SiO2"", ""Si/SiGe"", ""GaAs""]")        
         
-        def convert_SI_to_Ry(self, data):
-            pass
-                
         
