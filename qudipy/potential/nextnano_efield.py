@@ -78,7 +78,7 @@ def loadFile(filename):
             z = np.array(z, dtype='O')
             return x, y, z
 
-def slicePotential2D(potential, x, y, z, slice):
+def slicePotential2D(potential, x, y, z, slice, option):
     """
     input:  1d potential array, 
             lists of x, y ,z coordinates
@@ -91,33 +91,13 @@ def slicePotential2D(potential, x, y, z, slice):
     Q = len(z)
     print("inside slicePotential2D: ", potential.shape, "(first input which needs to be reshaped")
     pot3DArray = np.reshape(potential,(N,M,Q))
-    pot2DArray = pot3DArray[:, :, index]
+    if option == "field":
+        gradient = np.gradient(pot3DArray)[-1]
+        pot2DArray = gradient[:, :, index]
+    else:
+        pot2DArray = pot3DArray[:, :, index]
     return pot2DArray
-
-def sliceField2D(potential, x, y, z, slice):
-    """
-    input:  1d potential array, 
-            lists of x, y ,z coordinates
-            the z coordinate indicating the slice of x-y plane
-    output: a 2d array of the electric field in the x-y plane
-    """
-    index = np.where(z==slice)[0]
-    N = len(x)
-    M = len(y)
-    Q = len(z)
-    print("inside sliceField2D: ", potential.shape)
-    pot3DArray = np.reshape(potential,(N,M,Q))
-    pot2DArray = pot3DArray[:, :, index]
-    for i in range(N):
-        for j in range(M):
-            if index != 0 and index != len(z)-1:
-                pot2DArray[i,j,0] = - (pot3DArray[i, j, index+1] - pot3DArray[i, j, index-1])/(z[index+1] - z[index-1])
-            elif index == 0:
-                pot2DArray[i,j,0] = - (pot3DArray[i, j, index+1] - pot3DArray[i, j, index])/(z[index+1] - z[index])
-            elif index == len(z)-1:
-                pot2DArray[i,j,0] = - (pot3DArray[i, j, index] - pot3DArray[i, j, index-1])/(z[index] - z[index-1])
-    return pot2DArray
-
+    
 def parseVoltage(filename):
     """
     input: a string, the filename 
@@ -154,7 +134,7 @@ def importFolder(foldername):
                 L[counter-1].append(loadFile(filename))
     return L
 
-def reshapePotential(potentialL, voltages, coord, slice, option=["potential", "field"]):
+def reshapePotential(potentialL, voltages, coord, slice, option):
     """
     input:  a list, where each element is a list of voltages, potentials, and coordinates
             a list of gate voltages
@@ -166,10 +146,10 @@ def reshapePotential(potentialL, voltages, coord, slice, option=["potential", "f
         if option == "potential":
             # slice an x-y plane of the potentials
             print("inside reshape potential: ",i[1].size, "(first input to slicePotential2D)")
-            potential2D = slicePotential2D(i[1], i[2][0], i[2][1], i[2][2], slice)
+            potential2D = slicePotential2D(i[1], i[2][0], i[2][1], i[2][2], slice, option)
         elif option == "field":
             print("inside reshape field: ",i[1].size)
-            potential2D = sliceField2D(i[1], i[2][0], i[2][1], i[2][2], slice)
+            potential2D = slicePotential2D(i[1], i[2][0], i[2][1], i[2][2], slice, option)
         i[1] = potential2D
         # reverse the list of voltages for sorting purpose
         i[0].reverse()
@@ -226,3 +206,5 @@ print(out([0.2,1.0,1.0]))
 fieldND = reshapePotential(potentialL, voltages, coord, -1, "field")
 out2 = interp(fieldND, voltages, coord)
 print(out2([0.2,1.0,1.0]))
+
+# sliceField2D(potentialL[0][1], coord[0], coord[1], coord[2], -1)
