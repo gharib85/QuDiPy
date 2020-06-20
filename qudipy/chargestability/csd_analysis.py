@@ -93,4 +93,21 @@ class CSDAnalysis:
                 rho = int(round(x * cos_t[t_idx] + y * sin_t[t_idx]) + index_diag_len)
                 accumulator[rho, t_idx] += 1
 
+        self.accumulator = accumulator
+        self.thetas = thetas
+        self.rhos = rhos
+
         return accumulator, thetas, rhos
+
+    def threshold_hough_accumulator(self, q=95):
+        percentile = np.percentile(self.accumulator, q)
+        accumulator_threshold = np.zeros(self.accumulator.shape)
+        
+        for index, value in np.ndenumerate(self.accumulator):
+            if value >= percentile:
+                accumulator_threshold[index] = 1
+
+        self.accumulator_threshold = accumulator_threshold
+
+        return accumulator_threshold
+
