@@ -44,7 +44,7 @@ class CSDAnalysis:
 
     def hough_transform(self, num_thetas=180, rho_num=100):
         '''
-        Transforms the charge stability diagram into a bitmap. Threshold determines whether bit is considered 'on' or 'off'
+        Performs the Hough transform on the charge stability diagram bitmap stored in the object
 
         Parameters
         ----------
@@ -100,7 +100,27 @@ class CSDAnalysis:
         return accumulator, thetas, rhos
 
     def threshold_hough_accumulator(self, threshold, threshold_type='percentile'):
+        '''
+        Transforms the Hough transform accumulator stored in the objects into a binary accumulator using a threshold.
+        Threshold determines whether accumulator value is set to 1 or 0. The threshold flag determines how the thrsehold is interpretted
 
+        Parameters
+        ----------
+        threshold: number which specifies the threshold. Behaves differently depending on threshold_type
+
+        Keyword Arguments
+        -----------------
+        threshold_type: String flag for which type of thresholding to do (default 'percentile')
+            - 'percentile': will set all elements in the array above the set percentile to 1 and all those below to 0 
+                    e.g with threshold=99, only elements above the 99th percentile will be set to 1
+            - 'absolute': will set all elements in the array above the set percentile to 1 and all those below to 0 
+                    e.g with threshold=20, only elements whos value exceeds 20 will be set to 1
+
+        Returns
+        -------
+        accumulator_threshold: 2D array with counts 
+
+        '''
         if threshold_type is 'percentile':
             percentile = np.percentile(self.accumulator, threshold)
             accumulator_threshold = np.zeros(self.accumulator.shape)
@@ -124,4 +144,3 @@ class CSDAnalysis:
             raise ValueError('Unrecognized threshold type: ' + str(threshold_type))
 
         return accumulator_threshold
-
