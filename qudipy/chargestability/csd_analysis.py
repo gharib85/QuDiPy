@@ -99,29 +99,15 @@ class CSDAnalysis:
 
         return accumulator, thetas, rhos
 
-    def threshold_hough_accumulator(self, threshold, threshold_type='percentile'):
+    def threshold_hough_accumulator(self, q=95):
+        percentile = np.percentile(self.accumulator, q)
+        accumulator_threshold = np.zeros(self.accumulator.shape)
+        
+        for index, value in np.ndenumerate(self.accumulator):
+            if value >= percentile:
+                accumulator_threshold[index] = 1
 
-        if threshold_type is 'percentile':
-            percentile = np.percentile(self.accumulator, threshold)
-            accumulator_threshold = np.zeros(self.accumulator.shape)
-            
-            for index, value in np.ndenumerate(self.accumulator):
-                if value >= percentile:
-                    accumulator_threshold[index] = 1
-
-            self.accumulator_threshold = accumulator_threshold
-
-        elif threshold_type is 'absolute':
-            accumulator_threshold = np.zeros(self.accumulator.shape)
-            
-            for index, value in np.ndenumerate(self.accumulator):
-                if value >= threshold:
-                    accumulator_threshold[index] = 1
-
-            self.accumulator_threshold = accumulator_threshold
-
-        else:
-            raise ValueError('Unrecognized threshold type: ' + str(threshold_type))
+        self.accumulator_threshold = accumulator_threshold
 
         return accumulator_threshold
 
