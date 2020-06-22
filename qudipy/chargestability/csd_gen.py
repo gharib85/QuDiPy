@@ -143,7 +143,7 @@ class CSD:
                 [round(v_g1_min + i/num * (v_g1_max - v_g1_min), 4), round(v_g2_min + j/num * (v_g2_max - v_g2_min), 4),
                 (self._lowest_energy(v_g1_min + i/num * (v_g1_max - v_g1_min), v_g2_min + j/num * (
                  v_g2_max - v_g2_min))[0] * c_cs_1 + self._lowest_energy(v_g1_min + i/num * (v_g1_max - v_g1_min),
-                 v_g2_min + j/num * (v_g2_max - v_g2_min))[1] * c_cs_2) * 10**9
+                 v_g2_min + j/num * (v_g2_max - v_g2_min))[1] * c_cs_2)
                  ] for i in range(num) for j in range(num)
                 ]
 

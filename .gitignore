@@ -1,4 +1,2 @@
-
-qudipy/chargestability/__pycache__/csd_gen.cpython-38.pyc
 *.pyc
-.ipynb_checkpoints/
+*.ipynb_checkpoints
