@@ -15,7 +15,6 @@ class CSD:
     '''
     Initialize the charge stability diagram class which generates charge stability diagrams based on given capacitance parameters. 
     This class is intended for testing of the analysis module and comparing extracted input parameter with known input parameters.
-
     '''
     def __init__(self, c_l, c_r, c_m, c_g1, c_g2):
         '''
