@@ -115,7 +115,7 @@ class CSD:
         else:
             return [state[0], 0]
 
-    def generate_csd(self, v_g1_max, v_g2_max, c_cs_1, c_cs_2, v_g1_min=0, v_g2_min=0, num=100, plotting=False):
+    def generate_csd(self, v_g1_max, v_g2_max, c_cs_1=None, c_cs_2=None, v_g1_min=0, v_g2_min=0, num=100, plotting=False):
         ''' Generates the charge stability diagram between v_g1(2)_min and v_g1(2)_max with num by num data points in 2D
 
         Parameters
@@ -139,13 +139,28 @@ class CSD:
         # Generates the charge stability diagram as measured by a charge sensor
         # First and second elements are the applied volategs on gate 1 and 2, 
         # third element is formula to calculate what current the charge sensor would see
-        data = [
-                [round(v_g1_min + i/num * (v_g1_max - v_g1_min), 4), round(v_g2_min + j/num * (v_g2_max - v_g2_min), 4),
-                (self._lowest_energy(v_g1_min + i/num * (v_g1_max - v_g1_min), v_g2_min + j/num * (
-                 v_g2_max - v_g2_min))[0] * c_cs_1 + self._lowest_energy(v_g1_min + i/num * (v_g1_max - v_g1_min),
-                 v_g2_min + j/num * (v_g2_max - v_g2_min))[1] * c_cs_2)
-                 ] for i in range(num) for j in range(num)
-                ]
+        if (c_cs_1 is not None) and (c_cs_2 is not None):
+            data = [
+                    [round(v_g1_min + i/num * (v_g1_max - v_g1_min), 4), round(v_g2_min + j/num * (v_g2_max - v_g2_min), 4),
+                    (self._lowest_energy(v_g1_min + i/num * (v_g1_max - v_g1_min), v_g2_min + j/num * (
+                    v_g2_max - v_g2_min))[0] * c_cs_1 + self._lowest_energy(v_g1_min + i/num * (v_g1_max - v_g1_min),
+                    v_g2_min + j/num * (v_g2_max - v_g2_min))[1] * c_cs_2)
+                    ] for i in range(num) for j in range(num)
+                    ]
+
+        # If no charge sensor element is passed, then create a custom colorbar map that distinguishes between all charge occupation regions
+        else:
+            max_occupation = self._lowest_energy(v_g1_max, v_g2_max)
+            max_1 = max_occupation[0]
+            max_2 = max_occupation[1]
+
+            data = [
+                    [round(v_g1_min + i/num * (v_g1_max - v_g1_min), 4), round(v_g2_min + j/num * (v_g2_max - v_g2_min), 4),
+                    (self._lowest_energy(v_g1_min + i/num * (v_g1_max - v_g1_min), v_g2_min + j/num * (
+                    v_g2_max - v_g2_min))[0] + self._lowest_energy(v_g1_min + i/num * (v_g1_max - v_g1_min),
+                    v_g2_min + j/num * (v_g2_max - v_g2_min))[1] * (max_1 + 1))
+                    ] for i in range(num) for j in range(num)
+                    ]
 
         # Create DataFrame from data and pivot into num by num array
         df = pd.DataFrame(data, columns=['V_g1', 'V_g2', 'Current'])
@@ -160,14 +175,19 @@ class CSD:
         # Show plots if flag is set to True
         if plotting is True:
 
+            # Toggles colorbar if charge sensor information is given
+            cbar_flag = False
+            if (c_cs_1 is not None) and (c_cs_2 is not None):
+                cbar_flag = True
+
             # Plot the chagre stability diagram
-            p1 = sb.heatmap(self.csd, xticklabels=int(
+            p1 = sb.heatmap(self.csd, cbar=cbar_flag, xticklabels=int(
                 num/5), yticklabels=int(num/5), cbar_kws={'label': 'Current (arb.)'})
             p1.axes.invert_yaxis()
             plt.show()
 
             # Plot the "derivative" of the charge stability diagram
-            p2 = sb.heatmap(df_der, cbar=True, xticklabels=int(
+            p2 = sb.heatmap(df_der, cbar=cbar_flag, xticklabels=int(
             num/5), yticklabels=int(num/5))
             p2.axes.invert_yaxis()
             plt.show()
