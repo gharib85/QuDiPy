@@ -136,31 +136,24 @@ class CSD:
         -------
         None
         '''
-        # Generates the charge stability diagram as measured by a charge sensor
-        # First and second elements are the applied volategs on gate 1 and 2, 
-        # third element is formula to calculate what current the charge sensor would see
+        # Determines how to make the colorbar for the charge stability diagram
         if (c_cs_1 is not None) and (c_cs_2 is not None):
-            data = [
-                    [round(v_g1_min + i/num * (v_g1_max - v_g1_min), 4), round(v_g2_min + j/num * (v_g2_max - v_g2_min), 4),
-                    (self._lowest_energy(v_g1_min + i/num * (v_g1_max - v_g1_min), v_g2_min + j/num * (
-                    v_g2_max - v_g2_min))[0] * c_cs_1 + self._lowest_energy(v_g1_min + i/num * (v_g1_max - v_g1_min),
-                    v_g2_min + j/num * (v_g2_max - v_g2_min))[1] * c_cs_2)
-                    ] for i in range(num) for j in range(num)
-                    ]
-
-        # If no charge sensor element is passed, then create a custom colorbar map that distinguishes between all charge occupation regions
+            dot_1_multiplier = c_cs_1
+            dot_2_multiplier = c_cs_2
         else:
             max_occupation = self._lowest_energy(v_g1_max, v_g2_max)
-            max_1 = max_occupation[0]
-            max_2 = max_occupation[1]
+            dot_1_multiplier = 1
+            dot_2_multiplier = max_occupation[0] + 1
 
-            data = [
-                    [round(v_g1_min + i/num * (v_g1_max - v_g1_min), 4), round(v_g2_min + j/num * (v_g2_max - v_g2_min), 4),
-                    (self._lowest_energy(v_g1_min + i/num * (v_g1_max - v_g1_min), v_g2_min + j/num * (
-                    v_g2_max - v_g2_min))[0] + self._lowest_energy(v_g1_min + i/num * (v_g1_max - v_g1_min),
-                    v_g2_min + j/num * (v_g2_max - v_g2_min))[1] * (max_1 + 1))
-                    ] for i in range(num) for j in range(num)
-                    ]
+        # First and second elements are the applied volategs on gate 1 and 2, 
+        # third element is formula to calculate what the colorbar scale should indicate
+        data = [
+                [round(v_g1_min + i/num * (v_g1_max - v_g1_min), 4), round(v_g2_min + j/num * (v_g2_max - v_g2_min), 4),
+                (self._lowest_energy(v_g1_min + i/num * (v_g1_max - v_g1_min), v_g2_min + j/num * (
+                v_g2_max - v_g2_min))[0] * dot_1_multiplier + self._lowest_energy(v_g1_min + i/num * (v_g1_max - v_g1_min),
+                v_g2_min + j/num * (v_g2_max - v_g2_min))[1] * dot_2_multiplier)
+                ] for i in range(num) for j in range(num)
+                ]
 
         # Create DataFrame from data and pivot into num by num array
         df = pd.DataFrame(data, columns=['V_g1', 'V_g2', 'Current'])
