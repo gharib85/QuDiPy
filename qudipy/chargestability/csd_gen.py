@@ -148,10 +148,8 @@ class CSD:
         # First and second elements are the applied volategs on gate 1 and 2, 
         # third element is formula to calculate what the colorbar scale should indicate
         data = [
-                [round(v_g1_min + i/num * (v_g1_max - v_g1_min), 4), round(v_g2_min + j/num * (v_g2_max - v_g2_min), 4),
-                (self._lowest_energy(v_g1_min + i/num * (v_g1_max - v_g1_min), v_g2_min + j/num * (
-                v_g2_max - v_g2_min))[0] * dot_1_multiplier + self._lowest_energy(v_g1_min + i/num * (v_g1_max - v_g1_min),
-                v_g2_min + j/num * (v_g2_max - v_g2_min))[1] * dot_2_multiplier)
+                [round(v_g1_min + i/num * (v_g1_max - v_g1_min), 4), round(v_g2_min + j/num * (v_g2_max - v_g2_min), 4), 
+                (p:= self._lowest_energy(v_g1_min + i/num * (v_g1_max - v_g1_min), v_g2_min + j/num * (v_g2_max - v_g2_min)))[0] * dot_1_multiplier + p[1] * dot_2_multiplier
                 ] for i in range(num) for j in range(num)
                 ]
 
