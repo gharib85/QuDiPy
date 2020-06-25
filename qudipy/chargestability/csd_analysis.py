@@ -6,6 +6,7 @@ Hough transfrom code based off of https://github.com/alyssaq/hough_transform.
 
 import numpy as np
 import matplotlib.pyplot as plt
+from sklearn import cluster
 
 class CSDAnalysis:
     '''
@@ -121,7 +122,7 @@ class CSDAnalysis:
         accumulator_threshold: 2D array with counts 
 
         '''
-        if threshold_type is 'percentile':
+        if threshold_type == 'percentile':
             percentile = np.percentile(self.accumulator, threshold)
             accumulator_threshold = np.zeros(self.accumulator.shape)
             
@@ -131,7 +132,7 @@ class CSDAnalysis:
 
             self.accumulator_threshold = accumulator_threshold
 
-        elif threshold_type is 'absolute':
+        elif threshold_type == 'absolute':
             accumulator_threshold = np.zeros(self.accumulator.shape)
             
             for index, value in np.ndenumerate(self.accumulator):
@@ -144,3 +145,47 @@ class CSDAnalysis:
             raise ValueError('Unrecognized threshold type: ' + str(threshold_type))
 
         return accumulator_threshold
+
+    def hough_cluster(self):
+        x = self.accumulator_threshold
+        plt.imshow(x)
+        plt.gca().invert_yaxis()
+        plt.show()
+        a = np.array(x.nonzero())
+        points = []
+        for i in range(len(a[0])):
+            points.append([a[0][i], a[1][i]])
+        points = np.array(points)
+        
+        db = cluster.DBSCAN(eps=3, min_samples=3).fit(points)
+        core_samples_mask = np.zeros_like(db.labels_, dtype=bool)
+        core_samples_mask[db.core_sample_indices_] = True
+        labels = db.labels_
+
+        # Number of clusters in labels, ignoring noise if present.
+        n_clusters_ = len(set(labels)) - (1 if -1 in labels else 0)
+        n_noise_ = list(labels).count(-1)
+
+        print('Estimated number of clusters: %d' % n_clusters_)
+        print('Estimated number of noise points: %d' % n_noise_)
+
+        unique_labels = set(labels)
+        colors = [plt.cm.Spectral(each)
+                for each in np.linspace(0, 1, len(unique_labels))]
+        for k, col in zip(unique_labels, colors):
+            if k == -1:
+                # Black used for noise.
+                col = [0, 0, 0, 1]
+
+            class_member_mask = (labels == k)
+
+            xy = points[class_member_mask & core_samples_mask]
+            plt.plot(xy[:, 0], xy[:, 1], 'o', markerfacecolor=tuple(col),
+                    markeredgecolor='k', markersize=14)
+
+            xy = points[class_member_mask & ~core_samples_mask]
+            plt.plot(xy[:, 0], xy[:, 1], 'o', markerfacecolor=tuple(col),
+                    markeredgecolor='k', markersize=6)
+
+        plt.title('Estimated number of clusters: %d' % n_clusters_)
+        plt.show()
