@@ -6,6 +6,7 @@ Hough transfrom code based off of https://github.com/alyssaq/hough_transform.
 
 import numpy as np
 import matplotlib.pyplot as plt
+import seaborn as sb
 from sklearn import cluster
 
 class CSDAnalysis:
@@ -146,21 +147,37 @@ class CSDAnalysis:
 
         return accumulator_threshold
 
-    def hough_cluster(self):
-        x = self.accumulator_threshold
-        plt.imshow(x)
-        plt.gca().invert_yaxis()
-        plt.show()
-        a = np.array(x.nonzero())
-        points = []
-        for i in range(len(a[0])):
-            points.append([a[0][i], a[1][i]])
-        points = np.array(points)
+    def hough_cluster(self, eps, min_samples, plotting=False):
+        '''
+        Clusters the points in the thresholded Hough transform accumulator.
+
+        Parameters
+        ----------
+        eps: maximum distance for points to be considered in the local neighbourhood of each other
+        min_samples: minimum number of samples within the local neighbourhood in order for the point to be considered a core part of the cluster.
+
+        Keyword Arguments
+        -----------------
+        potting: boolean flag which sets whether or not to plot the results of clustering (default False)
         
-        db = cluster.DBSCAN(eps=3, min_samples=3).fit(points)
-        core_samples_mask = np.zeros_like(db.labels_, dtype=bool)
-        core_samples_mask[db.core_sample_indices_] = True
-        labels = db.labels_
+        Returns
+        -------
+
+        '''
+        # Get the accumulator threshold parameters and reorder as a list of pairs of indices instead of a 2D array
+        a = np.array(self.accumulator_threshold.nonzero())
+        points_index = []
+        for i in range(len(a[0])):
+            points_index.append([a[1][i], a[0][i]])
+
+        # Convert from indices to pairs of the for [theta, rho] and convert into a numpy array
+        points = []
+        for pair in points_index:
+            points.append([self.thetas[pair[0]], self.rhos[pair[1]]])
+        points = np.array(points)
+
+        self.db = cluster.DBSCAN(eps=eps, min_samples=min_samples).fit(points)
+        labels = self.db.labels_
 
         # Number of clusters in labels, ignoring noise if present.
         n_clusters_ = len(set(labels)) - (1 if -1 in labels else 0)
@@ -169,23 +186,26 @@ class CSDAnalysis:
         print('Estimated number of clusters: %d' % n_clusters_)
         print('Estimated number of noise points: %d' % n_noise_)
 
-        unique_labels = set(labels)
-        colors = [plt.cm.Spectral(each)
-                for each in np.linspace(0, 1, len(unique_labels))]
-        for k, col in zip(unique_labels, colors):
-            if k == -1:
-                # Black used for noise.
-                col = [0, 0, 0, 1]
+        if plotting is True:
+            temp_points = points.transpose()
+            sb.set()
+            # unique_labels = set(labels)
+            # colors = [plt.cm.hsv(each) for each in np.linspace(0, 1, len(unique_labels))]
+            # for k, col in zip(unique_labels, colors):
+            #     if k == -1:
+            #         # Black used for noise.
+            #         col = [0, 0, 0, 1]
+            #     class_member_mask = (labels == k)
 
-            class_member_mask = (labels == k)
+            #     points_to_plot = []
+            #     for i in range(len(labels)):
+            #         if k == labels[i]:
+            #             print('sprize!')
 
-            xy = points[class_member_mask & core_samples_mask]
-            plt.plot(xy[:, 0], xy[:, 1], 'o', markerfacecolor=tuple(col),
-                    markeredgecolor='k', markersize=14)
+            #     sb.scatterplot(x=xy[:, 0], y=xy[:, 1], color=tuple(col), s=100)
 
-            xy = points[class_member_mask & ~core_samples_mask]
-            plt.plot(xy[:, 0], xy[:, 1], 'o', markerfacecolor=tuple(col),
-                    markeredgecolor='k', markersize=6)
+            plt.title('Estimated number of clusters: %d' % n_clusters_)
+            sb.scatterplot(x=temp_points[0], y=temp_points[1], s=100)
+            plt.show()
 
-        plt.title('Estimated number of clusters: %d' % n_clusters_)
-        plt.show()
+        return 
