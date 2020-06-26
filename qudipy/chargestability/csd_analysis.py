@@ -170,42 +170,44 @@ class CSDAnalysis:
         for i in range(len(a[0])):
             points_index.append([a[1][i], a[0][i]])
 
-        # Convert from indices to pairs of the for [theta, rho] and convert into a numpy array
-        points = []
-        for pair in points_index:
-            points.append([self.thetas[pair[0]], self.rhos[pair[1]]])
-        points = np.array(points)
-
-        self.db = cluster.DBSCAN(eps=eps, min_samples=min_samples).fit(points)
+        # Function that does the clusterting. Save the labels for later
+        self.db = cluster.DBSCAN(eps=eps, min_samples=min_samples).fit(points_index)
         labels = self.db.labels_
 
         # Number of clusters in labels, ignoring noise if present.
         n_clusters_ = len(set(labels)) - (1 if -1 in labels else 0)
         n_noise_ = list(labels).count(-1)
 
+        # Convert from indices to pairs of the for [theta, rho] and convert into a numpy array
+        points = []
+        for pair in points_index:
+            points.append([self.thetas[pair[0]], self.rhos[pair[1]]])
+        points = np.array(points)
+
         print('Estimated number of clusters: %d' % n_clusters_)
         print('Estimated number of noise points: %d' % n_noise_)
 
         if plotting is True:
+            # take the transpose of points for ease of plotting 
             temp_points = points.transpose()
             sb.set()
-            # unique_labels = set(labels)
-            # colors = [plt.cm.hsv(each) for each in np.linspace(0, 1, len(unique_labels))]
-            # for k, col in zip(unique_labels, colors):
-            #     if k == -1:
-            #         # Black used for noise.
-            #         col = [0, 0, 0, 1]
-            #     class_member_mask = (labels == k)
+            unique_labels = set(labels)
+            colors = [plt.cm.viridis(each) for each in np.linspace(0, 1, len(unique_labels))]
+            for k, col in zip(unique_labels, colors):
+                if k == -1:
+                    # Black used for noise.
+                    col = [0, 0, 0, 1]
 
-            #     points_to_plot = []
-            #     for i in range(len(labels)):
-            #         if k == labels[i]:
-            #             print('sprize!')
+                points_to_plot_x = []
+                points_to_plot_y = []
+                for i in range(len(labels)):
+                    if k == labels[i]:
+                        points_to_plot_x.append(temp_points[0][i])
+                        points_to_plot_y.append(temp_points[1][i])
 
-            #     sb.scatterplot(x=xy[:, 0], y=xy[:, 1], color=tuple(col), s=100)
+                sb.scatterplot(x=points_to_plot_x, y=points_to_plot_y, color=tuple(col), s=100)
 
             plt.title('Estimated number of clusters: %d' % n_clusters_)
-            sb.scatterplot(x=temp_points[0], y=temp_points[1], s=100)
             plt.show()
 
         return 
