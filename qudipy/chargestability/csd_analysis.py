@@ -8,6 +8,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sb
 from sklearn import cluster
+from sklearn.neighbors import NearestCentroid
 
 class CSDAnalysis:
     '''
@@ -187,12 +188,16 @@ class CSDAnalysis:
         print('Estimated number of clusters: %d' % n_clusters_)
         print('Estimated number of noise points: %d' % n_noise_)
 
+        # Plotting subroutine which plots all the point in different clusters in different colors
         if plotting is True:
             # take the transpose of points for ease of plotting 
             temp_points = points.transpose()
+            # Set plot to Seaborn defaults
             sb.set()
+            # Create uniques colors for each cluster
             unique_labels = set(labels)
             colors = [plt.cm.viridis(each) for each in np.linspace(0, 1, len(unique_labels))]
+            # Loop over each
             for k, col in zip(unique_labels, colors):
                 if k == -1:
                     # Black used for noise.
@@ -210,4 +215,12 @@ class CSDAnalysis:
             plt.title('Estimated number of clusters: %d' % n_clusters_)
             plt.show()
 
-        return 
+        # get centroids of each cluster and save for later
+        clf = NearestCentroid()
+        clf.fit(points, labels)
+        centroid = clf.centroids_
+        # drop invalid centroids for charge stability diagram (which correcpond to positive slope)
+        valid_centroids = np.array([i for i in centroid if i[0]>0])
+        self.centroids = valid_centroids
+
+        return valid_centroids
