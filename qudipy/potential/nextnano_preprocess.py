@@ -3,12 +3,12 @@ from scipy.interpolate import RegularGridInterpolator
 import os
 import re
 
-########## Global Variables ##########
+########## User Inputs ##########
 
-# number of gates
-numberOfGates = 5
+# folder where all the nextnano files are stored
+folder = 'nextnanoSims_Small'
 
-# gate voltages
+# gate voltages of the files that we want to preprocess
 V1 = [0.1]
 V2 = [0.2]
 V3 = [0.2]
@@ -31,10 +31,29 @@ def is_int(string):
     except ValueError:
         return False
 
-def loadFile(filename):
+def all_combinations(gate_voltages):
     """
-    returns a single array ordered by the coordinates for potential.dat
-            a tuple of 3 element, x, y, z for coord files
+    Given a list of lists of voltages pertaining to each gate,
+    returns a list of lists of possible combinations
+    """
+    num = 1
+    for gate in gate_voltages:
+        num = num * len(gate)
+    L = [[] for i in range(num)]
+    for i in range(len(gate_voltages)):
+        for j in range(len(gate)):
+            volt = gate_voltages[i][j]
+            L[i]
+
+    return L
+        
+
+def load_file(filename):
+    """
+    Given a .dat file that contains the potential data
+        or a .coord file that contains the coordinates data,
+    returns a single array ordered for potential.dat and
+        a tuple of 3 arrays x, y, z for coord files
     """
     data = []
     x = []
@@ -131,7 +150,7 @@ def importFolder(foldername):
             filename = os.path.join(subdir, file)
             # always first .dat then .coord
             if filename[-4:] == '.dat' or filename[-6:] == '.coord':
-                L[counter-1].append(loadFile(filename))
+                L[counter-1].append(load_file(filename))
     return L
 
 def group_2D_potential(potentialL, voltages, coord, slice, option):
@@ -173,29 +192,8 @@ def group_2D_potential(potentialL, voltages, coord, slice, option):
     return potential_reshaped
 
 
-def interp(potential, voltages, coord):
-    """
-    inputs: 
-        potential is a n-dimensional array of 
-        voltages is a list of gate voltages
-        coord is a
-    output:
-        interpolating function with inputs of gate voltages and coordinates
-    """
-    x = [float(xi) for xi in coord[0]]
-    y = [float(yi) for yi in coord[1]]
-    variables = ()
-    for v in voltages:
-        if len(v) > 1:
-            variables = variables + (v,)
-    variables = variables+ (x,y)
-    interpolating_func = RegularGridInterpolator(variables, potential)
-    return interpolating_func
-
-
 ########## Tests ##########
 
-folder = 'nextnanoSims_Small'
 
 potentialL = importFolder(folder)
 voltages = [V1, V2, V3, V4, V5]

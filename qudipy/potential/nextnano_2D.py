@@ -7,14 +7,14 @@ def importFolder(foldername):
     output: a list, where each element is a list of voltages, potentials, and coordinates
     """
     for subdir, dirs, files in os.walk(foldername):
-        print("1")
+        print("2")
         for file in files:
             filename = os.path.join(subdir, file)
             with open(filename, newline='') as myFile:
                 reader = csv.reader(myFile)
                 for row in reader:
                     print(row)
-    return 
+    return 1
 
-importFolder("Sliced_potentails")
-    
+foldername = "Sliced_potentials"
+importFolder(foldername)
