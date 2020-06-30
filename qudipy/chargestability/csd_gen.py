@@ -184,10 +184,12 @@ class CSD:
             p1 = sb.heatmap(self.csd, cbar=cbar_flag, xticklabels=int(
                 num/5), yticklabels=int(num/5), cbar_kws={'label': 'Current (arb.)'})
             p1.axes.invert_yaxis()
+            p1.set(xlabel=r'V$_1$', ylabel=r'V$_2$')
             plt.show()
 
             # Plot the "derivative" of the charge stability diagram
             p2 = sb.heatmap(df_der, cbar=cbar_flag, xticklabels=int(
             num/5), yticklabels=int(num/5))
             p2.axes.invert_yaxis()
+            p2.set(xlabel=r'V$_1$', ylabel=r'V$_2$')
             plt.show()

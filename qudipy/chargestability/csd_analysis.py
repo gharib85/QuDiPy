@@ -60,6 +60,7 @@ class CSDAnalysis:
         -----------------
         num_thetas: number of angle points to sweep over (default 180) 
         rho_num: number of distance numbers to start with. Number of distnce points in the end will be roughly 2^(3/2) times the original amount (default 100)
+        plotting: flag which determines whether or not to plot the resulting Hough accumulator (default False)
 
         Returns
         -------
@@ -99,20 +100,21 @@ class CSDAnalysis:
                 rho = int(round(x * cos_t[t_idx] + y * sin_t[t_idx]) + index_diag_len)
                 accumulator[rho, t_idx] += 1
 
+        # Store values in object for later use
         self.accumulator = accumulator
         self.thetas = thetas
         self.rhos = rhos
 
         if plotting is True:
             # Round data to avoid ridiculously long tick markers
-            rhos = np.round(rhos, 3)
-            thetas = np.round(thetas, 3)
+            rhos = np.round(self.rhos, 3)
+            thetas = np.round(self.thetas, 3)
             # Call heatmap plotting function
-            self._plot_heatmap(accumulator, thetas, rhos, r'$\theta$ (rad)', r'$\rho$ (V)')
+            self._plot_heatmap(self.accumulator, thetas, rhos, r'$\theta$ (rad)', r'$\rho$ (V)')
 
         return accumulator, thetas, rhos
 
-    def threshold_hough_accumulator(self, threshold, threshold_type='percentile'):
+    def threshold_hough_accumulator(self, threshold, threshold_type='percentile', plotting=False):
         '''
         Transforms the Hough transform accumulator stored in the objects into a binary accumulator using a threshold.
         Threshold determines whether accumulator value is set to 1 or 0. The threshold flag determines how the thrsehold is interpretted
@@ -128,6 +130,7 @@ class CSDAnalysis:
                     e.g with threshold=99, only elements above the 99th percentile will be set to 1
             - 'absolute': will set all elements in the array above the specified value to 1 and all those below to 0 
                     e.g with threshold=20, only elements whos is value greater or equal 20 will be set to 1
+        plotting: flag which determines whether or not to plot the resulting thresholded Hough accumulator (default False)
 
         Returns
         -------
@@ -152,6 +155,13 @@ class CSDAnalysis:
                 accumulator_threshold[index] = 1
         self.accumulator_threshold = accumulator_threshold
 
+        if plotting is True:
+            # Round data to avoid ridiculously long tick markers
+            rhos = np.round(self.rhos, 3)
+            thetas = np.round(self.thetas, 3)
+            # Call heatmap plotting function
+            self._plot_heatmap(accumulator_threshold, thetas, rhos, r'$\theta$ (rad)', r'$\rho$ (V)')
+
         return accumulator_threshold
 
     def hough_cluster(self, eps, min_samples, plotting=False):
@@ -169,7 +179,7 @@ class CSDAnalysis:
         
         Returns
         -------
-        centroids: numpy array of pairs [theta, rhos] corresponding to valid charge transitions
+        centroids: numpy array of pairs [theta, rhos] corresponding to valid charge transition line
 
         '''
         # Get the accumulator threshold parameters and reorder as a list of pairs of indices instead of a 2D array
@@ -215,13 +225,16 @@ class CSDAnalysis:
                 sb.scatterplot(x=points_to_plot_x, y=points_to_plot_y, color=tuple(col), s=100)
 
             plt.title('Estimated number of clusters: %d' % n_clusters_)
+            plt.ylabel(r'$\rho$ (V)')
+            plt.xlabel(r'$\theta$ (rad)')
             plt.show()
 
         # get centroids of each cluster and save for later
         clf = NearestCentroid()
         clf.fit(points, labels)
         centroid = clf.centroids_
-        # drop invalid centroids for charge stability diagram (which correcpond to positive slope)
+        # TODO determine better way to determine invalid charge transitions and exclude them
+        # drop centroids where theta < 0 (which correcpond to positive slope)
         valid_centroids = np.array([i for i in centroid if i[0]>0])
         self.centroids = valid_centroids
 
@@ -236,13 +249,29 @@ class CSDAnalysis:
         plt.show()
 
     def plot_csd_with_lines(self):
+        '''
+        Function which plots the CSD with the fitted lines over top of it
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        None
+        '''
+        # Save number of points in charge stability diagram for later use
         num = self.csd.csd.shape[0]
 
+        # Create the heatmap figure
         f, ax = plt.subplots()
         sb.heatmap(self.csd.csd, cbar=False, xticklabels=int(num/5), yticklabels=int(num/5))
         ax.axes.invert_yaxis()
+
+        # Create second axis with same x and y axis as the heatmap
         ax2 = ax.twinx().twiny()
 
+        # For each centroid, convert from polar coordiantes to slope/intercept for and plot on second axis
         for centroid in self.centroids:
             theta = centroid[0]
             rho = centroid[1]
@@ -252,8 +281,10 @@ class CSDAnalysis:
             y = m * x + b
             sb.lineplot(x=x, y=y, ax=ax2)
 
+        # format the secodn axis and show the plot
         ax2.set_xlim([self.csd.v_g1_min,self.csd.v_g1_max])
         ax2.set_ylim([self.csd.v_g2_min,self.csd.v_g2_max])
-        ax2.get_yaxis().set_visible(False)
-        ax2.get_xaxis().set_visible(False)
+        ax2.get_yaxis().set_ticks([])
+        ax2.get_xaxis().set_ticks([])
+        ax.set(xlabel=r'V$_1$', ylabel=r'V$_2$')
         plt.show()
