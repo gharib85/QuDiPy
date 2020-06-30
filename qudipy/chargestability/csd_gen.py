@@ -136,6 +136,11 @@ class CSD:
         -------
         None
         '''
+        self.num = num
+        self.v_g1_min = v_g1_min
+        self.v_g1_max = v_g1_max
+        self.v_g2_min = v_g2_min
+        self.v_g2_max = v_g2_max
         # Determines how to make the colorbar for the charge stability diagram
         if (c_cs_1 is not None) and (c_cs_2 is not None):
             dot_1_multiplier = c_cs_1

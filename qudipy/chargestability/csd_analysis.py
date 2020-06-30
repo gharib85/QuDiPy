@@ -42,7 +42,7 @@ class CSDAnalysis:
         None
 
         '''
-        self.csd_bitmap = self.csd.mask(abs(self.csd) > threshold, other=1).mask(abs(self.csd) <= threshold, other=0)
+        self.csd_bitmap = self.csd.csd_der.mask(abs(self.csd.csd_der) > threshold, other=1).mask(abs(self.csd.csd_der) <= threshold, other=0)
 
 
     def hough_transform(self, num_thetas=180, rho_num=100):
@@ -116,8 +116,8 @@ class CSDAnalysis:
         threshold_type: String flag for which type of thresholding to do (default 'percentile')
             - 'percentile': will set all elements in the array above the set percentile to 1 and all those below to 0 
                     e.g with threshold=99, only elements above the 99th percentile will be set to 1
-            - 'absolute': will set all elements in the array above the set percentile to 1 and all those below to 0 
-                    e.g with threshold=20, only elements whos value exceeds 20 will be set to 1
+            - 'absolute': will set all elements in the array above the specified value to 1 and all those below to 0 
+                    e.g with threshold=20, only elements whos is value greater or equal 20 will be set to 1
 
         Returns
         -------
@@ -148,7 +148,7 @@ class CSDAnalysis:
 
         return accumulator_threshold
 
-    def hough_cluster(self, eps, min_samples, plotting=False):
+    def hough_cluster(self, eps, min_samples, plotting=False, verbose=False):
         '''
         Clusters the points in the thresholded Hough transform accumulator.
 
@@ -163,6 +163,7 @@ class CSDAnalysis:
         
         Returns
         -------
+        centroids: numpy array of pairs [theta, rhos] corresponding to valid charge transitions
 
         '''
         # Get the accumulator threshold parameters and reorder as a list of pairs of indices instead of a 2D array
@@ -185,15 +186,14 @@ class CSDAnalysis:
             points.append([self.thetas[pair[0]], self.rhos[pair[1]]])
         points = np.array(points)
 
-        print('Estimated number of clusters: %d' % n_clusters_)
-        print('Estimated number of noise points: %d' % n_noise_)
+        if verbose is True:
+            print('Estimated number of clusters: %d' % n_clusters_)
+            print('Estimated number of noise points: %d' % n_noise_)
 
         # Plotting subroutine which plots all the point in different clusters in different colors
         if plotting is True:
             # take the transpose of points for ease of plotting 
             temp_points = points.transpose()
-            # Set plot to Seaborn defaults
-            sb.set()
             # Create uniques colors for each cluster
             unique_labels = set(labels)
             colors = [plt.cm.viridis(each) for each in np.linspace(0, 1, len(unique_labels))]
@@ -224,3 +224,24 @@ class CSDAnalysis:
         self.centroids = valid_centroids
 
         return valid_centroids
+
+    def plot_csd_with_lines(self):
+        num = self.csd.csd.shape[0]
+
+        f, ax = plt.subplots()
+        sb.heatmap(self.csd.csd, cbar=False, xticklabels=int(num/5), yticklabels=int(num/5))
+        ax.axes.invert_yaxis()
+        ax2 = ax.twinx().twiny()
+
+        for centroid in self.centroids:
+            theta = centroid[0]
+            rho = centroid[1]
+            m = -np.cos(theta)/np.sin(theta)
+            b = rho/np.sin(theta)
+            x = np.linspace(self.csd.v_g1_min, self.csd.v_g1_max, num=num)
+            y = m * x + b
+            sb.lineplot(x=x, y=y, ax=ax2)
+
+        ax2.set_xlim([self.csd.v_g1_min,self.csd.v_g1_max])
+        ax2.set_ylim([self.csd.v_g2_min,self.csd.v_g2_max])
+        plt.show()
