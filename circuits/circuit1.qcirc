@@ -1,0 +1,8 @@
+Number of qubits: 4
+ROTX_1_2_exp 1 2
+ROTY_1_4_exp 1 4
+H_2_3_4 2 3 4
+H_1_3 1 3
+CTRLZ_1_2 1 2
+CTRLX 3_4
+RSWAP 2 4
