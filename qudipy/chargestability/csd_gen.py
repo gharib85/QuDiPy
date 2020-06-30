@@ -116,20 +116,20 @@ class CSD:
         else:
             return [state[0], 0]
 
-    def generate_csd(self, v_g1_max, v_g2_max, c_cs_1=None, c_cs_2=None, v_g1_min=0, v_g2_min=0, num=100, plotting=False):
+    def generate_csd(self, v_g1_max, v_g2_max, v_g1_min=0, v_g2_min=0, c_cs_1=None, c_cs_2=None, num=100, plotting=False):
         ''' Generates the charge stability diagram between v_g1(2)_min and v_g1(2)_max with num by num data points in 2D
 
         Parameters
         ----------
         v_g1_max: maximum voltage on plunger gate 1
         v_g2_max: maximum voltage on plunger gate 2
-        c_cs_1: coupling between charge sensor and dot 1
-        c_cs_2: coupling between charge sensor and dot 2
 
         Keyword Arguments
         -----------------
         v_g1_max: minimum voltage on plunger gate 1 (default 0)
         v_g2_max: minimum voltage on plunger gate 2 (default 0)
+        c_cs_1: coupling between charge sensor and dot 1 (default to None)
+        c_cs_2: coupling between charge sensor and dot 2 (default to None)
         num: number of voltage point in 1d, which leads to a num^2 charge stability diagram (default 100)
         plotting: flag indicating whether charge stability diagram should be plotted after completion (default False)
 
