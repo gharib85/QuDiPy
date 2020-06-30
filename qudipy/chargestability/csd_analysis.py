@@ -5,6 +5,7 @@ Hough transfrom code based off of https://github.com/alyssaq/hough_transform.
 '''
 
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sb
 from sklearn import cluster
@@ -29,7 +30,7 @@ class CSDAnalysis:
         '''
         self.csd = csd
 
-    def generate_bitmap(self, threshold):
+    def generate_bitmap(self, threshold, plotting=False):
         '''
         Transforms the charge stability diagram into a bitmap. Threshold determines whether bit is considered 'on' or 'off'
 
@@ -43,9 +44,11 @@ class CSDAnalysis:
 
         '''
         self.csd_bitmap = self.csd.csd_der.mask(abs(self.csd.csd_der) > threshold, other=1).mask(abs(self.csd.csd_der) <= threshold, other=0)
+        if plotting is True:
+            self._plot_heatmap(self.csd_bitmap, self.csd.v_1_values, self.csd.v_2_values, r'V$_1$', r'V$_2$')
 
 
-    def hough_transform(self, num_thetas=180, rho_num=100):
+    def hough_transform(self, num_thetas=180, rho_num=100, plotting=False):
         '''
         Performs the Hough transform on the charge stability diagram bitmap stored in the object
 
@@ -100,6 +103,13 @@ class CSDAnalysis:
         self.thetas = thetas
         self.rhos = rhos
 
+        if plotting is True:
+            # Round data to avoid ridiculously long tick markers
+            rhos = np.round(rhos, 3)
+            thetas = np.round(thetas, 3)
+            # Call heatmap plotting function
+            self._plot_heatmap(accumulator, thetas, rhos, r'$\theta$ (rad)', r'$\rho$ (V)')
+
         return accumulator, thetas, rhos
 
     def threshold_hough_accumulator(self, threshold, threshold_type='percentile'):
@@ -125,30 +135,26 @@ class CSDAnalysis:
 
         '''
         if threshold_type == 'percentile':
-            percentile = np.percentile(self.accumulator, threshold)
-            accumulator_threshold = np.zeros(self.accumulator.shape)
-            
-            for index, value in np.ndenumerate(self.accumulator):
-                if value >= percentile:
-                    accumulator_threshold[index] = 1
-
-            self.accumulator_threshold = accumulator_threshold
+            # Converts percentile type threshold into absolute type to use same for loop
+            threshold = np.percentile(self.accumulator, threshold)
 
         elif threshold_type == 'absolute':
-            accumulator_threshold = np.zeros(self.accumulator.shape)
-            
-            for index, value in np.ndenumerate(self.accumulator):
-                if value >= threshold:
-                    accumulator_threshold[index] = 1
-
-            self.accumulator_threshold = accumulator_threshold
+            # Do nothing to the threshold, but avoid raising an error
+            pass
 
         else:
             raise ValueError('Unrecognized threshold type: ' + str(threshold_type))
 
+        # Go through all the elements in the accumulator, setting all the elements above the threshold to 1
+        accumulator_threshold = np.zeros(self.accumulator.shape)
+        for index, value in np.ndenumerate(self.accumulator):
+            if value >= threshold:
+                accumulator_threshold[index] = 1
+        self.accumulator_threshold = accumulator_threshold
+
         return accumulator_threshold
 
-    def hough_cluster(self, eps, min_samples, plotting=False, verbose=False):
+    def hough_cluster(self, eps, min_samples, plotting=False):
         '''
         Clusters the points in the thresholded Hough transform accumulator.
 
@@ -186,10 +192,6 @@ class CSDAnalysis:
             points.append([self.thetas[pair[0]], self.rhos[pair[1]]])
         points = np.array(points)
 
-        if verbose is True:
-            print('Estimated number of clusters: %d' % n_clusters_)
-            print('Estimated number of noise points: %d' % n_noise_)
-
         # Plotting subroutine which plots all the point in different clusters in different colors
         if plotting is True:
             # take the transpose of points for ease of plotting 
@@ -225,6 +227,14 @@ class CSDAnalysis:
 
         return valid_centroids
 
+    def _plot_heatmap(self, data, x_values, y_values, x_label, y_label):
+        df1 = pd.DataFrame(data, index=y_values, columns=x_values)
+        s = sb.heatmap(df1, cbar=True, xticklabels=int(self.csd.num/5), yticklabels=int(self.csd.num/5))
+        s.axes.invert_yaxis()
+        s.axes.set_xlabel(x_label)
+        s.axes.set_ylabel(y_label)
+        plt.show()
+
     def plot_csd_with_lines(self):
         num = self.csd.csd.shape[0]
 
@@ -244,4 +254,6 @@ class CSDAnalysis:
 
         ax2.set_xlim([self.csd.v_g1_min,self.csd.v_g1_max])
         ax2.set_ylim([self.csd.v_g2_min,self.csd.v_g2_max])
+        ax2.get_yaxis().set_visible(False)
+        ax2.get_xaxis().set_visible(False)
         plt.show()
