@@ -143,21 +143,23 @@ class CSD:
         self.v_g2_min = v_g2_min
         self.v_g2_max = v_g2_max
         # Determines how to make the colorbar for the charge stability diagram
+        # If capacitances are given, use those as multipliers
         if (c_cs_1 is not None) and (c_cs_2 is not None):
             dot_1_multiplier = c_cs_1
             dot_2_multiplier = c_cs_2
+        # Otherwise, create a colormap that gives a uniques color combo to each (n,m) pair
         else:
             max_occupation = self._lowest_energy(v_g1_max, v_g2_max)
             dot_1_multiplier = 1
             dot_2_multiplier = max_occupation[0] + 1
 
         # Generates all the voltages to be swept
-        v_1_values = [round(self.v_g1_min + i/num * (self.v_g1_max - self.v_g1_min), 4) for i in range(num)]
-        v_2_values = [round(self.v_g2_min + j/num * (self.v_g2_max - self.v_g2_min), 4) for j in range(num)]
-        # Goes through all the v_1 and v_2 values and generate the 
+        self.v_1_values = [round(self.v_g1_min + i/num * (self.v_g1_max - self.v_g1_min), 4) for i in range(num)]
+        self.v_2_values = [round(self.v_g2_min + j/num * (self.v_g2_max - self.v_g2_min), 4) for j in range(num)]
+        # Goes through all the v_1 and v_2 values and generate the csd data
         data = [
                 [v_1, v_2, (p:= self._lowest_energy(v_1, v_2))[0] * dot_1_multiplier + p[1] * dot_2_multiplier
-                ] for v_1 in v_1_values for v_2 in v_2_values
+                ] for v_1 in self.v_1_values for v_2 in self.v_2_values
                 ]
 
         # Create DataFrame from data and pivot into num by num array
