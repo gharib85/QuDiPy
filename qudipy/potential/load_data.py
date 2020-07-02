@@ -26,6 +26,24 @@ def interp(potential, voltages, coord):
     return interpolating_func
 
 def build_interpolator(all_data_sep):
+    '''
+    This function constructs an interpolator object for either a group of 
+    potential or electric field files.
+
+    Parameters
+    ----------
+    all_data_sep : list where each element consists of
+                    [array, 2D array, (1D array, 1D array)]
+        This list contains all the loaded data and is built from the load_files
+        function. Each element in the list is an individual file that was
+        loaded and looks like [voltages, 2D data, (x-coordinates, y-coordinates)]
+
+    Returns
+    -------
+    interp_obj : Mod_RegularGridInterpolator class
+        Interpolant object for the data inputted into the function.
+
+    '''
     
     # Get first set of x and y coordinates
     x_coords = all_data_sep[0][2][0]
