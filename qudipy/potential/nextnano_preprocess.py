@@ -3,31 +3,42 @@ from scipy.interpolate import RegularGridInterpolator
 import os
 import re
 
-########## User Inputs ##########
+def __is_float(str_data):
+    '''
+    Checks if a string can be converted to a float or not.
 
-# folder where all the nextnano files are stored
-folder = 'nextnanoSims_Small'
+    Parameters
+    ----------
+    str_data : string
 
-# gate voltages of the files that we want to preprocess
-V1 = [0.1]
-V2 = [0.2]
-V3 = [0.2]
-V4 = [0.2, 0.22, 0.24, 0.25, 0.26]
-V5 = [0.1]
+    Returns
+    -------
+    bool
+        Returns True if string is a float, else False.
 
-########## Helper Functions ##########
-
-def is_float(string):
-    """ True if given string is float else False"""
+    '''
+    
     try:
-        return float(string)
+        return float(str_data)
     except ValueError:
         return False
 
-def is_int(string):
-    """ True if given string is int else False"""
+def __is_int(str_data):
+    '''
+    Checks if a string can be converted to an int or not.
+
+    Parameters
+    ----------
+    str_data : string
+
+    Returns
+    -------
+    bool
+        Returns True if string is an int, else False.
+
+    '''
     try:
-        return int(string)
+        return int(str_data)
     except ValueError:
         return False
 
@@ -68,10 +79,10 @@ def load_file(filename):
                 data.append(float(k[0]))     
             data = np.array(data, dtype='O')
             return data
-        else:
+        elif filename[-6:] == '.coord':
             for i in d:
                 k = i.rstrip().split(" ")
-                if is_float(i)==False:
+                if __is_float(i)==False:
                     # append number list if the element is an int but not float
                     try:
                         int(i)
@@ -109,7 +120,7 @@ def reshape_potential(potential, x, y, z, slice, option):
     M = len(y)
     Q = len(z)
     print("inside slicePotential2D: ", potential.shape, "(first input which needs to be reshaped")
-    pot3DArray = np.reshape(potential,(N,M,Q))
+    pot3DArray = np.reshape(potential,(N,M,Q),order='F')
     if option == "field":
         gradient = np.gradient(pot3DArray,x,y,z)[-1]
         pot2DArray = gradient[:, :, index]
@@ -117,7 +128,7 @@ def reshape_potential(potential, x, y, z, slice, option):
         pot2DArray = pot3DArray[:, :, index]
     return pot2DArray
     
-def parseVoltage(filename):
+def parse_voltage(filename):
     """
     input: a string, the filename 
            an int, number of gates
@@ -134,7 +145,7 @@ def parseVoltage(filename):
             delete.append(i)
     return s
 
-def importFolder(foldername):
+def import_folder(foldername):
     """
     input: a string, name of the folder where nextnano++ files are stored 
     output: a list, where each element is a list of voltages, potentials, and coordinates
@@ -144,7 +155,7 @@ def importFolder(foldername):
     for subdir, dirs, files in os.walk(folder):
         if subdir != folder and subdir[-7:] != '/output':
             counter += 1
-            voltage = parseVoltage(subdir)
+            voltage = parse_voltage(subdir)
             L.append([voltage])
         for file in files:
             filename = os.path.join(subdir, file)
@@ -191,20 +202,30 @@ def group_2D_potential(potentialL, voltages, coord, slice, option):
     potential_reshaped = np.reshape(potential_overall,shape)
     return potential_reshaped
 
-
 ########## Tests ##########
+if __name__ == "__main__":     
+    ########## User Inputs ##########
 
-
-potentialL = importFolder(folder)
-voltages = [V1, V2, V3, V4, V5]
-coord = potentialL[0][2]
-potentialND = group_2D_potential(potentialL, voltages, coord, -1, "potential")
-out = interp(potentialND, voltages, coord)
-print(out([0.2,1.0,1.0]))
-
-potentialL = importFolder(folder)
-fieldND = group_2D_potential(potentialL, voltages, coord, -1, "field")
-out2 = interp(fieldND, voltages, coord)
-print(out2([0.2,1.0,1.0]))
-
-# sliceField2D(potentialL[0][1], coord[0], coord[1], coord[2], -1)
+    # folder where all the nextnano files are stored
+    folder = 'nextnanoSims_Small'
+    
+    # gate voltages of the files that we want to preprocess
+    V1 = [0.1]
+    V2 = [0.2]
+    V3 = [0.2]
+    V4 = [0.2, 0.22, 0.24, 0.25, 0.26]
+    V5 = [0.1]
+    
+    potentialL = import_folder(folder)
+    voltages = [V1, V2, V3, V4, V5]
+    coord = potentialL[0][2]
+    potentialND = group_2D_potential(potentialL, voltages, coord, -1, "potential")
+    #out = interp(potentialND, voltages, coord)
+    #print(out([0.2,1.0,1.0]))
+    
+    potentialL = import_folder(folder)
+    fieldND = group_2D_potential(potentialL, voltages, coord, -1, "field")
+    #out2 = interp(fieldND, voltages, coord)
+    #print(out2([0.2,1.0,1.0]))
+    
+    # sliceField2D(potentialL[0][1], coord[0], coord[1], coord[2], -1)

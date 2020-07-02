@@ -4,3 +4,4 @@ software)
 '''
 
 from .gridparams import GridParameters
+from .nextnano_preprocess import *
