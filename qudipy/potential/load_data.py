@@ -25,22 +25,59 @@ def interp(potential, voltages, coord):
     interpolating_func = RegularGridInterpolator(variables, potential)
     return interpolating_func
 
-def build_interpolator(all_data):
+def build_interpolator(all_data_sep):
     
     # Get first set of x and y coordinates
-    x_coords = all_data[0][2][0]
-    y_coords = all_data[0][2][1]
+    x_coords = all_data_sep[0][2][0]
+    y_coords = all_data_sep[0][2][1]
     
     # Get total number of ctrls (including singleton dims)
-    n_ctrls = len(all_data[0][0])
+    n_ctrls = len(all_data_sep[0][0])
     
-    # Assemble all the potentials and collect the gate voltages
-    all_ctrls = np.zeros(len(all_data), n_ctrls)
-    for idx in range(len(all_data)):
-        all_ctrls[idx,:] = all_data[idx][0]
+    # Assemble the gate voltages
+    all_ctrls = np.zeros((len(all_data_sep), n_ctrls))
+    for idx in range(len(all_data_sep)):
+        all_ctrls[idx,:] = all_data_sep[idx][0]
         
-    print(all_ctrls)
+    # Find which gate voltages have singleton dimension. We need to keep track
+    # because the interpolator cannot handle singleton dimensions
+    single_dims = []
+    n_dims = []
+    ctrl_values = []
+    for idx in range(n_ctrls):
+        n_unique = len(set(all_ctrls[:,idx]))
+        if n_unique == 1:
+            single_dims.append(idx)
+        else:
+            n_dims.append(n_unique)
+            ctrl_values.append(sorted(list(set(all_ctrls[:,idx]))))
+        
+    # Now assemble the data to be interpolated
+    temp_n_dims = [range(n) for n in n_dims]
     
+    # It's a bit convoluted.. But we need to actually reverse the dimensions
+    # for the interpolant object due to the way we assembled all the potentials
+    # in the load_files function in order to most easily work with constructing
+    # the interpolator
+    n_dims.reverse()
+    ctrl_values = [ctrl_values[idx] for idx in reversed(range(len(ctrl_values)))]
+    
+    # Add the y and x coordinate lengths so we know the expected dimensions of 
+    # the total nd array of data to interpolate
+    all_data_stacked = np.zeros((np.prod(n_dims),len(y_coords),len(x_coords)))
+    n_dims.extend([len(y_coords),len(x_coords)])  
+
+    # Go and stack the data together and then reshape it into correct format    
+    for idx, curr_gate_idx in enumerate(product(*temp_n_dims)):
+        all_data_stacked[idx,:,:] = all_data_sep[idx][1]
+    
+    all_data_stacked = np.reshape(all_data_stacked,(n_dims))
+    
+    # Construct the interpolator
+    ctrl_values.extend([y_coords,x_coords])
+    interp_obj = RegularGridInterpolator(tuple(ctrl_values), all_data_stacked)
+    
+    return interp_obj
     
 def _load_one_file(fname):
     '''
@@ -157,12 +194,9 @@ if __name__ == "__main__":
     
     # gate voltages
     V1 = [0.1]
-    # V2 = [0.2, 0.22, 0.24, 0.26, 0.27]
-    # V3 = [0.2, 0.22, 0.24, 0.26, 0.27]
-    # V4 = [0.2, 0.22, 0.24, 0.26, 0.27]
-    V2 = [0.2, 0.22]
-    V3 = [0.2, 0.22]
-    V4 = [0.2, 0.22]
+    V2 = [0.2, 0.22, 0.24, 0.26, 0.27, 0.28, 0.29, 0.30]
+    V3 = [0.2, 0.22, 0.24, 0.26, 0.27, 0.28, 0.29, 0.30]
+    V4 = [0.2, 0.22, 0.24, 0.26, 0.27, 0.28, 0.29, 0.30]
     V5 = [0.1]
     ctrl_vals = [V1, V2, V3, V4, V5]
     
