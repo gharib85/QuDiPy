@@ -5,25 +5,79 @@ import os
 import re
 from itertools import product
 
+class Mod_RegularGridInterpolator:
+    
+    def __init__(self, ctrl_vals, interp_data, single_dim_idx):
+        # Build interpolator object (spline is not supported...)
+        self.interp_obj = RegularGridInterpolator(tuple(ctrl_vals),
+                                                  interp_data)
+        
+        # Track how many of the originally inputted grid vectors had only a 
+        # single dimension
+        self.single_dims = single_dim_idx
+        self.n_voltage_ctrls = len(ctrl_vals)-2
+        
+        # Extract grid vectors
+        self.gate_values = ctrl_vals[:-2]
+        self.x_coords = ctrl_vals[-1]
+        self.y_coords = ctrl_vals[-2]
+        
+        # Get min/max values for each voltage control (need the reversed due
+        # to the way we loaded the potentials)
+        self.min_max_vals = []
+        for idx in reversed(range(self.n_voltage_ctrls)):
+            curr_unique_volts = set(self.gate_values[idx])
+            
+            self.min_max_vals.append([min(curr_unique_volts),
+                                      max(curr_unique_volts)])
+    
+    def __call__(self, volt_vec):
+        # First check if the singleton dimensions were included in volt_vec
+        # and remove if so
+        if len(volt_vec) != self.n_voltage_ctrls:
+            # Double check that the inputted voltage vector has at least the
+            # original amount of voltages inputted (including the single dim
+            # voltages)
+            if len(volt_vec) != (self.n_voltage_ctrls + len(self.single_dims)):
+                raise ValueError('Input voltage vector does not have \
+                                 expected number of elements.')
+            else:
+                volt_vec = [volt_vec[idx] for idx in range(len(volt_vec)) if
+                            idx not in self.single_dims]
+        
+        # Check if values are out of min/max range
+        for idx in range(self.n_voltage_ctrls):
+            if (volt_vec[idx] >= self.min_max_vals[idx][0] and
+                volt_vec[idx] <= self.min_max_vals[idx][1]):
+                pass
+            else:
+                raise ValueError('Input voltage vector values are out of \
+                                 range of grid vectors.')
+            
+        
+        # Flip the voltage vector from the standard form to the reversed form
+        # we adopted when loading all the potentials.
+        volt_vec = volt_vec[::-1]
+        
+        volt_vec.extend([self.y_coords, self.x_coords])
+                    
+        # Call the RegularGridInterpolator with corrected (volt_vec,yy,xx)
+        new_volt_vec = [np.array(volt_vec[0]),np.array(volt_vec[1]),
+                        np.array(volt_vec[2]),self.y_coords,self.x_coords]
+        # print(*new_volt_vec)
+        
+        # Now build up meshgrid of points we want to query the interpolant
+        # object at
+        points = np.meshgrid(*new_volt_vec)
+        # Flatten it so the interpolator is happy
+        flat = np.array([m.flatten() for m in points])
+        # Do the interpolation
+        out_array = self.interp_obj(flat.T)
+        # Reshape back to our original shape
+        result = out_array.reshape(*points[0].shape)
+        
+        return result
 
-def interp(potential, voltages, coord):
-    """
-    inputs: 
-        potential is a n-dimensional array of 
-        voltages is a list of gate voltages
-        coord is a
-    output:
-        interpolating function with inputs of gate voltages and coordinates
-    """
-    x = [float(xi) for xi in coord[0]]
-    y = [float(yi) for yi in coord[1]]
-    variables = ()
-    for v in voltages:
-        if len(v) > 1:
-            variables = variables + (v,)
-    variables = variables+ (x,y)
-    interpolating_func = RegularGridInterpolator(variables, potential)
-    return interpolating_func
 
 def build_interpolator(all_data_sep):
     '''
@@ -93,7 +147,8 @@ def build_interpolator(all_data_sep):
     
     # Construct the interpolator
     ctrl_values.extend([y_coords,x_coords])
-    interp_obj = RegularGridInterpolator(tuple(ctrl_values), all_data_stacked)
+    interp_obj = Mod_RegularGridInterpolator(ctrl_values, all_data_stacked,
+                                             single_dims)
     
     return interp_obj
     
@@ -212,9 +267,9 @@ if __name__ == "__main__":
     
     # gate voltages
     V1 = [0.1]
-    V2 = [0.2, 0.22, 0.24, 0.26, 0.27, 0.28, 0.29, 0.30]
-    V3 = [0.2, 0.22, 0.24, 0.26, 0.27, 0.28, 0.29, 0.30]
-    V4 = [0.2, 0.22, 0.24, 0.26, 0.27, 0.28, 0.29, 0.30]
+    V2 = [0.2, 0.22, 0.24, 0.26]
+    V3 = [0.2, 0.22, 0.24, 0.26]
+    V4 = [0.2, 0.22, 0.24, 0.26]
     V5 = [0.1]
     ctrl_vals = [V1, V2, V3, V4, V5]
     
@@ -225,6 +280,8 @@ if __name__ == "__main__":
     potentialL = load_files(ctrl_vals, ctrl_names, f_type='pot', f_dir=pot_dir)
     
     pot_interp = build_interpolator(potentialL)
+    
+    ans = pot_interp([0.2, 0.2, 0.2])
     
 
     # folder = 'nextnanoSims_Small'
