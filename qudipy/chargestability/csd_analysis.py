@@ -264,7 +264,7 @@ class CSDAnalysis:
         num = self.csd.csd.shape[0]
 
         # Create the heatmap figure
-        f, ax = plt.subplots()
+        f, ax = plt.subplots(1,1)
         sb.heatmap(self.csd.csd, cbar=False, xticklabels=int(num/5), yticklabels=int(num/5))
         ax.axes.invert_yaxis()
 
@@ -288,3 +288,48 @@ class CSDAnalysis:
         ax2.get_xaxis().set_ticks([])
         ax.set(xlabel=r'V$_1$', ylabel=r'V$_2$')
         plt.show()
+
+    def find_tripletpoints(self):
+        '''
+        Finds the location of triplet points in a charge stability diagram.
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        triple_points: list of tuples with correspond to coordinates (x,y) of the triple point
+        '''
+        m_list = []
+        b_list = []
+
+        for centroid in self.valid_centroids:
+            theta = centroid[0]
+            rho = centroid[1]
+            m_list.append(-np.cos(theta)/np.sin(theta))
+            b_list.append(rho/np.sin(theta))
+
+        # Sort m, then use the same sorting index so eache (m,b) pair is kept
+        m_array = np.array(m_list)
+        b_array = np.array(b_list)
+        m_sort = m_list.argsort()
+        m_array = m_array[m_sort[::]]
+        b_array = b_array[m_sort[::]]
+
+        candidate_intersection_points = []
+        for i in range(len(m_array)):
+            for j in range(len(m_array)):
+                if i<=j:
+                    continue
+                m1_temp = m_array[i]
+                m2_temp = m_array[j]
+                if (m1_temp-m2_temp) < 0.01:
+                    continue
+                b1_temp = b_array[i]
+                b2_temp = b_array[j]
+                x_temp = (b2_temp-b1_temp)/(m1_temp-m2_temp)
+                y_temp = m1_temp * x_temp + b1_temp
+                candidate_intersection_points.append((x_temp, y_temp))
+
+        return candidate_intersection_points

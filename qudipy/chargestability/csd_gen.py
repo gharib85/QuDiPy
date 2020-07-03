@@ -160,7 +160,7 @@ class CSD:
         data = [
                 [v_1, v_2, (p:= self._lowest_energy(v_1, v_2))[0] * dot_1_multiplier + p[1] * dot_2_multiplier
                 ] for v_1 in self.v_1_values for v_2 in self.v_2_values
-                ]
+               ]
 
         # Create DataFrame from data and pivot into num by num array
         df = pd.DataFrame(data, columns=['V_g1', 'V_g2', 'Current'])
