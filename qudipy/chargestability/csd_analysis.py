@@ -5,6 +5,7 @@ Hough transfrom code based off of https://github.com/alyssaq/hough_transform.
 '''
 
 import numpy as np
+from numpy.lib.function_base import average
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sb
@@ -209,7 +210,7 @@ class CSDAnalysis:
             # Create uniques colors for each cluster
             unique_labels = set(labels)
             colors = [plt.cm.viridis(each) for each in np.linspace(0, 1, len(unique_labels))]
-            # Loop over each
+            # Loop over each group and corresponding color
             for k, col in zip(unique_labels, colors):
                 if k == -1:
                     # Black used for noise.
@@ -248,7 +249,7 @@ class CSDAnalysis:
         s.axes.set_ylabel(y_label)
         plt.show()
 
-    def plot_csd_with_lines(self):
+    def plot_csd_with_lines(self, points=None):
         '''
         Function which plots the CSD with the fitted lines over top of it
 
@@ -281,6 +282,10 @@ class CSDAnalysis:
             y = m * x + b
             sb.lineplot(x=x, y=y, ax=ax2)
 
+        if points is not None:
+            points = np.transpose(points)
+            sb.scatterplot(x=points[0], y=points[1], ax=ax2)
+
         # format the secodn axis and show the plot
         ax2.set_xlim([self.csd.v_g1_min,self.csd.v_g1_max])
         ax2.set_ylim([self.csd.v_g2_min,self.csd.v_g2_max])
@@ -291,7 +296,7 @@ class CSDAnalysis:
 
     def find_tripletpoints(self):
         '''
-        Finds the location of triplet points in a charge stability diagram.
+        Finds the location of triplet points in a charge stability diagram. 
 
         Parameters
         ----------
@@ -304,32 +309,42 @@ class CSDAnalysis:
         m_list = []
         b_list = []
 
-        for centroid in self.valid_centroids:
+        for centroid in self.centroids:
             theta = centroid[0]
             rho = centroid[1]
             m_list.append(-np.cos(theta)/np.sin(theta))
             b_list.append(rho/np.sin(theta))
 
-        # Sort m, then use the same sorting index so eache (m,b) pair is kept
+        # Sort m, then use the same sorting index so each (m,b) pair is kept
         m_array = np.array(m_list)
         b_array = np.array(b_list)
-        m_sort = m_list.argsort()
+        m_sort = m_array.argsort()
         m_array = m_array[m_sort[::]]
         b_array = b_array[m_sort[::]]
 
-        candidate_intersection_points = []
+        candidate_points = []
         for i in range(len(m_array)):
             for j in range(len(m_array)):
+                # Make sure you aren't looping over the same pair twice
                 if i<=j:
                     continue
+                # Extract values and compute expected intersection point
                 m1_temp = m_array[i]
                 m2_temp = m_array[j]
-                if (m1_temp-m2_temp) < 0.01:
-                    continue
                 b1_temp = b_array[i]
                 b2_temp = b_array[j]
                 x_temp = (b2_temp-b1_temp)/(m1_temp-m2_temp)
                 y_temp = m1_temp * x_temp + b1_temp
-                candidate_intersection_points.append((x_temp, y_temp))
+                # Discard if expected interection point lies outside the CSD
+                if (x_temp < self.csd.v_g1_min) or (x_temp > self.csd.v_g1_max) or (y_temp < self.csd.v_g2_min) or (y_temp > self.csd.v_g2_max):
+                    continue
+                candidate_points.append([x_temp, y_temp])
 
-        return candidate_intersection_points
+        # Convert to numpy arrays for ease of manipulation
+        candidate_points = np.array(candidate_points)
+
+        # Remove max and min x elements from points, which removes the invalid triple points
+        candidate_points = np.delete(candidate_points, np.argmin(candidate_points, axis=0)[0], axis=0)
+        triple_points = np.delete(candidate_points, np.argmax(candidate_points, axis=0)[0], axis=0)
+        
+        return triple_points
