@@ -4,10 +4,12 @@ sys.path.append('../../')
 import qudipy as qd
 import qudipy.potential as pot
 import qudipy.qutils as qt
-import qudipy.shuttling.parameters as params
+from qudipy.shuttling.parameters import Params 
 import numpy as np
-from scipy.fft import fft, ifft
+from scipy.fftpack import fft, ifft
 from scipy import sparse
+from scipy.sparse import diags
+from scipy.linalg import expm
 
 def initialize_params():
     """
@@ -64,56 +66,85 @@ def initialize_wf(consts, gparams):
     """
     # Pass sparams, gparams to the solve_schrodinger_eq qutils method to obtain the eigenvalues and eigenvectors
     e_ens, e_vecs = qt.solvers.solve_schrodinger_eq(consts, gparams, n_sols=1)      # n_sols set to 0 to obtain ground state
-    psi = np.real(e_vecs[:,0])
+    # psi = np.real(e_vecs[:,0])
+    psi = e_vecs[:,0]
 
     return psi
 
-def user_observe(t, psi, exp_K, exp_P):
-    """
-    for every time step, this function is called with inputs being the current time t
-    and the current state psi
-    """
-    # fourier transform into momentum space, psi(p)
-    psi_p = fft(psi)
-    # multiply psi(p) by exp(K/2)
-    exp_K_2 = exp_K/2
-    psi_p *= np.exp(exp_K_2)
-    # inverse fourier transform back into position space, psi(x)
-    psi_x = ifft(psi_p)
+# def user_observe(t, psi, exp_K, exp_P):
+#     """
+#     for every time step, this function is called with inputs being the current time t
+#     and the current state psi
+#     """
+#     # fourier transform into momentum space, psi(p)
+#     psi_p = fft(psi)
+#     # multiply psi(p) by exp(K/2)
+#     exp_K_2 = exp_K/2
+#     psi_p *= np.exp(exp_K_2)
+#     # inverse fourier transform back into position space, psi(x)
+#     psi_x = ifft(psi_p)
 
-    # iterate through nprint
-    for i in range(tprint):
-        psi_x *= exp(exp_K_2)
-        psi_p = fft(psi_x)
-        psi_p *= exp(exp_P)
-        psi_x = ifft(psi_p)
+#     # iterate through nprint
+#     for i in range(tprint):
+#         psi_x *= np.exp(exp_K_2)
+#         psi_p = fft(psi_x)
+#         psi_p *= np.exp(exp_P)
+#         psi_x = ifft(psi_p)
     
-    psi_x *= exp(exp_P)
-    psi_p = fft(psi_x)
-    psi_p *= exp(exp_K_2)
-    psi_x = ifft(psi_p)
+#     psi_x *= np.exp(exp_P)
+#     psi_p = fft(psi_x)
+#     psi_p *= np.exp(exp_K_2)
+#     psi_x = ifft(psi_p)
 
-    # TODO: calculate observable?
+#     # TODO: calculate observable?
 
-    return t+tprint, psi_x
+#     return t+tprint, psi_x
 
 def main():
-    consts, gparams = initialize_params
+    consts, gparams = initialize_params()
     KE_1D, PE_1D = initialize_ham(consts, gparams)
+    KE_1D = KE_1D.toarray()  
+    PE_1D = PE_1D.toarray()  
+    print("KE_1D: ", type(KE_1D))
+    print("PE_1D: ", type(PE_1D))
+    other_params = Params()
+    X = gparams.x
+    # print("X is:", X)
+    nx = len(X)
+    dx = (max(X) - min(X))/(nx-1)
+    I = [(i-nx/2) for i in range(nx)]
+    P = [2 * consts.pi * consts.hbar * i / (nx*dx) for i in I]
 
     # exponents present in evolution
-    exp_K = -j * dt * p**2 / (2*hbar * 2*params.mass)
-    exp_P = -j * dt * PE_1D /hbar
+    j = complex(0,1)
+    exp_K = expm(-j * other_params.dt / (2 * consts.hbar) * KE_1D)
+    exp_P = expm(-j * other_params.dt/consts.hbar  * PE_1D)
+    print(type(exp_K))
+    print(type(exp_P))
+
 
     # initialize psi(t=0)
-    psi = initialize_wf(consts, gparams)
-    print(psi)
+    # TODO delete
+    # note: wf is a list
+    psi_x = initialize_wf(consts, gparams)
+    print("initial wavefunction is: ", psi_x)
 
     t = 0
+    nt = 1500
     # iterate through nprint time steps
-    for j in range(nt/nprint):
-        t, psi = user_observe(t, psi, exp_K, exp_P)
+    for step in range(nt):
+        # fourier transform into momentum space, psi(p)
+        psi_p = fft(psi_x)
+        # multiply psi(p) by exp(K/2)
+        psi_p = np.matmul(psi_p, exp_K)
+        # inverse fourier transform back into position space, psi(x)
+        psi_x = ifft(psi_p)
+        psi_x = np.matmul(psi_x, exp_P)
+        psi_p = fft(psi_x)
+        psi_p = np.matmul(psi_p, exp_K)
+        psi_x = ifft(psi_p)
 
-    output = psi
+    output = psi_x
+    print(output)
 
 main()

@@ -42,6 +42,6 @@ class Params:
         # self.z2
 
         # # mass of the particle
-        # self.mass
-        # self.dt 
-        # self.hbar
+        self.mass = 0.0001
+        self.dt = 0.01
+        self.hbar = 1
