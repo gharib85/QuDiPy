@@ -71,34 +71,6 @@ def initialize_wf(consts, gparams):
 
     return psi
 
-# def user_observe(t, psi, exp_K, exp_P):
-#     """
-#     for every time step, this function is called with inputs being the current time t
-#     and the current state psi
-#     """
-#     # fourier transform into momentum space, psi(p)
-#     psi_p = fft(psi)
-#     # multiply psi(p) by exp(K/2)
-#     exp_K_2 = exp_K/2
-#     psi_p *= np.exp(exp_K_2)
-#     # inverse fourier transform back into position space, psi(x)
-#     psi_x = ifft(psi_p)
-
-#     # iterate through nprint
-#     for i in range(tprint):
-#         psi_x *= np.exp(exp_K_2)
-#         psi_p = fft(psi_x)
-#         psi_p *= np.exp(exp_P)
-#         psi_x = ifft(psi_p)
-    
-#     psi_x *= np.exp(exp_P)
-#     psi_p = fft(psi_x)
-#     psi_p *= np.exp(exp_K_2)
-#     psi_x = ifft(psi_p)
-
-#     # TODO: calculate observable?
-
-#     return t+tprint, psi_x
 
 def main():
     consts, gparams = initialize_params()

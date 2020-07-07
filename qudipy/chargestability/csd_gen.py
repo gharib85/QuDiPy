@@ -79,6 +79,7 @@ class CSD:
                                                                 v_g2**2 * self.e_c2 + self.c_g1 * v_g1 * self.c_g2 * v_g2 * self.e_cm)
 
         return 1/2 * n_1**2 * self.e_c1 + 1/2 * n_2**2 * self.e_c2 + n_1 * n_2 * self.e_cm + f
+
     def _lowest_energy(self, v_g1, v_g2):
         '''Returns occupation (n_1, n_2) with lowest energy for applied gate voltages v_g1, v_g2. 
         Dependent on c_l, c_r, c_m, c_g1 and c_g2 defined when object is initialized.
@@ -115,20 +116,20 @@ class CSD:
         else:
             return [state[0], 0]
 
-    def generate_csd(self, v_g1_max, v_g2_max, c_cs_1=None, c_cs_2=None, v_g1_min=0, v_g2_min=0, num=100, plotting=False):
+    def generate_csd(self, v_g1_max, v_g2_max, v_g1_min=0, v_g2_min=0, c_cs_1=None, c_cs_2=None, num=100, plotting=False):
         ''' Generates the charge stability diagram between v_g1(2)_min and v_g1(2)_max with num by num data points in 2D
 
         Parameters
         ----------
         v_g1_max: maximum voltage on plunger gate 1
         v_g2_max: maximum voltage on plunger gate 2
-        c_cs_1: coupling between charge sensor and dot 1
-        c_cs_2: coupling between charge sensor and dot 2
 
         Keyword Arguments
         -----------------
         v_g1_max: minimum voltage on plunger gate 1 (default 0)
         v_g2_max: minimum voltage on plunger gate 2 (default 0)
+        c_cs_1: coupling between charge sensor and dot 1 (default to None)
+        c_cs_2: coupling between charge sensor and dot 2 (default to None)
         num: number of voltage point in 1d, which leads to a num^2 charge stability diagram (default 100)
         plotting: flag indicating whether charge stability diagram should be plotted after completion (default False)
 
@@ -136,21 +137,29 @@ class CSD:
         -------
         None
         '''
+        self.num = num
+        self.v_g1_min = v_g1_min
+        self.v_g1_max = v_g1_max
+        self.v_g2_min = v_g2_min
+        self.v_g2_max = v_g2_max
         # Determines how to make the colorbar for the charge stability diagram
+        # If capacitances are given, use those as multipliers
         if (c_cs_1 is not None) and (c_cs_2 is not None):
             dot_1_multiplier = c_cs_1
             dot_2_multiplier = c_cs_2
+        # Otherwise, create a colormap that gives a uniques color combo to each (n,m) pair
         else:
             max_occupation = self._lowest_energy(v_g1_max, v_g2_max)
             dot_1_multiplier = 1
             dot_2_multiplier = max_occupation[0] + 1
 
-        # First and second elements are the applied volategs on gate 1 and 2, 
-        # third element is formula to calculate what the colorbar scale should indicate
+        # Generates all the voltages to be swept
+        self.v_1_values = [round(self.v_g1_min + i/num * (self.v_g1_max - self.v_g1_min), 4) for i in range(num)]
+        self.v_2_values = [round(self.v_g2_min + j/num * (self.v_g2_max - self.v_g2_min), 4) for j in range(num)]
+        # Goes through all the v_1 and v_2 values and generate the csd data
         data = [
-                [round(v_g1_min + i/num * (v_g1_max - v_g1_min), 4), round(v_g2_min + j/num * (v_g2_max - v_g2_min), 4), 
-                (p:= self._lowest_energy(v_g1_min + i/num * (v_g1_max - v_g1_min), v_g2_min + j/num * (v_g2_max - v_g2_min)))[0] * dot_1_multiplier + p[1] * dot_2_multiplier
-                ] for i in range(num) for j in range(num)
+                [v_1, v_2, (p:= self._lowest_energy(v_1, v_2))[0] * dot_1_multiplier + p[1] * dot_2_multiplier
+                ] for v_1 in self.v_1_values for v_2 in self.v_2_values
                 ]
 
         # Create DataFrame from data and pivot into num by num array
@@ -175,10 +184,12 @@ class CSD:
             p1 = sb.heatmap(self.csd, cbar=cbar_flag, xticklabels=int(
                 num/5), yticklabels=int(num/5), cbar_kws={'label': 'Current (arb.)'})
             p1.axes.invert_yaxis()
+            p1.set(xlabel=r'V$_1$', ylabel=r'V$_2$')
             plt.show()
 
             # Plot the "derivative" of the charge stability diagram
             p2 = sb.heatmap(df_der, cbar=cbar_flag, xticklabels=int(
             num/5), yticklabels=int(num/5))
             p2.axes.invert_yaxis()
+            p2.set(xlabel=r'V$_1$', ylabel=r'V$_2$')
             plt.show()
