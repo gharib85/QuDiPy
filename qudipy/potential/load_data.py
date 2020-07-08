@@ -20,10 +20,9 @@ class Mod_RegularGridInterpolator:
         self.x_coords = ctrl_vals[-1]
         self.y_coords = ctrl_vals[-2]
         
-        # Get min/max values for each voltage control (need the reversed due
-        # to the way we loaded the potentials)
+        # Get min/max values for each voltage control
         self.min_max_vals = []
-        for idx in reversed(range(self.n_voltage_ctrls)):
+        for idx in range(self.n_voltage_ctrls):
             curr_unique_volts = set(self.gate_values[idx])
             
             self.min_max_vals.append([min(curr_unique_volts),
@@ -37,8 +36,8 @@ class Mod_RegularGridInterpolator:
             # original amount of voltages inputted (including the single dim
             # voltages)
             if len(volt_vec) != (self.n_voltage_ctrls + len(self.single_dims)):
-                raise ValueError('Input voltage vector does not have \
-                                 expected number of elements.')
+                raise ValueError('Input voltage vector does not have' +
+                                 ' expected number of elements.')
             else:
                 volt_vec = [volt_vec[idx] for idx in range(len(volt_vec)) if
                             idx not in self.single_dims]
@@ -49,8 +48,8 @@ class Mod_RegularGridInterpolator:
                 volt_vec[idx] <= self.min_max_vals[idx][1]):
                 pass
             else:
-                raise ValueError('Input voltage vector values are out of \
-                                 range of grid vectors.')
+                raise ValueError('Input voltage vector values are out of' +
+                                 ' range of grid vectors.')
             
         
         # Flip the voltage vector from the standard form to the reversed form
@@ -219,8 +218,8 @@ def load_files(ctrl_vals, ctrl_names, f_type='pot', f_dir=None):
 
     # Check inputs
     if len(ctrl_vals) != len(ctrl_names):
-        raise ValueError('ctrl_vals and ctrl_names must have the same number\
-                         of elements.')
+        raise ValueError('ctrl_vals and ctrl_names must have the same' +
+                         ' number of elements.')
     
     # Check if dir was given
     if f_dir is None:
