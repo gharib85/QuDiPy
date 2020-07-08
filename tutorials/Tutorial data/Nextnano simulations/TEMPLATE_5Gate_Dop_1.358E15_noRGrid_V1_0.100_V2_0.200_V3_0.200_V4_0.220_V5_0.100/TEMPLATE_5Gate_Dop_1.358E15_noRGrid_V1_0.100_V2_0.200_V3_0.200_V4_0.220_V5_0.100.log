@@ -1,0 +1,464 @@
+00:00:00 Starting execution as:
+00:00:00 C:\Users\kswillic\Documents\nextnano_update_NUSOD\nextnano\2017_07_24\nextnano++\bin 64bit\nextnano++_Intel_64bit.exe --license C:\Users\kswillic\Documents\nextnano\License\license (1).txt --outputdirectory C:\Users\kswillic\Documents\nextnano\Output\TEMPLATE_5Gate_Dop_1.358E15_noRGrid_V1_0.100_V2_0.200_V3_0.200_V4_0.220_V5_0.100 --noautooutdir C:\Users\kswillic\Desktop\Brandon\Shuttling Simulations\TEMPLATE_5Gate_InputFiles\TEMPLATE_5Gate_Dop_1.358E15_noRGrid_V1_0.100_V2_0.200_V3_0.200_V4_0.220_V5_0.100.in 
+00:00:00 
+00:00:00 nextnano++ (1.4.1) Jun 30 2017
+00:00:00 ===========================================================================
+00:00:00 COPYRIGHT NOTICE                                                           
+00:00:00 ===========================================================================
+00:00:00 Please read the file 'copyright_nextnano++.txt' in your installation folder
+00:00:00 for further information about source code of third parties that is used    
+00:00:00 in the nextnano++ code.                                                    
+00:00:00 ===========================================================================
+00:00:00 
+00:00:00 
+00:00:00 =============================================================================
+00:00:00  PROCESSING FILE: C:\Users\kswillic\Desktop\Brandon\Shuttling Simulations\TEMPLATE_5Gate_InputFiles\TEMPLATE_5Gate_Dop_1.358E15_noRGrid_V1_0.100_V2_0.200_V3_0.200_V4_0.220_V5_0.100.in
+00:00:00 =============================================================================
+00:00:00 
+00:00:00 Preparing input validator...
+00:00:00 Reading input file (C:\Users\kswillic\Desktop\Brandon\Shuttling Simulations\TEMPLATE_5Gate_InputFiles\TEMPLATE_5Gate_Dop_1.358E15_noRGrid_V1_0.100_V2_0.200_V3_0.200_V4_0.220_V5_0.100.in)...
+00:00:00 
+00:00:00 WARNING: No database defined. Using default one.
+00:00:00 
+00:00:00 Preparing database validator...
+00:00:00 Reading database file (C:\Users\kswillic\Documents\nextnano_update_NUSOD\nextnano\2017_07_24\nextnano++\bin 64bit\..\Syntax\database_nnp.in)...
+00:00:00 This license file is specified: C:\Users\kswillic\Documents\nextnano\License\license (1).txt
+00:00:00  Reading in license file: C:\Users\kswillic\Documents\nextnano\License\license (1).txt
+00:00:00 
+00:00:00  ----------------------------------------------------------
+00:00:00  License issued to:
+00:00:00  First name(s):  Zbigniew
+00:00:00  Last name(s):   Wasilewski
+00:00:00  Organization:   University of Waterloo
+00:00:00  Country:        Canada
+00:00:00  email:          zwasilewski@uwaterloo.ca
+00:00:00 
+00:00:00  License valid until expiry date:
+00:00:00  Date: 2019-02-21
+00:00:00  License issued:
+00:00:00  Date: 2018-02-08
+00:00:00 
+00:00:00  NOTE: Your license will expire in 16 days.
+00:00:00  Found valid license.
+00:00:00  ----------------------------------------------------------
+00:00:00 
+00:00:00 
+00:00:00 ********* SETUP SIMULATION *****************************************************
+00:00:00 
+00:00:00 ********* Rotation Matrix *********
+00:00:00  1.0000000,  0.0000000,  0.0000000
+00:00:00  0.0000000,  1.0000000,  0.0000000
+00:00:00  0.0000000,  0.0000000,  1.0000000
+00:00:00 ***********************************
+00:00:00 
+00:00:00 ********* Simulation Grid *********   Gridsize: 103 * 35 * 78 = 281190
+00:00:00 
+00:00:00 Start initializing structure.
+00:00:00 Finished initializing structure.
+00:00:00 Structure initialization time: 0.096[s]
+00:00:00 
+00:00:00 ***** Quantum Subgrid ******     
+00:00:00 Gridsize: 103 * 35 * 6 = 21630
+00:00:00 
+00:00:00 ********* STRUCTURE OUTPUT *****************************************************
+00:00:00 
+00:00:00 ********* START CALCULATION ****************************************************
+00:00:00 
+00:00:00 Determine dirichlet points from contacts...
+00:00:00 Intrinsic charge time: 0.507[s]
+00:00:00 
+00:00:00 Discretizing Poisson equation...
+00:00:01 
+00:00:01 
+00:00:01 ========= STARTING FIRST BIAS SWEEP STEP =======================================
+00:00:01 GateContact_1 0.1 V   GateContact_2 0.2 V   GateContact_3 0.2 V   GateContact_4 0.22 V   GateContact_5 0.1 V   SiContact 0 V   
+00:00:01 
+00:00:01 Determine Fermi level dirichlet values in contacts...
+00:00:01 Initialize Fermi levels...
+00:00:01      cg started:   0.000000000000000E+000 -9.999999999999997E-007        1000
+00:00:01            1  0.953449473426975     
+00:00:01            2  0.121706595640808     
+00:00:01            3  0.111834936362656     
+00:00:01            4  7.159728978238296E-002
+00:00:01            5  5.260805594427512E-002
+00:00:01            6  3.779869608001942E-002
+00:00:01            7  2.958185908943874E-002
+00:00:01            8  2.114622239103574E-002
+00:00:01            9  1.533188205423740E-002
+00:00:01           10  1.178592549926894E-002
+00:00:01           11  8.724485909784611E-003
+00:00:01           12  5.571110328644572E-003
+00:00:01           13  4.237713362232821E-003
+00:00:01           14  2.744394642916392E-003
+00:00:01           15  1.965740074687611E-003
+00:00:01           16  1.426798932610182E-003
+00:00:01           17  8.842484086269360E-004
+00:00:01           18  6.630937772243869E-004
+00:00:01           19  4.803820129354903E-004
+00:00:01           20  3.303061500466389E-004
+00:00:01           21  2.213320992998401E-004
+00:00:01           22  1.296298342739184E-004
+00:00:01           23  8.503267777516514E-005
+00:00:01           24  5.825758107803216E-005
+00:00:01           25  3.620596706304000E-005
+00:00:01           26  2.252246406978981E-005
+00:00:01           27  1.482421748858714E-005
+00:00:01           28  9.417997886314500E-006
+00:00:01           29  6.217675782077140E-006
+00:00:01           30  4.018289618727658E-006
+00:00:01           31  2.631727960282366E-006
+00:00:01           32  1.676260251039954E-006
+00:00:01           33  1.062971487135129E-006
+00:00:01           34  8.621256208266249E-007
+00:00:01           35  6.207905277171770E-007
+00:00:01           36  3.614214317921184E-007
+00:00:01     cg matmuls:           36
+00:00:01     cg residual (rel,abs):   3.790672100253665E-007  5.889755705507094E-007
+00:00:01 Fermi level initialization time: 0.485[s]
+00:00:01 Initialize contacts as charge neutral...
+00:00:01 Determine Potential Dirichlet values in Schottky contacts...
+00:00:01 Update contact discretization in Poisson equation...
+00:00:01 
+00:00:01 Initialize electrostatic potential...
+00:00:03 Charge Neutrality time: 1.276[s]
+00:00:03 
+00:00:03 Solving nonlinear Poisson equation...
+00:00:03   Newton step: 1	17317321.5
+00:00:04     cg matmuls:           73
+00:00:04     cg residual (rel,abs):   5.942660395048697E-012  1.720098934547345E-007
+00:00:04     line search step: 	1 	23956740.8
+00:00:04     line search step: 	0.5 	12422928.9
+00:00:05     line search step: 	0.25 	13436841.7
+00:00:05   Newton step: 2	12422928.9
+00:00:05     cg matmuls:           62
+00:00:05     cg residual (rel,abs):   6.607138446853253E-012  1.719175345924147E-007
+00:00:06     line search step: 	1 	2395234.85
+00:00:06   Newton step: 3	2395234.85
+00:00:06     cg matmuls:           53
+00:00:06     cg residual (rel,abs):   2.389428705452829E-011  1.569272067621832E-007
+00:00:07     line search step: 	1 	467473.851
+00:00:07   Newton step: 4	467473.851
+00:00:07     cg matmuls:           51
+00:00:07     cg residual (rel,abs):   8.705033874648757E-011  1.496165956077659E-007
+00:00:08     line search step: 	1 	99764.4628
+00:00:08   Newton step: 5	99764.4628
+00:00:08     cg matmuls:           50
+00:00:08     cg residual (rel,abs):   1.983915489581709E-010  9.954332685003396E-008
+00:00:09     line search step: 	1 	20985.8422
+00:00:09   Newton step: 6	20985.8422
+00:00:09     cg matmuls:           49
+00:00:09     cg residual (rel,abs):   1.188212975385057E-009  1.631457022606215E-007
+00:00:10     line search step: 	1 	3995.07156
+00:00:10   Newton step: 7	3995.07156
+00:00:10     cg matmuls:           53
+00:00:10     cg residual (rel,abs):   2.637267024743061E-009  1.168426490230962E-007
+00:00:11     line search step: 	1 	763.833406
+00:00:11   Newton step: 8	763.833406
+00:00:11     cg matmuls:           57
+00:00:11     cg residual (rel,abs):   3.121102991817120E-009  1.325913141033772E-007
+00:00:12     line search step: 	1 	175.084243
+00:00:12   Newton step: 9	175.084243
+00:00:12     cg matmuls:           65
+00:00:12     cg residual (rel,abs):   2.602033391256474E-009  1.589950476281488E-007
+00:00:13     line search step: 	1 	91.5776783
+00:00:13   Newton step: 10	91.5776783
+00:00:14     cg matmuls:           81
+00:00:14     cg residual (rel,abs):   1.830887805101693E-009  1.509222076047754E-007
+00:00:14     line search step: 	1 	67.2236752
+00:00:14   Newton step: 11	67.2236752
+00:00:15     cg matmuls:          107
+00:00:15     cg residual (rel,abs):   1.292702170493474E-009  1.541537305308755E-007
+00:00:15     line search step: 	1 	52.4792542
+00:00:15   Newton step: 12	52.4792542
+00:00:16     cg matmuls:          129
+00:00:16     cg residual (rel,abs):   9.571854801958557E-010  1.592279719466719E-007
+00:00:17     line search step: 	1 	51.3851715
+00:00:17   Newton step: 13	51.3851715
+00:00:18     cg matmuls:          159
+00:00:18     cg residual (rel,abs):   8.840307393742616E-010  1.329003766522127E-007
+00:00:18     line search step: 	1 	70.4349892
+00:00:19     line search step: 	0.5 	43.9729571
+00:00:19     line search step: 	0.25 	42.5469056
+00:00:19     line search step: 	0.125 	45.8463661
+00:00:19   Newton step: 14	42.5469056
+00:00:21     cg matmuls:          198
+00:00:21     cg residual (rel,abs):   5.284370019860430E-010  1.495851681887648E-007
+00:00:21     line search step: 	1 	108.270373
+00:00:21     line search step: 	0.5 	58.1988654
+00:00:22     line search step: 	0.25 	41.8253514
+00:00:22     line search step: 	0.125 	39.5896742
+00:00:22     line search step: 	0.0625 	40.4577973
+00:00:22   Newton step: 15	39.5896742
+00:00:24     cg matmuls:          240
+00:00:24     cg residual (rel,abs):   3.383786009877025E-010  1.673850214886344E-007
+00:00:24     line search step: 	1 	113.8624
+00:00:25     line search step: 	0.5 	60.3516782
+00:00:25     line search step: 	0.25 	41.1938604
+00:00:25     line search step: 	0.125 	37.4661667
+00:00:26     line search step: 	0.0625 	37.7866918
+00:00:26   Newton step: 16	37.4661667
+00:00:28     cg matmuls:          332
+00:00:28     cg residual (rel,abs):   1.104110887131099E-010  1.724768286335144E-007
+00:00:28     line search step: 	1 	11.6192001
+00:00:28   Newton step: 17	11.6192001
+00:00:31     cg matmuls:          334
+00:00:31     cg residual (rel,abs):   5.183496692970019E-010  1.748757078776073E-007
+00:00:31     line search step: 	1 	5.19350297
+00:00:31   Newton step: 18	5.19350297
+00:00:34     cg matmuls:          347
+00:00:34     cg residual (rel,abs):   7.702009441805659E-010  1.413598504453134E-007
+00:00:34     line search step: 	1 	3.72915374
+00:00:34   Newton step: 19	3.72915374
+00:00:36     cg matmuls:          371
+00:00:36     cg residual (rel,abs):   3.760630796615747E-010  1.291136044696170E-007
+00:00:37     line search step: 	1 	167670.703
+00:00:37     line search step: 	0.5 	29722.7442
+00:00:37     line search step: 	0.25 	7340.42729
+00:00:38     line search step: 	0.125 	2051.058
+00:00:38     line search step: 	0.0625 	593.595368
+00:00:38     line search step: 	0.03125 	132.47598
+00:00:39     line search step: 	0.015625 	22.075705
+00:00:39     line search step: 	0.0078125 	5.52254317
+00:00:39     line search step: 	0.00390625 	3.72143493
+00:00:39     line search step: 	0.001953125 	3.72192714
+00:00:39   Newton step: 20	3.72143493
+00:00:42     cg matmuls:          362
+00:00:42     cg residual (rel,abs):   5.654309525997351E-010  1.780862858693251E-007
+00:00:42     line search step: 	1 	124496.128
+00:00:43     line search step: 	0.5 	17201.3158
+00:00:43     line search step: 	0.25 	3565.9128
+00:00:43     line search step: 	0.125 	958.816918
+00:00:43     line search step: 	0.0625 	259.108291
+00:00:44     line search step: 	0.03125 	45.1918097
+00:00:44     line search step: 	0.015625 	3.70249588
+00:00:44     line search step: 	0.0078125 	3.69237107
+00:00:45     line search step: 	0.00390625 	3.70690052
+00:00:45   Newton step: 21	3.69237107
+00:00:47     cg matmuls:          368
+00:00:47     cg residual (rel,abs):   4.622204387486178E-010  1.443501732677634E-007
+00:00:48     line search step: 	1 	124486.55
+00:00:48     line search step: 	0.5 	17557.179
+00:00:48     line search step: 	0.25 	3756.49627
+00:00:48     line search step: 	0.125 	1051.68699
+00:00:49     line search step: 	0.0625 	324.83526
+00:00:49     line search step: 	0.03125 	85.1402532
+00:00:49     line search step: 	0.015625 	15.0712937
+00:00:50     line search step: 	0.0078125 	3.69780635
+00:00:50     line search step: 	0.00390625 	3.67795108
+00:00:50     line search step: 	0.001953125 	3.68515997
+00:00:50   Newton step: 22	3.67795108
+00:00:53     cg matmuls:          359
+00:00:53     cg residual (rel,abs):   5.355377116444991E-010  1.657156448661629E-007
+00:00:53     line search step: 	1 	122908.262
+00:00:53     line search step: 	0.5 	17283.9246
+00:00:54     line search step: 	0.25 	3717.95444
+00:00:54     line search step: 	0.125 	1059.06653
+00:00:54     line search step: 	0.0625 	345.564101
+00:00:55     line search step: 	0.03125 	103.603628
+00:00:55     line search step: 	0.015625 	26.3776075
+00:00:55     line search step: 	0.0078125 	6.15528709
+00:00:55     line search step: 	0.00390625 	3.69034575
+00:00:56     line search step: 	0.001953125 	3.67095133
+00:00:56     line search step: 	0.0009765625 	3.6743699
+00:00:56   Newton step: 23	3.67095133
+00:00:59     cg matmuls:          363
+00:00:59     cg residual (rel,abs):   6.044619228836131E-010  1.611167514668314E-007
+00:00:59     line search step: 	1 	79897.4176
+00:00:59     line search step: 	0.5 	5945.98324
+00:01:00     line search step: 	0.25 	479.601843
+00:01:00     line search step: 	0.125 	117.055787
+00:01:00     line search step: 	0.0625 	31.8459262
+00:01:00     line search step: 	0.03125 	7.73405284
+00:01:01     line search step: 	0.015625 	3.83565244
+00:01:01     line search step: 	0.0078125 	3.65061001
+00:01:01     line search step: 	0.00390625 	3.65738762
+00:01:01   Newton step: 24	3.65061001
+00:01:04     cg matmuls:          357
+00:01:04     cg residual (rel,abs):   7.466757533005924E-010  1.706932200963388E-007
+00:01:04     line search step: 	1 	70757.1061
+00:01:04     line search step: 	0.5 	4166.46963
+00:01:05     line search step: 	0.25 	120.286063
+00:01:05     line search step: 	0.125 	10.4345518
+00:01:05     line search step: 	0.0625 	3.67515018
+00:01:06     line search step: 	0.03125 	3.54375267
+00:01:06     line search step: 	0.015625 	3.59447333
+00:01:06   Newton step: 25	3.54375267
+00:01:08     cg matmuls:          350
+00:01:08     cg residual (rel,abs):   8.287152630040587E-010  1.740279525222891E-007
+00:01:09     line search step: 	1 	69195.0073
+00:01:09     line search step: 	0.5 	4359.92473
+00:01:09     line search step: 	0.25 	218.984739
+00:01:10     line search step: 	0.125 	3.09418275
+00:01:10     line search step: 	0.0625 	2.5136174
+00:01:10     line search step: 	0.03125 	3.43490815
+00:01:10   Newton step: 26	2.5136174
+00:01:13     cg matmuls:          330
+00:01:13     cg residual (rel,abs):   1.529523812017691E-009  1.576971934870586E-007
+00:01:13     line search step: 	1 	3.0366217
+00:01:13     line search step: 	0.5 	1.50329423
+00:01:13     line search step: 	0.25 	1.89755424
+00:01:13   Newton step: 27	1.50329423
+00:01:16     cg matmuls:          342
+00:01:16     cg residual (rel,abs):   1.586991124803170E-009  1.228320263402627E-007
+00:01:16     line search step: 	1 	4.97578841
+00:01:16     line search step: 	0.5 	3.14333389
+00:01:17     line search step: 	0.25 	1.58341144
+00:01:17     line search step: 	0.125 	1.38854011
+00:01:17     line search step: 	0.0625 	1.42844841
+00:01:17   Newton step: 28	1.38854011
+00:01:20     cg matmuls:          291
+00:01:20     cg residual (rel,abs):   3.503004429090851E-008  1.750770980834410E-007
+00:01:20     line search step: 	1 	2.3549489
+00:01:20     line search step: 	0.5 	1.43139442
+00:01:20     line search step: 	0.25 	1.35080883
+00:01:21     line search step: 	0.125 	1.17719321
+00:01:21     line search step: 	0.0625 	1.31176775
+00:01:21   Newton step: 29	1.17719321
+00:01:23     cg matmuls:          282
+00:01:23     cg residual (rel,abs):   1.201008952677736E-008  1.497397355053802E-007
+00:01:23     line search step: 	1 	1.39881172
+00:01:24     line search step: 	0.5 	0.939900228
+00:01:24     line search step: 	0.25 	0.872508653
+00:01:24     line search step: 	0.125 	1.00131709
+00:01:24   Newton step: 30	0.872508653
+00:01:26     cg matmuls:          281
+00:01:26     cg residual (rel,abs):   1.156385285575453E-008  1.572544782652325E-007
+00:01:27     line search step: 	1 	1.07585734
+00:01:27     line search step: 	0.5 	0.610104629
+00:01:27     line search step: 	0.25 	0.695455358
+00:01:27   Newton step: 31	0.610104629
+00:01:29     cg matmuls:          295
+00:01:29     cg residual (rel,abs):   3.410903983489479E-009  1.577117859462125E-007
+00:01:30     line search step: 	1 	0.384308974
+00:01:30   Newton step: 32	0.384308974
+00:01:32     cg matmuls:          303
+00:01:32     cg residual (rel,abs):   2.600403841180315E-009  1.599631091693666E-007
+00:01:32     line search step: 	1 	16.607179
+00:01:32     line search step: 	0.5 	0.342782595
+00:01:33     line search step: 	0.25 	0.327724143
+00:01:33     line search step: 	0.125 	0.347790493
+00:01:33   Newton step: 33	0.327724143
+00:01:35     cg matmuls:          297
+00:01:35     cg residual (rel,abs):   3.881092011973174E-009  1.790588352519772E-007
+00:01:36     line search step: 	1 	16.6050651
+00:01:36     line search step: 	0.5 	0.289004707
+00:01:36     line search step: 	0.25 	0.275285477
+00:01:36     line search step: 	0.125 	0.294641765
+00:01:36   Newton step: 34	0.275285477
+00:01:39     cg matmuls:          302
+00:01:39     cg residual (rel,abs):   4.100317538116644E-009  1.418804474101550E-007
+00:01:39     line search step: 	1 	16.6035756
+00:01:39     line search step: 	0.5 	2.02149214
+00:01:39     line search step: 	0.25 	0.232638691
+00:01:40     line search step: 	0.125 	0.247754937
+00:01:40   Newton step: 35	0.232638691
+00:01:42     cg matmuls:          300
+00:01:42     cg residual (rel,abs):   5.467901607658279E-009  1.418951069167784E-007
+00:01:42     line search step: 	1 	16.6026327
+00:01:43     line search step: 	0.5 	2.5163379
+00:01:43     line search step: 	0.25 	1.72463964
+00:01:43     line search step: 	0.125 	0.666548753
+00:01:43     line search step: 	0.0625 	0.219882942
+00:01:44     line search step: 	0.03125 	0.225870316
+00:01:44   Newton step: 36	0.219882942
+00:01:46     cg matmuls:          291
+00:01:46     cg residual (rel,abs):   7.580670519590110E-009  1.783509178677664E-007
+00:01:46     line search step: 	1 	16.6015407
+00:01:46     line search step: 	0.5 	2.51256123
+00:01:47     line search step: 	0.25 	1.94693172
+00:01:47     line search step: 	0.125 	1.36599981
+00:01:47     line search step: 	0.0625 	0.559662348
+00:01:48     line search step: 	0.03125 	0.215752285
+00:01:48     line search step: 	0.015625 	0.216557095
+00:01:48   Newton step: 37	0.215752285
+00:01:50     cg matmuls:          291
+00:01:50     cg residual (rel,abs):   7.111176781458872E-009  1.620222156490047E-007
+00:01:50     line search step: 	1 	16.5927888
+00:01:51     line search step: 	0.5 	1.50679775
+00:01:51     line search step: 	0.25 	0.490601098
+00:01:51     line search step: 	0.125 	0.21861306
+00:01:51     line search step: 	0.0625 	0.206245729
+00:01:52     line search step: 	0.03125 	0.209797652
+00:01:52   Newton step: 38	0.206245729
+00:01:54     cg matmuls:          285
+00:01:54     cg residual (rel,abs):   8.359294760802024E-009  1.785552270953195E-007
+00:01:54     line search step: 	1 	16.5885571
+00:01:54     line search step: 	0.5 	0.986232896
+00:01:55     line search step: 	0.25 	0.210447997
+00:01:55     line search step: 	0.125 	0.186446089
+00:01:55     line search step: 	0.0625 	0.194621679
+00:01:55   Newton step: 39	0.186446089
+00:01:57     cg matmuls:          292
+00:01:57     cg residual (rel,abs):   5.810213426637030E-009  1.085932324406339E-007
+00:01:58     line search step: 	1 	16.5796929
+00:01:58     line search step: 	0.5 	0.550824786
+00:01:58     line search step: 	0.25 	0.158468265
+00:01:59     line search step: 	0.125 	0.165962659
+00:01:59   Newton step: 40	0.158468265
+00:02:01     cg matmuls:          277
+00:02:01     cg residual (rel,abs):   1.256057452900188E-008  1.760685282085543E-007
+00:02:01     line search step: 	1 	16.5473108
+00:02:01     line search step: 	0.5 	0.257787837
+00:02:02     line search step: 	0.25 	0.127322284
+00:02:02     line search step: 	0.125 	0.140432286
+00:02:02   Newton step: 41	0.127322284
+00:02:04     cg matmuls:          270
+00:02:04     cg residual (rel,abs):   1.456781499114913E-008  1.531540042553579E-007
+00:02:04     line search step: 	1 	16.511514
+00:02:04     line search step: 	0.5 	0.124013627
+00:02:05     line search step: 	0.25 	0.0993126156
+00:02:05     line search step: 	0.125 	0.112302376
+00:02:05   Newton step: 42	0.0993126156
+00:02:07     cg matmuls:          267
+00:02:07     cg residual (rel,abs):   1.909980897335605E-008  1.505998872753106E-007
+00:02:07     line search step: 	1 	16.4045283
+00:02:08     line search step: 	0.5 	0.0644123297
+00:02:08     line search step: 	0.25 	0.0763157856
+00:02:08   Newton step: 43	0.0644123297
+00:02:10     cg matmuls:          259
+00:02:10     cg residual (rel,abs):   3.106463857522565E-008  1.224514078208410E-007
+00:02:10     line search step: 	1 	16.2707034
+00:02:10     line search step: 	0.5 	0.0364323673
+00:02:11     line search step: 	0.25 	0.0492666227
+00:02:11   Newton step: 44	0.0364323673
+00:02:12     cg matmuls:          245
+00:02:12     cg residual (rel,abs):   8.041659769333712E-008  1.514104272789441E-007
+00:02:13     line search step: 	1 	9.54884972
+00:02:13     line search step: 	0.5 	0.0482561259
+00:02:13     line search step: 	0.25 	0.0283993825
+00:02:14     line search step: 	0.125 	0.0320977044
+00:02:14   Newton step: 45	0.0283993825
+00:02:15     cg matmuls:          238
+00:02:15     cg residual (rel,abs):   1.248889935703195E-007  1.745177665463924E-007
+00:02:16     line search step: 	1 	0.145185009
+00:02:16     line search step: 	0.5 	0.0178105794
+00:02:16     line search step: 	0.25 	0.0220797718
+00:02:16   Newton step: 46	0.0178105794
+00:02:18     cg matmuls:          237
+00:02:18     cg residual (rel,abs):   1.869918206715108E-007  1.223591384264001E-007
+00:02:18     line search step: 	1 	0.0659852088
+00:02:19     line search step: 	0.5 	0.0130516435
+00:02:19     line search step: 	0.25 	0.0144689564
+00:02:19   Newton step: 47	0.0130516435
+00:02:21     cg matmuls:          226
+00:02:21     cg residual (rel,abs):   6.535527786938229E-007  1.783060755146863E-007
+00:02:21     line search step: 	1 	0.00852160956
+00:02:21   Newton step: 48	0.00852160956
+00:02:22     cg matmuls:          189
+00:02:22     cg residual (rel,abs):   4.311113788824736E-005  1.567423081797278E-007
+00:02:23     line search step: 	1 	0.00242811608
+00:02:23   Newton step: 49	0.00242811608
+00:02:24     cg matmuls:          144
+00:02:24     cg residual (rel,abs):   1.218053070562991E-004  1.719052656199951E-007
+00:02:24     line search step: 	1 	0.000834129502
+00:02:24   Newton step: 50	0.000834129502
+00:02:25 
+00:02:25 ********* OUTPUT ***************************************************************
+00:02:25 Total Poisson Solution Time: 143.027[s]  (2.38378333[m])
+00:02:25   -  Poisson discretization time: 0.21[s]
+00:02:25   -  Poisson linear solver time: 72.87[s]  (1.2145[m])
+00:02:25 Simulator Run Time: 145.321[s]  (2.42201667[m])
+00:02:25 
+00:02:25 ================================================================================
+00:02:25  DONE.
+00:02:25 ================================================================================
