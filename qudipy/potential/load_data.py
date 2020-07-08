@@ -1,8 +1,6 @@
 import numpy as np
 import pandas as pd
 from scipy.interpolate import RegularGridInterpolator, interp2d
-import os
-import re
 from itertools import product
 
 class Mod_RegularGridInterpolator:
@@ -57,29 +55,29 @@ class Mod_RegularGridInterpolator:
         
         # Flip the voltage vector from the standard form to the reversed form
         # we adopted when loading all the potentials.
-        volt_vec = volt_vec[::-1]
+        #volt_vec = volt_vec[::-1]
         
         volt_vec.extend([self.y_coords, self.x_coords])
                     
         # Call the RegularGridInterpolator with corrected (volt_vec,yy,xx)
-        new_volt_vec = [np.array(volt_vec[0]),np.array(volt_vec[1]),
-                        np.array(volt_vec[2]),self.y_coords,self.x_coords]
+        #new_volt_vec = [np.array(volt_vec[0]),np.array(volt_vec[1]),
+        #                np.array(volt_vec[2]),self.y_coords,self.x_coords]
         # print(*new_volt_vec)
         
         # Now build up meshgrid of points we want to query the interpolant
         # object at
-        points = np.meshgrid(*new_volt_vec)
+        #points = np.meshgrid(*new_volt_vec)
+        points = np.meshgrid(*volt_vec)
         # Flatten it so the interpolator is happy
         flat = np.array([m.flatten() for m in points])
         # Do the interpolation
         out_array = self.interp_obj(flat.T)
         # Reshape back to our original shape
-        result = out_array.reshape(*points[0].shape)
+        result = np.squeeze(out_array.reshape(*points[0].shape))
         
         return result
 
-
-def build_interpolator(all_data_sep):
+def build_interpolator(load_data_dict):
     '''
     This function constructs an interpolator object for either a group of 
     potential or electric field files.
@@ -100,16 +98,14 @@ def build_interpolator(all_data_sep):
     '''
     
     # Get first set of x and y coordinates
-    x_coords = all_data_sep[0][2][0]
-    y_coords = all_data_sep[0][2][1]
+    x_coords = load_data_dict['coords'][0]
+    y_coords = load_data_dict['coords'][1]
+    
+    # Extract all the control values
+    all_ctrls = np.asarray(load_data_dict['ctrl_vals'])
     
     # Get total number of ctrls (including singleton dims)
-    n_ctrls = len(all_data_sep[0][0])
-    
-    # Assemble the gate voltages
-    all_ctrls = np.zeros((len(all_data_sep), n_ctrls))
-    for idx in range(len(all_data_sep)):
-        all_ctrls[idx,:] = all_data_sep[idx][0]
+    n_ctrls = len(load_data_dict['ctrl_vals'][0])
         
     # Find which gate voltages have singleton dimension. We need to keep track
     # because the interpolator cannot handle singleton dimensions
@@ -127,21 +123,15 @@ def build_interpolator(all_data_sep):
     # Now assemble the data to be interpolated
     temp_n_dims = [range(n) for n in n_dims]
     
-    # It's a bit convoluted.. But we need to actually reverse the dimensions
-    # for the interpolant object due to the way we assembled all the potentials
-    # in the load_files function in order to most easily work with constructing
-    # the interpolator
-    n_dims.reverse()
-    ctrl_values = [ctrl_values[idx] for idx in reversed(range(len(ctrl_values)))]
-    
     # Add the y and x coordinate lengths so we know the expected dimensions of 
     # the total nd array of data to interpolate
     all_data_stacked = np.zeros((np.prod(n_dims),len(y_coords),len(x_coords)))
     n_dims.extend([len(y_coords),len(x_coords)])  
 
-    # Go and stack the data together and then reshape it into correct format    
+    # Go and stack the potential data together and then reshape it into
+    # correct format    
     for idx, curr_gate_idx in enumerate(product(*temp_n_dims)):
-        all_data_stacked[idx,:,:] = all_data_sep[idx][1]
+        all_data_stacked[idx,:,:] = load_data_dict['potentials'][idx]
     
     all_data_stacked = np.reshape(all_data_stacked,(n_dims))
     
@@ -204,7 +194,7 @@ def load_files(ctrl_vals, ctrl_names, f_type='pot', f_dir=None):
     3D nextnano simulations, you must preprocess them first). Potential files
     are assumed to follow the syntax: 
     'TYPE_C1NAME_C1VAL_C2NAME_C2VAL_..._CNNAME_CNVAL.txt'
-    where TPYE = 'Uxy' or 'Ez'. 
+    where TYPE = 'Uxy' or 'Ez'. 
     Refer to tutorial for a more explicit example.
 
     Parameters
@@ -236,7 +226,9 @@ def load_files(ctrl_vals, ctrl_names, f_type='pot', f_dir=None):
     if f_dir is None:
         f_dir = ''
 
-    all_pots = []
+    all_files = {}
+    cval_array = []
+    pots_array = []
     # Loop through all combinations of gate voltages to load the files
     for idx, curr_cvals in enumerate(product(*ctrl_vals)):
         # Now build up the current file name
@@ -254,51 +246,19 @@ def load_files(ctrl_vals, ctrl_names, f_type='pot', f_dir=None):
         # After file name is constructed, load the data from file into a larger
         # list containing information about all the loaded files.
         x, y, pot = _load_one_file(f_dir + f_name)
-        all_pots.append([curr_cvals])
-        all_pots[idx].append(pot)
-        all_pots[idx].append((x,y))
         
-    return all_pots
+        if idx == 0:
+            all_files['coords'] = (x,y)
+            
+        cval_array.append(list(curr_cvals))
+        pots_array.append(pot)
+        
+    all_files['ctrl_vals'] = cval_array
+    all_files['potentials'] = pots_array
+    
+    
+    return all_files
 
-if __name__ == "__main__":
-    
-    # # number of gates
-    # numberOfGates = 5
-    
-    # gate voltages
-    V1 = [0.1]
-    V2 = [0.2, 0.22, 0.24, 0.26]
-    V3 = [0.2, 0.22, 0.24, 0.26]
-    V4 = [0.2, 0.22, 0.24, 0.26]
-    V5 = [0.1]
-    ctrl_vals = [V1, V2, V3, V4, V5]
-    
-    ctrl_names = ['V1','V2','V3','V4','V5']
-    
-    pot_dir = './Sliced_potentials/'
-    
-    potentialL = load_files(ctrl_vals, ctrl_names, f_type='pot', f_dir=pot_dir)
-    
-    pot_interp = build_interpolator(potentialL)
-    
-    ans = pot_interp([0.2, 0.2, 0.2])
-    
-
-    # folder = 'nextnanoSims_Small'
-    
-    # potentialL = import_folder(folder)
-    # voltages = [V1, V2, V3, V4, V5]
-    # coord = potentialL[0][2]
-    # potentialND = group_2D_potential(potentialL, voltages, coord, -1, "potential")
-    # out = interp(potentialND, voltages, coord)
-    # print(out([0.2,1.0,1.0]))
-    
-    # potentialL = import_folder(folder)
-    # fieldND = group_2D_potential(potentialL, voltages, coord, -1, "field")
-    # out2 = interp(fieldND, voltages, coord)
-    # print(out2([0.2,1.0,1.0]))
-    
-    
     
     
 
