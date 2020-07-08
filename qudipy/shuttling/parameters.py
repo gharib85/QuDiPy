@@ -43,5 +43,5 @@ class Params:
 
         # # mass of the particle
         self.mass = 0.0001
-        self.dt = 0.01
+        self.dt = 5e-16
         self.hbar = 1

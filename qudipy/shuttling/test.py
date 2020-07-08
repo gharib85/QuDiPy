@@ -38,6 +38,7 @@ def initialize_ham(consts, gparams):
     find the kinetic term and the potential term of a 1D Hamiltonian
     using the constants class with the Si/SiO2 material system and the GridParameters obejct 
     of the harmonic potential
+    TODO: generalize to 2D wavefunctions
     """
     # Build potential energy hamiltonian term
     PE_1D = sparse.diags(gparams.potential)
@@ -66,32 +67,58 @@ def initialize_wf(consts, gparams):
     TODO: generalize to 2D wavefunctions
     """
     # Pass sparams, gparams to the solve_schrodinger_eq qutils method to obtain the eigenvalues and eigenvectors
-    e_ens, e_vecs = qt.solvers.solve_schrodinger_eq(consts, gparams, n_sols=5)      # n_sols set to 0 to obtain ground state
+    e_ens, e_vecs = qt.solvers.solve_schrodinger_eq(consts, gparams, n_sols=1)      # n_sols set to 0 to obtain ground state
     # psi = np.real(e_vecs[:,0])
-    psi = e_vecs[:,1]
+    psi = e_vecs[:,0]
 
     return psi
 
-def main():
-    # initialize relevant constants and parameters for the calculation
+def user_observe(psi_x):
     consts, gparams = initialize_params()
-    # diagonal matrix of potential energy in position space
-    __, PE_1D = initialize_ham(consts, gparams)
-    PE_1D = PE_1D.toarray()         
+    KE_1D, PE_1D = initialize_ham(consts, gparams)
+    KE_1D = KE_1D.toarray()  
+    PE_1D = PE_1D.toarray()  
     other_params = Params()
-    # vector of position grid
-    X = gparams.x                
-    # number of grid points   
-    nx = len(X)             
-    # spacing between grid points        
-    dx = (max(X) - min(X))/(nx-1)   
-    # indices of grid points
-    I = [(i-nx/2) for i in range(nx)]   
-    # vector of momentum grid
+
+    # exponents present in evolution
+    j = complex(0,1)
+    exp_K = expm(-j * other_params.dt / (2 * consts.hbar) * KE_1D)
+    exp_K_2 = expm(-j * other_params.dt / consts.hbar * KE_1D)
+    exp_P = expm(-j * other_params.dt/consts.hbar  * PE_1D)
+
+    # fourier transform into momentum space, psi(p)
+    psi_p = fft(psi_x)
+    # multiply psi(p) by exp(K/2)
+    psi_p = np.matmul(psi_p, exp_K)
+    # inverse fourier transform back into position space, psi(x)
+    psi_x = ifft(psi_p)
+
+    nt = 10
+    for t in range(nt):
+        psi_x = np.matmul(psi_x, exp_P)
+        psi_p = fft(psi_x)
+        psi_p = np.matmul(psi_p, exp_K_2)
+        psi_x = ifft(psi_p)
+
+    psi_x = np.matmul(psi_x, exp_P)
+    psi_p = fft(psi_x)
+    psi_p = np.matmul(psi_p, exp_K)
+    psi_x = ifft(psi_p)
+
+    return psi_x
+
+def main():
+    consts, gparams = initialize_params()
+    KE_1D, PE_1D = initialize_ham(consts, gparams)
+    KE_1D = KE_1D.toarray()  
+    PE_1D = PE_1D.toarray()  
+    other_params = Params()
+    X = gparams.x
+    # print("X is:", X)
+    nx = len(X)
+    dx = (max(X) - min(X))/(nx-1)
+    I = [(i-nx/2) for i in range(nx)]
     P = [2 * consts.pi * consts.hbar * i / (nx*dx) for i in I]
-    # diagonal matrix of kinetic energy in momentum space
-    KE_1D = sparse.diags([p**2/(2* consts.m0) for p in P])
-    KE_1D = KE_1D.toarray()
 
     # exponents present in evolution
     j = complex(0,1)
@@ -99,35 +126,25 @@ def main():
     exp_P = expm(-j * other_params.dt/consts.hbar  * PE_1D)
 
     # initialize psi(t=0)
+    # TODO delete
+    # note: wf is a list
     psi_x = initialize_wf(consts, gparams)
-    # print("initial: ", psi_x)
+    print("initial: ", psi_x)
     # print("initial probability is: ", [abs(x)**2 for x in psi_x])
-    print("Plotting the initial wavefunction...")
-    plt.plot(X, [abs(x)**2 for x in psi_x])
-    plt.show()
 
-    # number of time steps
-    nt = 1000
+    # plt.plot(X, [abs(x)**2 for x in psi_x])
+    # plt.show()
+
+    nt = 10
     # iterate through nprint time steps
     for step in range(nt):
-        # fourier transform into momentum space, psi(p)
-        psi_p = fft(psi_x)
-        # multiply psi(p) by exp(K/2)
-        psi_p = np.matmul(psi_p, exp_K)
-        # inverse fourier transform back into position space, psi(x)
-        psi_x = ifft(psi_p)
-        psi_x = np.matmul(psi_x, exp_P)
-        psi_p = fft(psi_x)
-        psi_p = np.matmul(psi_p, exp_K)
-        psi_x = ifft(psi_p)
+        psi_x = user_observe(psi_x)
+        plt.plot(X, [abs(x)**2 for x in psi_x])
+        plt.show() 
 
     output = psi_x
-    # print("output: ", output)
+    print("output: ", output)
     # print("the resultant probability is: ", [abs(x)**2 for x in output])
-    print("Plotting the wavefunction at time ",nt * other_params.dt)
-    plt.plot(X, [abs(x)**2 for x in output])
-    plt.show() 
-
     
 
 
