@@ -146,6 +146,9 @@ if __name__ == "__main__":
     
     circuit = load_circuit(file_circuit, pulse_obj)
     
+    # TODO: check that loaded gate name in add_gate is actually avaiable in
+    # in the pulse dictionary.
+    
     
     
     
