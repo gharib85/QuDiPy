@@ -212,7 +212,7 @@ def _load_one_file(fname):
     return new_x_coord, new_y_coord, new_pot_xy
 
 
-def load_files(ctrl_vals, ctrl_names, f_type='pot', f_dir=None):
+def load_potentials(ctrl_vals, ctrl_names, f_type='pot', f_dir=None):
     '''
     This function loads many potential files specified by all combinations of 
     the control values given in ctrl_vals and the control names given in
