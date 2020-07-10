@@ -5,11 +5,6 @@ import os
 import re
 from itertools import product
 
-class mod_RegularGridInterpolator:
-    
-    def __init__(self, variables, nd_data):
-        
-
 def __is_float(str_data):
     '''
     Checks if a string can be converted to a float or not.

@@ -6,6 +6,27 @@ from itertools import product
 class Mod_RegularGridInterpolator:
     
     def __init__(self, ctrl_vals, interp_data, single_dim_idx):
+        '''
+        Initialize the class which is basically a wrapper for the scipy
+        RegularGridInterpolator class.
+
+        Parameters
+        ----------
+        ctrl_vals : 2D list
+            List of grid vectors for each control variable (gate voltages AND
+            x and y coords).
+        interp_data : nd array
+            Array of 2D potential (or electric field) data which is to be
+            interpolated. Number of dimensions should be num_ctrls + 2 (for x
+            and y coords)
+        single_dim_idx : int list
+            List of all control indices which only have a singleton dimension.
+
+        Returns
+        -------
+        None.
+
+        '''
         # Build interpolator object (spline is not supported...)
         self.interp_obj = RegularGridInterpolator(tuple(ctrl_vals),
                                                   interp_data)
@@ -29,6 +50,22 @@ class Mod_RegularGridInterpolator:
                                       max(curr_unique_volts)])
     
     def __call__(self, volt_vec):
+        '''
+        Call method for class
+
+        Parameters
+        ----------
+        volt_vec : 1D float array
+            Array of voltage vectors at which we wish to find the interpolated
+            2D potential.
+
+        Returns
+        -------
+        result : 2D array
+            Interpolated 2D potential at the supplied voltage vector.
+
+        '''
+        
         # First check if the singleton dimensions were included in volt_vec
         # and remove if so
         if len(volt_vec) != self.n_voltage_ctrls:
@@ -51,21 +88,11 @@ class Mod_RegularGridInterpolator:
                 raise ValueError('Input voltage vector values are out of' +
                                  ' range of grid vectors.')
             
-        
-        # Flip the voltage vector from the standard form to the reversed form
-        # we adopted when loading all the potentials.
-        #volt_vec = volt_vec[::-1]
-        
+        # Add the x and y coordinates so we interpolate the whole 2D potenial
         volt_vec.extend([self.y_coords, self.x_coords])
-                    
-        # Call the RegularGridInterpolator with corrected (volt_vec,yy,xx)
-        #new_volt_vec = [np.array(volt_vec[0]),np.array(volt_vec[1]),
-        #                np.array(volt_vec[2]),self.y_coords,self.x_coords]
-        # print(*new_volt_vec)
         
         # Now build up meshgrid of points we want to query the interpolant
         # object at
-        #points = np.meshgrid(*new_volt_vec)
         points = np.meshgrid(*volt_vec)
         # Flatten it so the interpolator is happy
         flat = np.array([m.flatten() for m in points])
