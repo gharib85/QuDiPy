@@ -249,7 +249,7 @@ class CSDAnalysis:
         s.axes.set_ylabel(y_label)
         plt.show()
 
-    def plot_csd_with_lines(self, points=None):
+    def plot_csd_with_lines(self):
         '''
         Function which plots the CSD with the fitted lines over top of it
 
@@ -278,7 +278,7 @@ class CSDAnalysis:
             rho = centroid[1]
             m = -np.cos(theta)/np.sin(theta)
             b = rho/np.sin(theta)
-            x = np.linspace(self.csd.v_g1_min, self.csd.v_g1_max, num=num)
+            x = np.linspace(self.csd.v_g1_min, self.csd.v_g1_max)
             y = m * x + b
             sb.lineplot(x=x, y=y, ax=ax2)
 
@@ -346,5 +346,62 @@ class CSDAnalysis:
         # Remove max and min x elements from points, which removes the invalid triple points
         candidate_points = np.delete(candidate_points, np.argmin(candidate_points, axis=0)[0], axis=0)
         triple_points = np.delete(candidate_points, np.argmax(candidate_points, axis=0)[0], axis=0)
-        
+
+        self.triple_points = triple_points
+
         return triple_points
+
+    def plot_csd_with_lines_and_triple_points(self):
+
+        # Extract the coordinates for the two triple points
+        x_electron = self.triple_points[0][0]
+        y_electron = self.triple_points[0][1]
+        
+        x_hole = self.triple_points[1][0]
+        y_hole = self.triple_points[1][1]
+
+        # Create the heatmap figure
+        f, ax = plt.subplots(1,1)
+        num = self.csd.csd.shape[0]
+        sb.heatmap(self.csd.csd, cbar=False, xticklabels=int(num/5), yticklabels=int(num/5))
+        ax.axes.invert_yaxis()
+
+        # Create second axis with same x and y axis as the heatmap
+        ax2 = ax.twinx().twiny()
+
+        # Create the x ranges for the various lines to plot on
+        x_1 = [self.csd.v_g1_min, x_electron]
+        x_2 = [x_hole, self.csd.v_g1_max]
+        x_3 = [x_electron, self.csd.v_g1_max]
+        x_4 = [self.csd.v_g1_min, x_hole]
+        x_5 = [x_electron, x_hole]
+        x_ranges = np.array([x_1, x_2, x_3, x_4, x_5])
+
+        line_params = []
+        for centroid in self.centroids:
+            line_params.append([-np.cos(centroid[0])/np.sin(centroid[0]), centroid[1]/np.sin(centroid[0])])
+
+        line_params = np.array(line_params)
+        line_params = np.sort(line_params, axis = 1)
+        
+        # Add the last line for the transition betweent the two points
+        m_5 = (y_hole - y_electron)/(x_hole - x_electron)
+        b_5 = y_electron - m_5 * x_electron
+        line_5 = np.array([m_5, b_5])
+        line_params = np.vstack((line_params, line_5))
+        print(line_params)
+
+        for x_range, line in zip(x_ranges, line_params):
+            y = line[0] * x_range + line[1]
+            sb.lineplot(x=x_range, y=y, ax=ax2)
+
+        # Plot the two triple points
+        sb.scatterplot(x=[x_hole, x_electron], y=[y_hole, y_electron], ax=ax2)
+
+        # format the secodn axis and show the plot
+        ax2.set_xlim([self.csd.v_g1_min,self.csd.v_g1_max])
+        ax2.set_ylim([self.csd.v_g2_min,self.csd.v_g2_max])
+        ax2.get_yaxis().set_ticks([])
+        ax2.get_xaxis().set_ticks([])
+        ax.set(xlabel=r'V$_1$', ylabel=r'V$_2$')
+        plt.show()
