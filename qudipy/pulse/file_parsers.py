@@ -134,7 +134,7 @@ def load_circuit(f_name, gate_dict):
             
             gate_acting_qubits = [int(qubit_idx) for qubit_idx in gate_acting_qubits]
             q_circ.add_gate(gate_name, gate_acting_qubits)
-            
+
     return q_circ            
     
     
