@@ -89,6 +89,8 @@ def load_pulses(f_names):
         curr_pulse = _load_one_pulse(f)
         
         pulse_dict[curr_pulse.name] = curr_pulse
+        
+    return pulse_dict
       
 def load_circuit(f_name, gate_dict):
     '''
@@ -148,7 +150,8 @@ if __name__ == "__main__":
     
     # TODO: check that loaded gate name in add_gate is actually avaiable in
     # in the pulse dictionary.
-    
+    # TODO: add ideal pulse line to .ctrlp files for use in the 'ideal'
+    # simulator
     
     
     
