@@ -2,4 +2,6 @@
 Module for handling pulse generation
 '''
 
-from .parser import *
+from .controlPulse import ControlPulse
+from .quantumCircuit import QuantumCircuit
+from file_parsers import *

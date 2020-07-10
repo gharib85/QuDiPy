@@ -16,7 +16,7 @@ class ControlPulse:
         self.ctrl_pulses = {
             }
         self.ctrl_names = list(self.ctrl_pulses.keys())
-        self.num_ctrls = len(self.ctrl_names)
+        self.n_ctrls = len(self.ctrl_names)
         
     def set_pulse_length(self, pulse_length):
         '''
@@ -51,8 +51,7 @@ class ControlPulse:
         None.
 
         '''
-        
-        
+            
         self.ctrl_pulses[var_name] = np.array(var_pulse)
         self.ctrl_names = list(self.ctrl_pulses.keys())
         self.num_ctrls = len(self.ctrl_names)
