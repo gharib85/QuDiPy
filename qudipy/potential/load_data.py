@@ -19,7 +19,7 @@ class Mod_RegularGridInterpolator:
             Array of 2D potential (or electric field) data which is to be
             interpolated. Number of dimensions should be num_ctrls + 2 (for x
             and y coords)
-        single_dim_idx : int list
+        single_dim_idx : list of ints
             List of all control indices which only have a singleton dimension.
 
         Returns
@@ -67,14 +67,18 @@ class Mod_RegularGridInterpolator:
         '''
         
         # First check if the singleton dimensions were included in volt_vec
-        # and remove if so
+        # and remove if so (
+        # if True ==> they were NOT included
         if len(volt_vec) != self.n_voltage_ctrls:
             # Double check that the inputted voltage vector has at least the
             # original amount of voltages inputted (including the single dim
             # voltages)
-            if len(volt_vec) != (self.n_voltage_ctrls + len(self.single_dims)):
+            exp_num = self.n_voltage_ctrls + len(self.single_dims)
+            if len(volt_vec) != exp_num:
                 raise ValueError('Input voltage vector does not have' +
-                                 ' expected number of elements.')
+                                 ' correct number of elements.\n' + 
+                                 f"Expected {exp_num} or {exp_num-2} number" +
+                                 f" of elements, got {len(volt_vec)} instead.")
             else:
                 volt_vec = [volt_vec[idx] for idx in range(len(volt_vec)) if
                             idx not in self.single_dims]
@@ -110,11 +114,11 @@ def build_interpolator(load_data_dict):
 
     Parameters
     ----------
-    all_data_sep : list where each element consists of
-                    [array, 2D array, (1D array, 1D array)]
-        This list contains all the loaded data and is built from the load_files
-        function. Each element in the list is an individual file that was
-        loaded and looks like [voltages, 2D data, (x-coordinates, y-coordinates)]
+    all_data_sep : dict
+        Dictionary containing the x and y coordinates for the loaded files,
+        the potential data for each loaded file, and the corresponding votlage
+        vector for each file.
+        Fields = ['coords', 'potentials', 'ctrl_vals']
 
     Returns
     -------
@@ -225,8 +229,11 @@ def load_potentials(ctrl_vals, ctrl_names, f_type='pot', f_dir=None):
 
     Parameters
     ----------
-    ctrl_vals : list of float lists
-    ctrl_names : string list
+    ctrl_vals : list of list of floats
+        List of relevant control values for the files to load.  The first list
+        index corresponds to the ith control variable and the second list
+        index correspond to the ith value for that control variable.
+    ctrl_names : list of strings
         List of each ctrl variable name. Must be the same length as ctrl_vals 
         first dimension.
     f_type : string
@@ -239,14 +246,19 @@ def load_potentials(ctrl_vals, ctrl_names, f_type='pot', f_dir=None):
     
     Returns
     -------
-    None.
+    all_files : dict
+        Dictionary containing the x and y coordinates for the loaded files,
+        the potential data for each loaded file, and the corresponding votlage
+        vector for each file.
+        Fields = ['coords', 'potentials', 'ctrl_vals']
 
     '''
 
     # Check inputs
     if len(ctrl_vals) != len(ctrl_names):
-        raise ValueError('ctrl_vals and ctrl_names must have the same' +
-                         ' number of elements.')
+        raise ValueError('Incorrect number of control names given, must be ' +
+                         'equal to first dimension of ctrl_vals ' +
+                         f' {len(ctrl_vals)}.')
     
     # Check if dir was given
     if f_dir is None:

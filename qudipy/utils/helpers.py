@@ -12,23 +12,28 @@ def find_nearest(array, value):
     
     Parameters
     ----------
-    array : 1D float array-like object
-        A 1D array type object of floats.
+    array : ND float array-like object
+        An ND array type object of floats.
     value : float
         Value which we want to find the closest number to in the array.
 
     Returns
     -------
-    near_idx : int
-        Index of nearest value in array.
+    near_idx : tuple of ints
+        Tuple of indices for the nearest value in array.
     near_value : float
         Nearest value in array.
 
     '''
     
+    # Convert to numpy array if not already
     array = np.asarray(array)
-    near_idx = (np.abs(array - value)).argmin()
     
+    # Obtain the indices corresponding to which element in array is closest 
+    # to value
+    near_idx = np.unravel_index((np.abs(array - value)).argmin(), array.shape)
+        
+    # Return also the nearest value
     near_value = array[near_idx]
     
     return near_idx, near_value
