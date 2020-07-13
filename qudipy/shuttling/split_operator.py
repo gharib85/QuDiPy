@@ -4,7 +4,6 @@ sys.path.append('../../')
 import qudipy as qd
 import qudipy.potential as pot
 import qudipy.qutils as qt
-from qudipy.shuttling.parameters import Params 
 import numpy as np
 from numpy.fft import fft, ifft, fftshift, ifftshift
 from scipy import sparse
@@ -22,12 +21,15 @@ def initialize_params():
     consts = qd.Constants("Si/SiO2")
 
     # First define the x-coordinates
-    x = np.linspace(-70,70,301)*1E-9
+    x = np.linspace(-100,100,256)*1E-9
     # Define harmonic oscillator frequency
     omega = 5E12
+    sep = 27.25E-9
     # Now construct the harmonic potential
-    harm_pot = 1/2*consts.me*omega**2*np.square(x)
-        
+    harm_pot_L = 1/2*consts.me*omega**2*np.square(x - sep)
+    harm_pot_R = 1/2*consts.me*omega**2*np.square(x + sep)
+    harm_pot = np.minimum(harm_pot_L, harm_pot_R)
+    
     # Create a GridParameters object
     gparams = pot.GridParameters(x, potential=harm_pot)
 
@@ -43,8 +45,14 @@ def initialize_wf(consts, gparams):
     # Pass sparams, gparams to the solve_schrodinger_eq qutils method to obtain the eigenvalues and eigenvectors
     e_ens, e_vecs = qt.solvers.solve_schrodinger_eq(consts, gparams, n_sols=5)      # n_sols set to 0 to obtain ground state
     # psi = np.real(e_vecs[:,0])
-    print("energy: ", e_ens[0])
-    psi = e_vecs[:,0]
+    print("energy 0: ", e_ens[0])
+    print("energy 1: ", e_ens[1])
+    print("energy dff:", e_ens[1] - e_ens[0])
+    print("tunnel time [s]:", 1/(2*(e_ens[1] - e_ens[0])/6.626E-34))
+
+    psi = 1/np.sqrt(2)*(e_vecs[:,0] + e_vecs[:,1])
+    
+    print('Norm psi: ', qd.qutils.math.inner_prod(gparams, psi, psi))
 
     return psi
 
@@ -53,58 +61,65 @@ def main():
     consts, gparams = initialize_params()
     # diagonal matrix of potential energy in position space
     PE_1D = gparams.potential
-    other_params = Params()
+    
+    dt = 5E-16
     # vector of position grid
     X = gparams.x                
-    # number of grid points   TODO: delete
-    nx = len(X)
 
-    # spacing between grid points        TODO: delete
-    dx = (max(X) - min(X))/(nx-1)   
     # indices of grid points
-    I = [(i-nx/2) for i in range(nx)]   
+    I = [(idx-gparams.nx/2) for idx in range(gparams.nx)]   
     # vector of momentum grid
-    P = [2 * consts.pi * consts.hbar * i / (nx*dx) for i in I]
-    print(P)
+    P = np.asarray([2 * consts.pi * consts.hbar * i / (gparams.nx*gparams.dx) for i in I])
 
     # diagonal matrix of kinetic energy in momentum space
-    KE_1D = np.asarray([p**2/(2* consts.me) for p in P])
+    #KE_1D = np.multiply(P,P)/(2*consts.me)
 
     # exponents present in evolution
-    j = complex(0,1)
-    exp_K = np.exp(-j * other_params.dt / (2 * consts.hbar) * KE_1D)
-    exp_P = np.exp(-j * other_params.dt/consts.hbar  * PE_1D)
+    exp_K = np.exp(-1j*dt/2*np.multiply(P,P)/(2*consts.me*consts.hbar))
+    exp_KK = np.multiply(exp_K,exp_K)
+    exp_P = np.exp(-1j*dt/consts.hbar*gparams.potential)
 
     # initialize psi(t=0)
     psi_x = initialize_wf(consts, gparams)
     # print("initial: ", psi_x)
     # print("initial probability is: ", [abs(x)**2 for x in psi_x])
     print("Plotting the initial wavefunction...")
-    # plt.plot(X, [abs(x)**2 for x in psi_x])
-    plt.plot(X, psi_x)
+    plt.plot(X, [abs(x)**2 for x in psi_x])
+    # plt.plot(X, psi_x)
     plt.show()
 
-    # number of time steps
-    nt = 1000
+    # print(consts.me)
+    # print(consts.hbar)
+    # print(P)
+    print(exp_K)
+    
+    psi_p = fftshift(fft(psi_x))
+    psi_p = np.multiply(exp_K,psi_p)
+    
     # iterate through nprint time steps
+    # number of time steps
+    nt = int(np.round(1.0167586E-10/dt))
+    print("Number of time steps:",nt)
+    # nt = 20000
     for step in range(nt):
-        # fourier transform into momentum space, psi(p)
-        psi_p = fftshift(fft(psi_x))
-        # multiply psi(p) by exp(K/2)
-        psi_p = np.multiply(psi_p, exp_K)
-        # inverse fourier transform back into position space, psi(x)
-        psi_x = ifft(fftshift(psi_p))
-        psi_x = np.multiply(psi_x, exp_P)
-        psi_p = fftshift(fft(psi_x))
-        psi_p = np.multiply(psi_p, exp_K)
-        psi_x = ifft(fftshift(psi_p))
+        psi_x = ifft(ifftshift(psi_p))     
+        psi_x = np.multiply(exp_P,psi_x)
+        
+        psi_p = fftshift(fft(psi_x))     
+        
+        if step != nt-1:
+            psi_p = np.multiply(exp_KK,psi_p)
+        else:
+            psi_p = np.multiply(exp_K,psi_p)
+            psi_x = ifft(ifftshift(psi_p))
 
-    output = psi_x
-    # print("output: ", output)
-    # print("the resultant probability is: ", [abs(x)**2 for x in output])
-    print("Plotting the wavefunction at time ",nt * other_params.dt)
-    plt.plot(P, [abs(x)**2 for x in output])
-    plt.show() 
+    # output = psi_x
+    # print("output norm:", qd.qutils.math.inner_prod(gparams,psi_x,psi_x))
+    # #print("output: ", output)
+    # # print("the resultant probability is: ", [abs(x)**2 for x in output])
+    # print("Plotting the wavefunction at time ",nt * dt)
+    # plt.plot(X, [abs(x)**2 for x in output])
+    # plt.show() 
 
     
 
