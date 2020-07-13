@@ -48,13 +48,14 @@ def initialize_wf(consts, gparams):
     print("energy 0: ", e_ens[0])
     print("energy 1: ", e_ens[1])
     print("energy dff:", e_ens[1] - e_ens[0])
-    print("tunnel time [s]:", 1/(2*(e_ens[1] - e_ens[0])/6.626E-34))
+    t_time = 1/(2*(e_ens[1] - e_ens[0])/6.626E-34)
+    print("tunnel time [s]:", t_time)
 
     psi = 1/np.sqrt(2)*(e_vecs[:,0] + e_vecs[:,1])
     
     print('Norm psi: ', qd.qutils.math.inner_prod(gparams, psi, psi))
 
-    return psi
+    return psi, t_time
 
 def main():
     # initialize relevant constants and parameters for the calculation
@@ -80,7 +81,7 @@ def main():
     exp_P = np.exp(-1j*dt/consts.hbar*gparams.potential)
 
     # initialize psi(t=0)
-    psi_x = initialize_wf(consts, gparams)
+    psi_x, t_time = initialize_wf(consts, gparams)
     # print("initial: ", psi_x)
     # print("initial probability is: ", [abs(x)**2 for x in psi_x])
     print("Plotting the initial wavefunction...")
@@ -98,7 +99,8 @@ def main():
     
     # iterate through nprint time steps
     # number of time steps
-    nt = int(np.round(1.0167586E-10/dt))
+    print(t_time)
+    nt = int(np.round(t_time/dt))
     print("Number of time steps:",nt)
     # nt = 20000
     for step in range(nt):
@@ -113,13 +115,13 @@ def main():
             psi_p = np.multiply(exp_K,psi_p)
             psi_x = ifft(ifftshift(psi_p))
 
-    # output = psi_x
-    # print("output norm:", qd.qutils.math.inner_prod(gparams,psi_x,psi_x))
-    # #print("output: ", output)
-    # # print("the resultant probability is: ", [abs(x)**2 for x in output])
-    # print("Plotting the wavefunction at time ",nt * dt)
-    # plt.plot(X, [abs(x)**2 for x in output])
-    # plt.show() 
+    output = psi_x
+    print("output norm:", qd.qutils.math.inner_prod(gparams,psi_x,psi_x))
+    #print("output: ", output)
+    # print("the resultant probability is: ", [abs(x)**2 for x in output])
+    print("Plotting the wavefunction at time ",nt * dt)
+    plt.plot(X, [abs(x)**2 for x in output])
+    plt.show() 
 
     
 
