@@ -33,6 +33,7 @@ class Constants:
         self.c = 2.99792458E8               # speed of light [m/s]
         self.muB = 9.274009994E-24          # Bohr magneton [J/T]
         self.eps0 = 8.85418782E-12          # Vacuum permitivity [F/m]
+        self.kB = 1.380649E-23              # Boltzmann constant [J/K]
                   
         # Material system constants
         # Supported material systems include [Si/SiO2, Si/SiGe, GaAs]
