@@ -340,9 +340,9 @@ def project_down(rho, elem):
     ----------
     rho : numpy array
         matrix of the dimensions 2**N x 2**N(density matrix in our case)
-    k : int
-        number of the electron whose state is to project
-        the system density matrix on
+    elem : int / iterable of ints
+        number(s) of the electron(s) whose state(s) is to project the system 
+        density matrix on
 
     Returns
     -------
@@ -390,8 +390,9 @@ def partial_trace(rho, elem):
     ----------
     rho : numpy array
         matrix of the dimensions 2**N x 2**N (density matrix in our case)
-    k : int
-        number of the electron whose state is averaged out
+    elem : int / iterable of ints
+        number(s) of the electron(s) whose state(s) is to project the system 
+        density matrix on
 
     Returns
     -------
@@ -551,6 +552,9 @@ class SpinSys:
         pulse_params : dictionary
              dictionary of values of delta_g[i], 
         J[i], B_x, B_y at a particular point of time
+        
+        Note: before our talk on Monday, Jul 13, I assumed that B_x is actually B_x * cos(phi), and B_y is B_y * sin(phi).
+        The separate entry for phase will be added later
 
 
         Returns
@@ -600,10 +604,10 @@ class SpinSys:
                     ham += J[k]*const_dict_N["sigma_products"][k][k+1]
             
             if B_x != 0:
-                ham += const_dict_N["x_sum"]* B_x
+                ham += const_dict_N["x_sum"]* B_x       #will be later changed to:  ... * B_x * cos(phi)
             
             if B_y != 0:
-                ham += const_dict_N["y_sum"]* B_y
+                ham += const_dict_N["y_sum"]* B_y       #will be later changed to:  ... * B_y * sin(phi)
                 
         return ham
     
