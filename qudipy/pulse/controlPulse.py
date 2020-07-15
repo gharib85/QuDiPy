@@ -6,7 +6,7 @@ import numpy as np
 
 class ControlPulse:
     
-    def __init__(self, pulse_name, pulse_type, pulse_length=0):
+    def __init__(self, pulse_name, pulse_type, pulse_length=0, ideal_gate="I"):
         
         self.pulse_type = pulse_type
         
@@ -17,6 +17,8 @@ class ControlPulse:
             }
         self.ctrl_names = list(self.ctrl_pulses.keys())
         self.n_ctrls = len(self.ctrl_names)
+        
+        self.ideal_gate = ideal_gate
         
     def set_pulse_length(self, pulse_length):
         '''

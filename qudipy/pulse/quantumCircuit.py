@@ -16,7 +16,10 @@ class QuantumCircuit:
         # 
         self.circuit_sequence = []
         
-    def add_gate(self, gate_name, used_qubits):
+        # Index to track which gate in sequence we are on
+        self.curr_gate_idx = 0
+        
+    def add_gate(self, gate_name, ideal_gate, used_qubits):
         '''
         This function adds a gate into the quantum circuit sequence.
 
@@ -45,11 +48,15 @@ class QuantumCircuit:
         # index (i.e. outside of the allowable values)
         if (any(qubit_idx > self.n_qubits for qubit_idx in used_qubits) or
             any(qubit_idx < 1 for qubit_idx in used_qubits)):
-            raise ValueError("Cannot load gate " + gate_name + 
-                             " because qubit index is out of range.")
+            raise ValueError("Problem loading circuit file: " +
+                            f"{self.name}.\n" +
+                            f"Gate {gate_name} could not be loaded as the " +
+                            f"affected qubit indices {used_qubits}\n are " +
+                            " greater than the number of qubits in the circuit " +
+                            f"({self.n_qubits}) or is <= 0.\n")
         
         # Add the gate to the circuit sequence
-        self.circuit_sequence.append([gate_name, used_qubits])
+        self.circuit_sequence.append([gate_name, ideal_gate, used_qubits])
         
     def get_next_gate(self):
         '''
@@ -65,7 +72,8 @@ class QuantumCircuit:
         '''
         
         try:
-            next_gate = self.circuit_sequence.pop(0)
+            next_gate = self.circuit_sequence[self.curr_gate_idx]
+            self.curr_gate_idx += 1
         except:
             next_gate = None
         
