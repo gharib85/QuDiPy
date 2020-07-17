@@ -91,6 +91,25 @@ class QuantumCircuit:
         
         return next_gate
     
+    def load_more_gates(self, pulse_dict):
+        '''
+        Adds more controlPulse objects to the gate dictionary.
+
+        Parameters
+        ----------
+        pulse_dict : dict of controlPulse objects
+            Dictionary containing all the pulse objects to be added.
+
+        Returns
+        -------
+        None.
+
+        '''
+        
+        for pulse in pulse_dict.keys():
+            self.gates[pulse] = pulse_dict[pulse]
+        
+    
     def print_ideal_circuit(self):
         '''
         Prints out an ascii display of the loaded circuit sequence for the user.
@@ -221,7 +240,8 @@ class QuantumCircuit:
             curr_gate = self.get_next_gate()
             gate_flag = -1
     
-        # Tidy up output
+        # Tidy up output by adding an extra padding at the end of each qubit
+        # line
         for idx in range(len(circ_str)):
             if idx%2 == 0:
                 circ_str[idx] += '-'

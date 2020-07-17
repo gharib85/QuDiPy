@@ -156,8 +156,8 @@ def load_circuit(f_name, gate_dict={}):
                 raise ValueError("Problem loading circuit file: " +
                                  f"{circuit_name}.\n" +
                                  f"Gate {gate_name} could not be loaded as " +
-                                 "the corresponding pulse was not loaded nor " + 
-                                 " is the gate name a ideal gate keyword.\n" +
+                                 "the corresponding pulse was not loaded or " + 
+                                 " is not the gate name a ideal gate keyword.\n" +
                                  "Check .qcirc file for typos or load the " +
                                  "corresponding pulse file.")
             
@@ -276,9 +276,11 @@ if __name__ == "__main__":
     circuit2 = load_circuit(file_circuit_2)
     circuit2.print_ideal_circuit()
     
+    print(circuit2.gates)
+    circuit2.load_more_gates(pulse_dict)
+    print(circuit2.gates)
+    
     # TODO: Write tutorial for loading .ctrlp and .qcirc files
-    # TODO: Be able to read in an ideal .qcirc file
-    # TODO: Add method for quantumCircuit that can add another controlPulse to gates dict
     # TODO: Right now I don't check if .qcirc is a mix of ideal or not. Should I?
     
     
