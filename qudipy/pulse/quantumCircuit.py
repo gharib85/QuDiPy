@@ -19,6 +19,13 @@ class QuantumCircuit:
         # Index to track which gate in sequence we are on
         self.curr_gate_idx = 0
         
+        # Flag to determine is every gate in the circuit has a correctly
+        # specified ideal gate
+        self.specified_all_ideal = True 
+        # Flag to determine if the .qirc file that was loaded is comprised 
+        # ONLY of ideal gates. Default assumes it is
+        self.ideal_circuit = True
+        
     def add_gate(self, gate_name, ideal_gate, used_qubits):
         '''
         This function adds a gate into the quantum circuit sequence.
@@ -54,6 +61,11 @@ class QuantumCircuit:
                             f"affected qubit indices {used_qubits}\n are " +
                             " greater than the number of qubits in the circuit " +
                             f"({self.n_qubits}) or is <= 0.\n")
+            
+        # If the ideal_gate is None type, then there was an issue reading the
+        # gate when the .ctrlp file was loaded
+        if ideal_gate is None:
+            self.specified_all_ideal = False
         
         # Add the gate to the circuit sequence
         self.circuit_sequence.append([gate_name, ideal_gate, used_qubits])
@@ -78,3 +90,147 @@ class QuantumCircuit:
             next_gate = None
         
         return next_gate
+    
+    def print_ideal_circuit(self):
+        '''
+        Prints out an ascii display of the loaded circuit sequence for the user.
+    
+        Parameters
+        ----------
+        None.
+    
+        Returns
+        -------
+        None.
+    
+        '''
+        
+        # Check that every gate has an ideal gate specified
+        if not self.specified_all_ideal:
+            print(f'Cannot print ideal circuit for {self.name}.')
+            print('Some or all of the gates in the circuit do not have an')
+            print('ideal gate specified. Please check the .ctrlp or .qcirc')
+            print('files for errors.')
+            return
+        
+        
+        # Initialize the circuit to print
+        circ_str = []
+        for idx in range(self.n_qubits):
+            circ_str.append('Q' + str(idx+1) + ' --')
+            if idx != self.n_qubits:
+                if idx < 10:
+                    circ_str.append('     ')
+                else:
+                    circ_str.append('      ')
+        
+        # Each odd idx in circ_str corresponds to a qubit in the circuit
+        # Each even idx correspond to gaps between qubit lines.
+        
+        # Store the current gate index to change back to later
+        initial_gate_idx = self.curr_gate_idx
+        # Now reset index
+        self.curr_gate_idx = 0
+        
+        # Now loop through each gate in circuit and add the respective strings
+        curr_gate = 0
+        gate_flag = -1
+        curr_gate = self.get_next_gate()
+        while curr_gate is not None:
+            
+            # Extract ideal gate and affected qubits
+            ideal_gate = curr_gate[1]
+            aff_qubits = curr_gate[2]
+            
+            # Build the strings for a qubit affected by gate, nont affected by 
+            # gate, and empty space between qubit lines
+            if ideal_gate in ['H','I']:
+                gate_flag = 1
+                used_str = ideal_gate + '-'
+                non_used_str = '--'
+                empty_space = '  '
+                
+            if ideal_gate[:2] in ['RX','RY','RZ']:
+                gate_flag = 1
+                used_str = ideal_gate + '-'
+                non_used_str = '------'
+                empty_space = '      '
+                                                
+            # Now append respective strings as appropriate for each qubit
+            # Single qubit gate
+            if gate_flag == 1:
+                for idx in range(1,self.n_qubits+1):
+                    # Is qubit affected by gate
+                    if idx in aff_qubits:
+                        circ_str[2*(idx-1)] += used_str
+                    else:
+                        circ_str[2*(idx-1)] += non_used_str
+                        
+                    # Update empty space
+                    circ_str[2*idx-1] += empty_space
+            
+            # Double qubit gates are trickier
+            # SWAP gates
+            if ideal_gate in ['RSWAP','SWAP']:
+                used_str = ideal_gate + '-'
+                non_used_str = ''.join(['-']*(len(ideal_gate)+1))
+                
+                # Edit the qubit lines first
+                for idx in range(1,self.n_qubits+1):
+                    # Is qubit affected by gate
+                    if idx in aff_qubits:
+                        circ_str[2*(idx-1)] += used_str
+                    else:
+                        circ_str[2*(idx-1)] += non_used_str
+                        
+                # Now fill in the empty spaces
+                for idx in range(1,self.n_qubits):
+                    if idx in range(min(aff_qubits),max(aff_qubits)):
+                        if ideal_gate == 'SWAP':
+                            circ_str[2*idx-1] += '  |  '
+                        elif ideal_gate == 'RSWAP':
+                            circ_str[2*idx-1] += '  |   '
+                    else:
+                        circ_str[2*idx-1] += ''.join([' ']*(len(ideal_gate)+1))
+                        
+            # CTRL gates        
+            if ideal_gate[:4] == 'CTRL':
+                targ_str = ideal_gate + '-'
+                ctrl_str = '--o---'
+                non_used_str = '------'
+                
+                # Edit the qubit lines first
+                for idx in range(1,self.n_qubits+1):
+                    # First qubit indices are always the ctrl qubits
+                    if idx in aff_qubits[:-1]:
+                        circ_str[2*(idx-1)] += ctrl_str
+                    # Last qubit index is always the target qubit
+                    elif idx == aff_qubits[-1]:
+                        circ_str[2*(idx-1)] += targ_str
+                    else:
+                        circ_str[2*(idx-1)] += non_used_str
+    
+                # Now fill in the empty spaces
+                for idx in range(1,self.n_qubits):
+                    if idx in range(min(aff_qubits),max(aff_qubits)):
+                        circ_str[2*idx-1] += '  |   '
+                    else:
+                        circ_str[2*idx-1] += ''.join([' ']*(len(ideal_gate)+1))
+            
+            # Reset things for next loop        
+            curr_gate = self.get_next_gate()
+            gate_flag = -1
+    
+        # Tidy up output
+        for idx in range(len(circ_str)):
+            if idx%2 == 0:
+                circ_str[idx] += '-'
+            else:
+                circ_str[idx] += ' '
+     
+        # Print the circuit
+        print(f'Ideal circuit: {self.name}\n')
+        for idx in range(len(circ_str)):
+            print(circ_str[idx])
+            
+        self.curr_gate_idx = initial_gate_idx

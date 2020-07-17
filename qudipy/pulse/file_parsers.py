@@ -32,10 +32,11 @@ def _load_one_pulse(f_name):
     f = open(f_name, "r")
     pulse_name = os.path.basename(f.name).split('.')[0]
     
-    # Count the number of lines which don't the control pulse vs time information
+    # Count the number of lines which don't have control pulse vs time information
     line_cnt = 0
-    # Initialize ideal gate to idenity
-    ideal_gate = "I"
+    # Initialize ideal gate to None object for if it isn't specified in the
+    # pulse file
+    ideal_gate = None
     for x in f:
         # Keep track of how many lines to skip for reading in the pulse table
         line_cnt += 1
@@ -97,7 +98,7 @@ def load_pulses(f_names):
         
     return pulse_dict
       
-def load_circuit(f_name, gate_dict):
+def load_circuit(f_name, gate_dict={}):
     '''
     This function takes in a single quantum circuit .qcirc file as input and 
     constructs a quantum circuit object
@@ -106,6 +107,10 @@ def load_circuit(f_name, gate_dict):
     ----------
     f_name : string
         Full file path to the circuit file.
+        
+    gate_dict : dictionary of controlPulse objects
+        Contains all loaded control pulse objects to be used in the 
+        quantumCircuit's circuit sequence.
 
     Returns
     -------
@@ -124,6 +129,7 @@ def load_circuit(f_name, gate_dict):
     f = open(f_name, "r")
     circuit_name = os.path.basename(f.name).split('.')[0]
 
+    # Loop over every gate in the circuit file.
     for x in f:
         # Parse line by line
         if "Number of qubits:" in x:
@@ -137,8 +143,16 @@ def load_circuit(f_name, gate_dict):
             
             gate_name = temp[0]
             
-            # Check that the gate name is one that was actually loaded
-            if gate_name not in q_circ.gates.keys():
+            # Track if the current line in the file is an ideal gate or a
+            # pulse file that was loaded
+            if _check_ideal_gate(gate_name):
+                is_ideal_gate = True
+            else:
+                is_ideal_gate = False                            
+            
+            # Check that the gate name is one that was actually loaded or a
+            # valid ideal gate and print an error if not
+            if gate_name not in q_circ.gates.keys() and not is_ideal_gate:
                 raise ValueError("Problem loading circuit file: " +
                                  f"{circuit_name}.\n" +
                                  f"Gate {gate_name} could not be loaded as " +
@@ -147,21 +161,40 @@ def load_circuit(f_name, gate_dict):
                                  "Check .qcirc file for typos or load the " +
                                  "corresponding pulse file.")
             
-            # Get the corresponding ideal gate
-            ideal_gate = q_circ.gates[gate_name].ideal_gate
-            # Check that it's a valid ideal gate keyword
-            if not _check_ideal_gate(ideal_gate):
-                raise ValueError("Problem loading circuit file: " +
-                                 f"{circuit_name}.\n" +
-                                 f"Gate {gate_name} was not loaded as the " +
-                                 "ideal gate keyword was not recognized.")
+            # If it's not an ideal gate, get the ideal_gate equivalent from
+            # the pulse object dictionary in quantumCircuit object 
+            if not is_ideal_gate:
+                # Update tracker that checks if .qcirc is all ideal gates or not
+                q_circ.ideal_circuit = False
+                
+                # Get the corresponding ideal gate
+                ideal_gate = q_circ.gates[gate_name].ideal_gate
+                # Check that it's a valid ideal gate keyword and that the 
+                # ideal_gate isn't None (i.e. not specified in the pulse file)
+                if not _check_ideal_gate(ideal_gate) and ideal_gate != None:
+                    raise ValueError("Problem loading circuit file: " +
+                                     f"{circuit_name}.\n" +
+                                     f"Gate {gate_name}.ctrlp could not be loaded " +
+                                     "as the ideal gate keyword was not recognized.")
+            # If it is an ideal gate
+            elif is_ideal_gate:
+                ideal_gate = gate_name
             
-            gate_acting_qubits = temp[1:]
+            gate_aff_qubits = temp[1:]
             
-            gate_acting_qubits = [int(qubit_idx) for qubit_idx in gate_acting_qubits]
-            q_circ.add_gate(gate_name, ideal_gate, gate_acting_qubits)
+            gate_aff_qubits = [int(qubit_idx) for qubit_idx in gate_aff_qubits]
+            q_circ.add_gate(gate_name, ideal_gate, gate_aff_qubits)
 
-    return q_circ            
+    # Check now if every gate in the circuit file loaded had a ideal gate 
+    # correctly specified or not.  If not, then warn user that we cannot print
+    # the ideal circuit nor do simulations of the ideal circuit as well.
+    if not q_circ.specified_all_ideal:
+        print(f'WARNING: Problem loading circuit file: {circuit_name}.')
+        print('Not every gate loaded had a corresponding ideal specified')
+        print('correctly or specified at all in the file. This will prevent')
+        print(f'you from simulating the ideal quantum circuit for {circuit_name}.\n')
+    
+    return q_circ    
     
 def _check_ideal_gate(gate_name, qubit_idx=[]):
     '''
@@ -183,6 +216,11 @@ def _check_ideal_gate(gate_name, qubit_idx=[]):
     boolean
 
     '''
+    
+    # If gate name is None type then that means there was no ideal gate line
+    # specified in the corresponding pulse file
+    if gate_name is None:
+        return False    
     
     # Quick check by looking at gate name length
     if len(gate_name) not in [1,4,5]:
@@ -220,142 +258,6 @@ def _check_ideal_gate(gate_name, qubit_idx=[]):
     
     # Otherwise
     return False
-
-def print_circuit_sequence(circuit):
-    '''
-    Prints out an ascii display of the loaded circuit sequence for the user
-    to see what was loaded.
-
-    Parameters
-    ----------
-    circuit : quantumCircuit object
-        The object of the quantum circuit whose sequence we want to print.
-
-    Returns
-    -------
-    None.
-
-    '''
-    
-    # Initialize the circuit to print
-    circ_str = []
-    for idx in range(circuit.n_qubits):
-        circ_str.append('Q' + str(idx+1) + ' --')
-        if idx != circuit.n_qubits:
-            if idx < 10:
-                circ_str.append('     ')
-            else:
-                circ_str.append('      ')
-    
-    # Each odd idx in circ_str corresponds to a qubit in the circuit
-    # Each even idx correspond to gaps between qubit lines.
-    
-    # Store the current gate index to change back to later
-    initial_gate_idx = circuit.curr_gate_idx
-    # Now reset index
-    circuit.curr_gate_idx = 0
-    
-    # Now loop through each gate in circuit and add the respective strings
-    curr_gate = 0
-    gate_flag = -1
-    curr_gate = circuit.get_next_gate()
-    while curr_gate is not None:
-        
-        # Extract ideal gate and affected qubits
-        ideal_gate = curr_gate[1]
-        aff_qubits = curr_gate[2]
-        
-        # Build the strings for a qubit affected by gate, nont affected by 
-        # gate, and empty space between qubit lines
-        if ideal_gate in ['H','I']:
-            gate_flag = 1
-            used_str = ideal_gate + '-'
-            non_used_str = '--'
-            empty_space = '  '
-            
-        if ideal_gate[:2] in ['RX','RY','RZ']:
-            gate_flag = 1
-            used_str = ideal_gate + '-'
-            non_used_str = '------'
-            empty_space = '      '
-                                            
-        # Now append respective strings as appropriate for each qubit
-        # Single qubit gate
-        if gate_flag == 1:
-            for idx in range(1,circuit.n_qubits+1):
-                # Is qubit affected by gate
-                if idx in aff_qubits:
-                    circ_str[2*(idx-1)] += used_str
-                else:
-                    circ_str[2*(idx-1)] += non_used_str
-                    
-                # Update empty space
-                circ_str[2*idx-1] += empty_space
-        
-        # Double qubit gates are trickier
-        # SWAP gates
-        if ideal_gate in ['RSWAP','SWAP']:
-            used_str = ideal_gate + '-'
-            non_used_str = ''.join(['-']*(len(ideal_gate)+1))
-            
-            # Edit the qubit lines first
-            for idx in range(1,circuit.n_qubits+1):
-                # Is qubit affected by gate
-                if idx in aff_qubits:
-                    circ_str[2*(idx-1)] += used_str
-                else:
-                    circ_str[2*(idx-1)] += non_used_str
-                    
-            # Now fill in the empty spaces
-            for idx in range(1,circuit.n_qubits):
-                if idx in range(min(aff_qubits),max(aff_qubits)):
-                    if ideal_gate == 'SWAP':
-                        circ_str[2*idx-1] += '  |  '
-                    elif ideal_gate == 'RSWAP':
-                        circ_str[2*idx-1] += '  |   '
-                else:
-                    circ_str[2*idx-1] += ''.join([' ']*(len(ideal_gate)+1))
-                    
-        # CTRL gates        
-        if ideal_gate[:4] == 'CTRL':
-            targ_str = ideal_gate + '-'
-            ctrl_str = '--o---'
-            
-            # Edit the qubit lines first
-            for idx in range(1,circuit.n_qubits+1):
-                # First qubit indices are always the ctrl qubits
-                if idx in aff_qubits[:-1]:
-                    circ_str[2*(idx-1)] += ctrl_str
-                # Last qubit index is always the target qubit
-                elif idx == aff_qubits[-1]:
-                    circ_str[2*(idx-1)] += targ_str
-                else:
-                    circ_str[2*(idx-1)] += non_used_str
-
-            # Now fill in the empty spaces
-            for idx in range(1,circuit.n_qubits):
-                if idx in range(min(aff_qubits),max(aff_qubits)):
-                    circ_str[2*idx-1] += '  |   '
-                else:
-                    circ_str[2*idx-1] += ''.join([' ']*(len(ideal_gate)+1))
-        
-        # Reset things for next loop        
-        curr_gate = circuit.get_next_gate()
-        gate_flag = -1
-
-    # Tidy up output
-    for idx in range(len(circ_str)):
-        if np.mod(idx,2) == 0:
-            circ_str[idx] += '-'
-        else:
-            circ_str[idx] += ' '
- 
-    # Print the circuit
-    print(f'Ideal circuit for file: {circuit.name}\n')
-    for idx in range(len(circ_str)):
-        print(circ_str[idx])
-        
-    circuit.curr_gate_idx = initial_gate_idx
     
 if __name__ == "__main__":
     path_to_pulses = "/Users/simba/Documents/GitHub/Silicon-Modelling/tutorials/Tutorial data/Control pulses/"
@@ -365,16 +267,19 @@ if __name__ == "__main__":
     for p in file_pulse:
         pulse_files.append(path_to_pulses + p)
     
-    file_circuit = '/Users/simba/Documents/GitHub/Silicon-Modelling/tutorials/Tutorial data/Quantum circuits/test_circuit.qcirc'
+    file_circuit_1 = '/Users/simba/Documents/GitHub/Silicon-Modelling/tutorials/Tutorial data/Quantum circuits/test_circuit1.qcirc'
+    pulse_dict = load_pulses(pulse_files) 
+    circuit1 = load_circuit(file_circuit_1, pulse_dict) 
+    circuit1.print_ideal_circuit()
     
-    pulse_dict = load_pulses(pulse_files)
+    file_circuit_2 = '/Users/simba/Documents/GitHub/Silicon-Modelling/tutorials/Tutorial data/Quantum circuits/test_circuit2.qcirc'
+    circuit2 = load_circuit(file_circuit_2)
+    circuit2.print_ideal_circuit()
     
-    circuit = load_circuit(file_circuit, pulse_dict)
-    
-    print_circuit_sequence(circuit)
-    
-    # TODO: Add a dummy ascii printout for the quantum circuit.
+    # TODO: Write tutorial for loading .ctrlp and .qcirc files
     # TODO: Be able to read in an ideal .qcirc file
+    # TODO: Add method for quantumCircuit that can add another controlPulse to gates dict
+    # TODO: Right now I don't check if .qcirc is a mix of ideal or not. Should I?
     
     
     
