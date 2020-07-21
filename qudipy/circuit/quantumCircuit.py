@@ -121,7 +121,7 @@ class QuantumCircuit:
         try:
             next_gate = self.circuit_sequence[self.curr_gate_idx]
             self.curr_gate_idx += 1
-        except:
+        except IndexError:
             next_gate = None
         
         return next_gate
@@ -141,8 +141,8 @@ class QuantumCircuit:
 
         '''
         
-        for pulse in pulse_dict.keys():
-            self.gates[pulse] = pulse_dict[pulse]
+        for pulse_key, pulse_value in pulse_dict.items():
+            self.gates[pulse_key] = pulse_value
         
     
     def print_ideal_circuit(self):

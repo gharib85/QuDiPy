@@ -42,14 +42,14 @@ def _load_one_pulse(f_name):
         line_cnt += 1
         # Parse line by line (don't care about ordering except that Control 
         # pulses is the last line)
-        if "Control pulses:" in x:
+        if "control pulses:" in x.lower():
             break
-        elif "type:" in x:
+        elif "pulse type:" in x.lower():
             # Remove any leading/ending white space and convert to lowercase
             pulse_type = x.split(":")[1].strip().lower()
-        elif "length" in x:
+        elif "pulse length:" in x.lower():
             pulse_length = int(x.split(":")[1].strip().split(" ")[0])
-        elif "Ideal" in x:
+        elif "ideal gate:" in x.lower():
             ideal_gate = x.split(":")[1].strip().upper()
             
     # Initialize the control pulse object
@@ -85,8 +85,9 @@ def load_pulses(f_names):
     
     pulse_dict = {}
     
-    # Check if only a single file was passed.
-    # If it was and was not contained in a list already, then wrap it in a list.
+    # Check if list of file names was passed.
+    # If it was not, then only a single file name was passed and we need to
+    # wrap it in a list container.
     if isinstance(f_names, list) == False:
         f_names = [f_names]
     
@@ -182,8 +183,10 @@ def load_circuit(f_name, gate_dict={}):
                 gate_name = "IDEAL_GATE"
             
             gate_aff_qubits = temp[1:]
-            
-            gate_aff_qubits = [int(qubit_idx) for qubit_idx in gate_aff_qubits]
+            # int() always rounds down so as a precaution we convert to float,
+            # then round, then convert to int.
+            gate_aff_qubits = [int(round(float(qubit_idx))) 
+                               for qubit_idx in gate_aff_qubits]
             q_circ.add_gate(gate_name, ideal_gate, gate_aff_qubits)
 
     # Check now if every gate in the circuit file loaded had a ideal gate 
@@ -248,13 +251,13 @@ def check_ideal_gate(gate_name, qubit_idx=[]):
     # Check CTRL gates
     if gate_name[:4] == "CTRL" and gate_name[4] in ["Z","X","Y"]:
         # Now check qubit number, must be an even number of used qubits
-        if len(qubit_idx) == 0 or np.mod(len(qubit_idx),2) == 0:
+        if np.mod(len(qubit_idx),2) == 0:
             return True
     
     # Check SWAP and RSWAP
     if gate_name == "SWAP" or gate_name == "RSWAP":
         # Now check qubit number, must be an even number of used qubits
-        if len(qubit_idx) == 0 or np.mod(len(qubit_idx),2) == 0:
+        if np.mod(len(qubit_idx),2) == 0:
             return True
     
     # Otherwise

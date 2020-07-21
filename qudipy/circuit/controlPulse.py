@@ -35,8 +35,8 @@ class ControlPulse:
         
         self.ctrl_pulses = {
             }
-        self.ctrl_names = list(self.ctrl_pulses.keys())
-        self.n_ctrls = len(self.ctrl_names)
+        self.ctrl_names = []
+        self.n_ctrls = 0
         
         self.ideal_gate = ideal_gate
         
