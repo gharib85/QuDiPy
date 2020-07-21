@@ -121,8 +121,8 @@ def solve_schrodinger_eq(consts, gparams, n_sols=1):
     gparams : GridParameters class
         Contains grid and potential information.
         
-    n_sols: int
-        Number of eigenvectors and eigenenergies to return (default is 1).
+    n_sols: int, optional
+        Number of eigenvectors and eigenenergies to return. Default is 1.
 
     Returns
     -------

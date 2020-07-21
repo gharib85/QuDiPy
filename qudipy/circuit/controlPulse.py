@@ -6,7 +6,27 @@ import numpy as np
 
 class ControlPulse:
     
-    def __init__(self, pulse_name, pulse_type, pulse_length=0, ideal_gate="I"):
+    def __init__(self, pulse_name, pulse_type, pulse_length=0, ideal_gate=None):
+        '''
+        Initialize a ControlPulse object.
+
+        Parameters
+        ----------
+        pulse_name : string
+            Name of pulse.
+        pulse_type : string
+            Specify whether pulse is described with "experimental" or 
+            "effective" control variables.
+        pulse_length : int, optional
+            Total length of pulse in ps. The default is 0.
+        ideal_gate : string, optional
+            The ideal gate keyword for this control pulse. The default is None.
+
+        Returns
+        -------
+        None.
+
+        '''
         
         self.pulse_type = pulse_type
         
@@ -56,7 +76,7 @@ class ControlPulse:
             
         self.ctrl_pulses[var_name] = np.array(var_pulse)
         self.ctrl_names = list(self.ctrl_pulses.keys())
-        self.num_ctrls = len(self.ctrl_names)
+        self.n_ctrls = len(self.ctrl_names)
         
         
         

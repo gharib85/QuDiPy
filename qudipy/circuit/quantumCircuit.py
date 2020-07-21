@@ -5,6 +5,24 @@ Class for a quantum circuit
 class QuantumCircuit:
     
     def __init__(self, circuit_name, n_qubits, pulse_dict):
+        '''
+        Initialize QuantumCircuit object
+
+        Parameters
+        ----------
+        circuit_name : string
+            Name of quantum circuit.
+        n_qubits : int
+            Number of qubits in the circuit.
+        pulse_dict : dictionary of ControlPulse objects
+            Dictionary containing all control pulses that will be used in the
+            quantum circuit.
+
+        Returns
+        -------
+        None.
+
+        '''
         
         # Name of circuit file
         self.name = circuit_name
@@ -13,7 +31,7 @@ class QuantumCircuit:
         # Loaded gates 
         self.gates = pulse_dict
         
-        # 
+        # The circuit sequence for this quantum circuit
         self.circuit_sequence = []
         
         # Index to track which gate in sequence we are on
@@ -25,6 +43,23 @@ class QuantumCircuit:
         # Flag to determine if the .qirc file that was loaded is comprised 
         # ONLY of ideal gates. Default assumes it is
         self.ideal_circuit = True
+        
+    def reset_circuit_index(self):
+       '''
+       Reset the current gate index for the circuit sequence back to the 
+       begining of the circuit.
+
+       Raises
+       ------
+       None.
+
+       Returns
+       -------
+       None.
+
+       '''
+       
+       self.curr_gate_idx = 0
         
     def add_gate(self, gate_name, ideal_gate, used_qubits):
         '''

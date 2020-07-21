@@ -5,7 +5,7 @@ Functions for handling control pulse files .ctrlp
 import pandas as pd
 import numpy as np
 import os
-from qudipy.pulse import ControlPulse, QuantumCircuit
+from qudipy.circuit import ControlPulse, QuantumCircuit
 
 def _load_one_pulse(f_name):
     '''
@@ -108,9 +108,9 @@ def load_circuit(f_name, gate_dict={}):
     f_name : string
         Full file path to the circuit file.
         
-    gate_dict : dictionary of controlPulse objects
+    gate_dict : dictionary of controlPulse objects, optional
         Contains all loaded control pulse objects to be used in the 
-        quantumCircuit's circuit sequence.
+        quantumCircuit's circuit sequence. Default is {}.
 
     Returns
     -------
@@ -145,7 +145,7 @@ def load_circuit(f_name, gate_dict={}):
             
             # Track if the current line in the file is an ideal gate or a
             # pulse file that was loaded
-            if _check_ideal_gate(gate_name):
+            if check_ideal_gate(gate_name):
                 is_ideal_gate = True
             else:
                 is_ideal_gate = False                            
@@ -171,7 +171,7 @@ def load_circuit(f_name, gate_dict={}):
                 ideal_gate = q_circ.gates[gate_name].ideal_gate
                 # Check that it's a valid ideal gate keyword and that the 
                 # ideal_gate isn't None (i.e. not specified in the pulse file)
-                if not _check_ideal_gate(ideal_gate) and ideal_gate != None:
+                if not check_ideal_gate(ideal_gate) and ideal_gate != None:
                     raise ValueError("Problem loading circuit file: " +
                                      f"{circuit_name}.\n" +
                                      f"Gate {gate_name}.ctrlp could not be loaded " +
@@ -179,6 +179,7 @@ def load_circuit(f_name, gate_dict={}):
             # If it is an ideal gate
             elif is_ideal_gate:
                 ideal_gate = gate_name
+                gate_name = "IDEAL_GATE"
             
             gate_aff_qubits = temp[1:]
             
@@ -196,7 +197,7 @@ def load_circuit(f_name, gate_dict={}):
     
     return q_circ    
     
-def _check_ideal_gate(gate_name, qubit_idx=[]):
+def check_ideal_gate(gate_name, qubit_idx=[]):
     '''
     This function checks if the supplied gate_name is a valid ideal gate
     keyword used to simulate an ideal quantum circuit. 
@@ -208,8 +209,8 @@ def _check_ideal_gate(gate_name, qubit_idx=[]):
     ----------
     gate_name : string
         Gate name to be tested.
-    qubit_idx : list of ints 
-        Indices of qubits used by gate
+    qubit_idx : list of ints, optional
+        Indices of qubits used by gate. Default is [].
 
     Returns
     -------
@@ -258,31 +259,7 @@ def _check_ideal_gate(gate_name, qubit_idx=[]):
     
     # Otherwise
     return False
-    
-if __name__ == "__main__":
-    path_to_pulses = "/Users/simba/Documents/GitHub/Silicon-Modelling/tutorials/Tutorial data/Control pulses/"
-    file_pulse = ["ROTX_1_2.ctrlp", "CTRLZ_3_4.ctrlp", "H_1_2_4.ctrlp",
-                  "ROTX_3.ctrlp", "CTRLX_2_3.ctrlp", "SWAP_1_2.ctrlp"]
-    pulse_files = []
-    for p in file_pulse:
-        pulse_files.append(path_to_pulses + p)
-    
-    file_circuit_1 = '/Users/simba/Documents/GitHub/Silicon-Modelling/tutorials/Tutorial data/Quantum circuits/test_circuit1.qcirc'
-    pulse_dict = load_pulses(pulse_files) 
-    circuit1 = load_circuit(file_circuit_1, pulse_dict) 
-    circuit1.print_ideal_circuit()
-    
-    file_circuit_2 = '/Users/simba/Documents/GitHub/Silicon-Modelling/tutorials/Tutorial data/Quantum circuits/test_circuit2.qcirc'
-    circuit2 = load_circuit(file_circuit_2)
-    circuit2.print_ideal_circuit()
-    
-    print(circuit2.gates)
-    circuit2.load_more_gates(pulse_dict)
-    print(circuit2.gates)
-    
-    # TODO: Write tutorial for loading .ctrlp and .qcirc files
-    # TODO: Right now I don't check if .qcirc is a mix of ideal or not. Should I?
-    
+
     
     
 
