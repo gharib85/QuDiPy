@@ -342,6 +342,8 @@ class CSDAnalysis:
         # Remove max and min x elements from points, which removes the invalid triple points
         candidate_points = np.delete(candidate_points, np.argmin(candidate_points, axis=0)[0], axis=0)
         triple_points = np.delete(candidate_points, np.argmax(candidate_points, axis=0)[0], axis=0)
+        # Sort so the triple point with the smallest x comes first
+        triple_points = triple_points[triple_points[:,0].argsort()]
 
         self.triple_points = triple_points
 
@@ -350,11 +352,11 @@ class CSDAnalysis:
     def plot_csd_with_lines_and_triple_points(self):
 
         # Extract the coordinates for the two triple points
-        x_electron = self.triple_points[1][0]
-        y_electron = self.triple_points[1][1]
+        x_electron = self.triple_points[0][0]
+        y_electron = self.triple_points[0][1]
         
-        x_hole = self.triple_points[0][0]
-        y_hole = self.triple_points[0][1]
+        x_hole = self.triple_points[1][0]
+        y_hole = self.triple_points[1][1]
 
         # Create the heatmap figure
         f, ax = plt.subplots(1,1)
