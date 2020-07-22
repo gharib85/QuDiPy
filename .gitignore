@@ -1,3 +1,4 @@
 *.pyc
 *.ipynb_checkpoints
 tutorials/test.py
+tutorials/QuDiPy tutorial data
