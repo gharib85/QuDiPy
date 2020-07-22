@@ -282,10 +282,6 @@ class CSDAnalysis:
             y = m * x + b
             sb.lineplot(x=x, y=y, ax=ax2)
 
-        if points is not None:
-            points = np.transpose(points)
-            sb.scatterplot(x=points[0], y=points[1], ax=ax2)
-
         # format the secodn axis and show the plot
         ax2.set_xlim([self.csd.v_g1_min,self.csd.v_g1_max])
         ax2.set_ylim([self.csd.v_g2_min,self.csd.v_g2_max])
@@ -354,11 +350,11 @@ class CSDAnalysis:
     def plot_csd_with_lines_and_triple_points(self):
 
         # Extract the coordinates for the two triple points
-        x_electron = self.triple_points[0][0]
-        y_electron = self.triple_points[0][1]
+        x_electron = self.triple_points[1][0]
+        y_electron = self.triple_points[1][1]
         
-        x_hole = self.triple_points[1][0]
-        y_hole = self.triple_points[1][1]
+        x_hole = self.triple_points[0][0]
+        y_hole = self.triple_points[0][1]
 
         # Create the heatmap figure
         f, ax = plt.subplots(1,1)
@@ -370,10 +366,10 @@ class CSDAnalysis:
         ax2 = ax.twinx().twiny()
 
         # Create the x ranges for the various lines to plot on
-        x_1 = [self.csd.v_g1_min, x_electron]
-        x_2 = [x_hole, self.csd.v_g1_max]
-        x_3 = [x_electron, self.csd.v_g1_max]
-        x_4 = [self.csd.v_g1_min, x_hole]
+        x_1 = [x_electron, self.csd.v_g1_max]
+        x_2 = [self.csd.v_g1_min, x_electron]
+        x_3 = [self.csd.v_g1_min, x_hole]
+        x_4 = [x_hole, self.csd.v_g1_max]
         x_5 = [x_electron, x_hole]
         x_ranges = np.array([x_1, x_2, x_3, x_4, x_5])
 
@@ -389,7 +385,6 @@ class CSDAnalysis:
         b_5 = y_electron - m_5 * x_electron
         line_5 = np.array([m_5, b_5])
         line_params = np.vstack((line_params, line_5))
-        print(line_params)
 
         for x_range, line in zip(x_ranges, line_params):
             y = line[0] * x_range + line[1]
