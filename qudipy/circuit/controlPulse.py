@@ -18,7 +18,9 @@ class ControlPulse:
             Specify whether pulse is described with "experimental" or 
             "effective" control variables.
         pulse_length : int, optional
-            Total length of pulse in ps. The default is 0.
+            Total length of pulse in ps. This is in optional keyword because 
+            sometimes you may wish to vary the pulse length across different
+            simulations for a given pulse. The default is 0.
         ideal_gate : string, optional
             The ideal gate keyword for this control pulse. The default is None.
 

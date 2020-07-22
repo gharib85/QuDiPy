@@ -236,13 +236,13 @@ def load_potentials(ctrl_vals, ctrl_names, f_type='pot', f_dir=None):
     ctrl_names : list of strings
         List of each ctrl variable name. Must be the same length as ctrl_vals 
         first dimension.
-    f_type : string
+    f_type : string, optional
         Type of file to load (either potential or electric field). Acceptable 
         arguments include ['pot','potential','Uxy','electric','field','Ez'].
-        Default is potential.
-    f_dir : string
-        Path to find files specified in f_list.  This is an optional argument.
-        The default location to search is the current working directory.
+        Default is potential. The default is 'pot'
+    f_dir : string, optional
+        Path to find files specified in f_list. The default is is the current
+        working directory.
     
     Returns
     -------
