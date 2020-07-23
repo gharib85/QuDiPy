@@ -155,10 +155,10 @@ def construct_controlled(numOfQubits, control, target, operation):
 
     return output
 
-test = construct_controlled(2, 1, 2, 'X')
-print('CNOT constructed: ', test)
-test = construct_controlled(2, 1, 2, 'Z')
-print('CZ constructed: ', test)
+# test = construct_controlled(2, 1, 2, 'X')
+# print('CNOT constructed: ', test)
+# test = construct_controlled(2, 1, 2, 'Z')
+# print('CZ constructed: ', test)
 
 SWAP = np.array([[1,0,0,0],[0,0,1,0],[0,1,0,0],[0,0,0,1]],dtype=complex)
 RSWAP = np.array([[1,0,0,0],[0,(1 + 1.j)/2,(1 - 1.j)/2,0],[0,(1 - 1.j)/2,(1 + 1.j)/2,0],[0,0,0,1]],dtype=complex)
