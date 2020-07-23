@@ -31,25 +31,47 @@ class CSDAnalysis:
         '''
         self.csd = csd
 
-    def generate_bitmap(self, threshold, plotting=False):
+    def generate_bitmap(self, threshold, threshold_type='percentile', plotting=False):
         '''
         Transforms the charge stability diagram into a bitmap. Threshold determines whether bit is considered 'on' or 'off'
 
         Parameters
         ----------
-        threshold: threshold which determines whether bit is considered 'on' or 'off' 
+        threshold: threshold which determines whether bit is considered 'on' or 'off'
+
+        threshold: number which specifies the threshold. Behaves differently depending on threshold_type
+
+        Keyword Arguments
+        -----------------
+        threshold_type: String flag for which type of thresholding to do (default 'percentile')
+            - 'percentile': will set all elements in the array above the set percentile to 1 and all those below to 0, ignoring NaN values 
+                    e.g with threshold=99, only elements above the 99th percentile will be set to 1
+            - 'absolute': will set all elements in the array above the specified value to 1 and all those below to 0 
+                    e.g with threshold=20, only elements whos is value greater or equal 20 will be set to 1
+        plotting: flag which determines whether or not to plot the resulting thresholded Hough accumulator (default False)
 
         Returns
         -------
         None
 
         '''
+        if threshold_type == 'percentile':
+            # Converts percentile type threshold into absolute type to use same for loop
+            threshold = np.nanpercentile(self.csd.csd_der, threshold)
+
+        elif threshold_type == 'absolute':
+            # Do nothing to the threshold, but avoid raising an error
+            pass
+
+        else:
+            raise ValueError('Unrecognized threshold type: ' + str(threshold_type))
+
         self.csd_bitmap = self.csd.csd_der.mask(abs(self.csd.csd_der) > threshold, other=1).mask(abs(self.csd.csd_der) <= threshold, other=0)
         if plotting is True:
-            self._plot_heatmap(self.csd_bitmap, self.csd.v_1_values, self.csd.v_2_values, r'V$_1$', r'V$_2$')
+            self.plot_heatmap(self.csd_bitmap, self.csd.v_1_values, self.csd.v_2_values, r'V$_1$', r'V$_2$')
 
 
-    def hough_transform(self, num_thetas=180, rho_num=100, plotting=False):
+    def hough_transform(self, num_thetas=180, theta_min=-90, theta_max=90, rho_num=100, plotting=False):
         '''
         Performs the Hough transform on the charge stability diagram bitmap stored in the object
 
@@ -74,7 +96,7 @@ class CSDAnalysis:
         img = self.csd_bitmap
         
         # Rho and Theta ranges
-        thetas = np.deg2rad(np.linspace(-90.0, 90.0, num=num_thetas))
+        thetas = np.deg2rad(np.linspace(theta_min, theta_max, num=num_thetas))
         width = img.columns[-1]
         height = img.index[-1]
         diag_len = np.sqrt(width ** 2 + height ** 2)   # max_dist
@@ -111,7 +133,7 @@ class CSDAnalysis:
             rhos = np.round(self.rhos, 3)
             thetas = np.round(self.thetas, 3)
             # Call heatmap plotting function
-            self._plot_heatmap(self.accumulator, thetas, rhos, r'$\theta$ (rad)', r'$\rho$ (V)')
+            self.plot_heatmap(self.accumulator, thetas, rhos, r'$\theta$ (rad)', r'$\rho$ (V)')
 
         return accumulator, thetas, rhos
 
@@ -127,7 +149,7 @@ class CSDAnalysis:
         Keyword Arguments
         -----------------
         threshold_type: String flag for which type of thresholding to do (default 'percentile')
-            - 'percentile': will set all elements in the array above the set percentile to 1 and all those below to 0 
+            - 'percentile': will set all elements in the array above the set percentile to 1 and all those below to 0, ignoring NaN values  
                     e.g with threshold=99, only elements above the 99th percentile will be set to 1
             - 'absolute': will set all elements in the array above the specified value to 1 and all those below to 0 
                     e.g with threshold=20, only elements whos is value greater or equal 20 will be set to 1
@@ -140,7 +162,7 @@ class CSDAnalysis:
         '''
         if threshold_type == 'percentile':
             # Converts percentile type threshold into absolute type to use same for loop
-            threshold = np.percentile(self.accumulator, threshold)
+            threshold = np.nanpercentile(self.accumulator, threshold)
 
         elif threshold_type == 'absolute':
             # Do nothing to the threshold, but avoid raising an error
@@ -161,7 +183,7 @@ class CSDAnalysis:
             rhos = np.round(self.rhos, 3)
             thetas = np.round(self.thetas, 3)
             # Call heatmap plotting function
-            self._plot_heatmap(accumulator_threshold, thetas, rhos, r'$\theta$ (rad)', r'$\rho$ (V)')
+            self.plot_heatmap(accumulator_threshold, thetas, rhos, r'$\theta$ (rad)', r'$\rho$ (V)')
 
         return accumulator_threshold
 
@@ -241,7 +263,7 @@ class CSDAnalysis:
 
         return valid_centroids
 
-    def _plot_heatmap(self, data, x_values, y_values, x_label, y_label):
+    def plot_heatmap(self, data, x_values, y_values, x_label, y_label):
         df1 = pd.DataFrame(data, index=y_values, columns=x_values)
         s = sb.heatmap(df1, cbar=True, xticklabels=int(self.csd.num/5), yticklabels=int(self.csd.num/5))
         s.axes.invert_yaxis()
