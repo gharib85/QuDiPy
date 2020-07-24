@@ -5,7 +5,6 @@ Hough transfrom code based off of https://github.com/alyssaq/hough_transform.
 '''
 
 import numpy as np
-from numpy.lib.function_base import average
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sb
@@ -71,7 +70,7 @@ class CSDAnalysis:
             self.plot_heatmap(self.csd_bitmap, self.csd.v_1_values, self.csd.v_2_values, r'V$_1$', r'V$_2$')
 
 
-    def hough_transform(self, num_thetas=180, theta_min=-90, theta_max=90, rho_num=100, plotting=False):
+    def hough_transform(self, num_thetas=180, theta_min=-90, theta_max=90, plotting=False):
         '''
         Performs the Hough transform on the charge stability diagram bitmap stored in the object
 
@@ -217,7 +216,6 @@ class CSDAnalysis:
 
         # Number of clusters in labels, ignoring noise if present.
         n_clusters_ = len(set(labels)) - (1 if -1 in labels else 0)
-        n_noise_ = list(labels).count(-1)
 
         # Convert from indices to pairs of the for [theta, rho] and convert into a numpy array
         points = []
@@ -255,10 +253,15 @@ class CSDAnalysis:
         # get centroids of each cluster and save for later
         clf = NearestCentroid()
         clf.fit(points, labels)
-        centroid = clf.centroids_
+        centroids = clf.centroids_
+
+        # Remove the noise from the clustering if it is present (since it's label is -1 and all others are positive, it will alwasy be the first in the list of centroids)
+        if -1 in labels:
+            centroids = np.delete(centroids, 0, 0)
+
         # TODO determine better way to determine invalid charge transitions and exclude them
         # drop centroids where theta < 0 (which correcpond to positive slope)
-        valid_centroids = np.array([i for i in centroid if i[0]>0])
+        valid_centroids = np.array([i for i in centroids if i[0]>0])
         self.centroids = valid_centroids
 
         return valid_centroids
