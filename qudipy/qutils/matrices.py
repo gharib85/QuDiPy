@@ -9,16 +9,18 @@ import numpy as np
 
 #Pauli matrices
 
-_X = np.array([[0,1],[1,0]], dtype=complex)
-_Y = np.array([[0,-1j],[1j,0]], dtype=complex)
-_Z = np.array([[1,0],[0,-1]], dtype=complex)
-_I = np.array([[1,0],[0,1]], dtype=complex)
+PAULI_X = np.array([[0,1],[1,0]], dtype=complex)
+PAULI_Y = np.array([[0,-1j],[1j,0]], dtype=complex)
+PAULI_Z = np.array([[1,0],[0,-1]], dtype=complex)
+PAULI_I = np.array([[1,0],[0,1]], dtype=complex)
     
 #constant matrices and expressions with them
     
 
-def x_matrix(N,k):
+def x(N,k):
     """
+    Creates matrix X_k of dimensions 2**N x 2**N 
+    
     Parameters
     ----------
     N : number of electrons in the system
@@ -31,19 +33,21 @@ def x_matrix(N,k):
 
     """
     if k==1:
-        return np.kron(_X,np.eye(2**(N-1)))
+        return np.kron(PAULI_X,np.eye(2**(N-1)))
     else:
-        temp=_I
+        temp=PAULI_I
         for m in range(2,N+1):
             if k is m:
-                temp=np.kron(temp,_X)
+                temp=np.kron(temp,PAULI_X)
             else:
-                temp=np.kron(temp,_I)
+                temp=np.kron(temp,PAULI_I)
         return temp
             
             
-def y_matrix(N,k):
+def y(N,k):
     """
+    Creates matrix Y_k of dimensions 2**N x 2**N 
+    
     Parameters
     ----------
     N : number of electrons in the system
@@ -56,21 +60,23 @@ def y_matrix(N,k):
 
     """
     if k==1:
-        return np.kron(_Y,np.eye(2**(N-1)))
+        return np.kron(PAULI_Y,np.eye(2**(N-1)))
     else:
-        temp=_I
+        temp=PAULI_I
         for m in range(2,N+1):
             if k is m:
-                temp=np.kron(temp,_Y)
+                temp=np.kron(temp,PAULI_Y)
             else:
-                temp=np.kron(temp,_I)
+                temp=np.kron(temp,PAULI_I)
         return temp
 
           
-def z_matrix(N,k):
+def z(N,k):
     """
     Parameters
     ----------
+    Creates matrix Z_k of dimensions 2**N x 2**N 
+    
     N : number of electrons in the system
     k : position of the Z matrix
 
@@ -81,26 +87,26 @@ def z_matrix(N,k):
 
     """
     if k==1:
-        return np.kron(_Z,np.eye(2**(N-1)))
+        return np.kron(PAULI_Z,np.eye(2**(N-1)))
     else:
-        temp=_I
+        temp=PAULI_I
         for m in range(2,N+1):
             if k is m:
-                temp=np.kron(temp,_Z)
+                temp=np.kron(temp,PAULI_Z)
             else:
-                temp=np.kron(temp,_I)
+                temp=np.kron(temp,PAULI_I)
         return temp
 
 
-def sigma_plus_matrix(N,k):
-    return x_matrix(N,k)+1j*y_matrix(N,k)
+def sigma_plus(N,k):
+    return x(N,k)+1j*y(N,k)
 
 
-def sigma_minus_matrix(N,k):
-    return x_matrix(N,k)-1j*y_matrix(N,k)
+def sigma_minus(N,k):
+    return x(N,k)-1j*y(N,k)
 
 
-def up_matrix(N,k):
+def e_up(N,k):
     """
     Defines matrix that projects k-th qubit on the state |0>
     
@@ -115,9 +121,9 @@ def up_matrix(N,k):
         Matrix |0><0|k of dimensions 2**Nx2**N 
 
     """
-    return 0.5*(unit_matrix(N) + z_matrix(N,k))
+    return 0.5*(unit(N) + z(N,k))
     
-def down_matrix(N,k):
+def e_down(N,k):
     """
     Defines matrix that projects k-th qubit on the state |1>
     
@@ -132,9 +138,9 @@ def down_matrix(N,k):
         Matrix |1><1|k of dimensions 2**Nx2**N 
 
     """
-    return 0.5*(unit_matrix(N) - z_matrix(N,k))
+    return 0.5*(unit(N) - z(N,k))
 
-def unit_matrix(N):
+def unit(N):
     """
     Defines unit matrix of dimensions 2**Nx2**N
     
@@ -150,7 +156,7 @@ def unit_matrix(N):
     return np.eye(2**N, 2**N, dtype = complex )
 
 
-def cnot_matrix(N, ctrl, trgt):
+def cnot(N, ctrl, trgt):
     """
     Defines matrix for CNOT gate 
     
@@ -166,10 +172,10 @@ def cnot_matrix(N, ctrl, trgt):
         Matrix for CNOT gate
 
     """
-    return up_matrix(N, ctrl) + down_matrix(N, ctrl) @ x_matrix(N, trgt)
+    return e_up(N, ctrl) + e_down(N, ctrl) @ x(N, trgt)
 
 
-def swap_matrix(N, k1, k2):
+def swap(N, k1, k2):
     """
     Defines SWAP gate matrix for qubits # k1, k2
     
@@ -184,13 +190,13 @@ def swap_matrix(N, k1, k2):
         Matrix for SWAP gate 
 
     """
-    return cnot_matrix(N, k1, k2) @ cnot_matrix(N, k2, k1) @ cnot_matrix(N, k1, k2)
+    return cnot(N, k1, k2) @ cnot(N, k2, k1) @ cnot(N, k1, k2)
     
 
 
-def sigma_product_matrix(N, k1, k2):
+def sigma_product(N, k1, k2):
     """
-    Matrix coupled to the exchange parameter J_{k_1, k_2}
+    Dot product of two Pauli vectors
     
     Parameters
     ----------
@@ -203,16 +209,14 @@ def sigma_product_matrix(N, k1, k2):
         \vec{sigma_k1} \cdot \vec{sigma_k2}
 
     """    
-    if k1==k2:
-        return np.zeros((2**N, 2**N))
-    else:
-        return (
-            x_matrix(N, k1) @ x_matrix(N, k2) 
-            + y_matrix(N, k1) @ y_matrix(N, k2) 
-            + z_matrix(N, k1) @ z_matrix(N, k2))
+    
+    return (
+            x(N, k1) @ x(N, k2) 
+            + y(N, k1) @ y(N, k2) 
+            + z(N, k1) @ z(N, k2))
 
 
-def rswap_matrix(N, k1, k2):
+def rswap(N, k1, k2):
     """
     Defines sqrt(SWAP) gate matrix for qubits # k1, k2
     
@@ -227,5 +231,5 @@ def rswap_matrix(N, k1, k2):
         Matrix for SWAP gate 
 
     """
-    return (1-1j)/4 * sigma_product_matrix(N, k1, k2) + (3+1j)/2 * unit_matrix(N)
+    return (1-1j)/4 * sigma_product(N, k1, k2) + (3+1j)/2 * unit(N)
 
