@@ -135,7 +135,7 @@ class CSD:
         num: number of voltage point in 1d, which leads to a num^2 charge stability diagram (default 100)
         plotting: flag indicating whether charge stability diagram should be plotted after completion (default False)
         blur: Flag which dictates whether to do a Gaussian blur on the data (default False)
-        blur_sigma: If blur is set to True, use this number as the stanaderd devation in the Gaussian blur
+        blur_sigma: If blur is set to True, use this number as the stanaderd devation in the Gaussian blur (default 0)
 
         Returns
         -------

@@ -37,7 +37,6 @@ class CSDAnalysis:
         Parameters
         ----------
         threshold: threshold which determines whether bit is considered 'on' or 'off'
-
         threshold: number which specifies the threshold. Behaves differently depending on threshold_type
 
         Keyword Arguments
@@ -80,8 +79,9 @@ class CSDAnalysis:
 
         Keyword Arguments
         -----------------
-        num_thetas: number of angle points to sweep over (default 180) 
-        rho_num: number of distance numbers to start with. Number of distnce points in the end will be roughly 2^(3/2) times the original amount (default 100)
+        num_thetas: number of angle points to sweep over (default 180)
+        theta_min: smallest angle (in degrees) to start the sweep from, which should not be smaller than -90 (default -90)
+        theta_max: largest angle (in degrees) to sweep to, which should not be greater than 90 (default 90)
         plotting: flag which determines whether or not to plot the resulting Hough accumulator (default False)
 
         Returns
@@ -317,9 +317,8 @@ class CSDAnalysis:
 
     def find_tripletpoints(self):
         '''
-        Finds the location of triplet points in a charge stability diagram.
-        This function is NOT general and only works in the case of 4 main transition
-        lines with a middle transition that is missing.
+        Finds the location of triple points in a charge stability diagram.
+        This function is NOT general and only works in the case of 4 main transition lines with a middle transition that is missing.
 
         Parameters
         ----------
@@ -375,6 +374,18 @@ class CSDAnalysis:
         return triple_points
 
     def plot_csd_with_lines_and_triple_points(self):
+        '''
+        Plots charge stability diagram with fitted lines (terminated at the correct triple points)
+        This function is NOT general and only works in the case of 4 main transition lines with a middle transition that is missing.
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        None
+        '''
 
         # Extract the coordinates for the two triple points
         x_electron = self.triple_points[0][0]
