@@ -8,6 +8,7 @@ import pandas as pd
 import math
 import matplotlib.pyplot as plt
 from scipy.ndimage import gaussian_filter
+import sys
 
 e = 1.602176634 * 10**-19  # TODO figure out relative imports for common constants
 
@@ -160,8 +161,16 @@ class CSD:
         self.v_1_values = [round(self.v_g1_min + i/num * (self.v_g1_max - self.v_g1_min), 4) for i in range(num)]
         self.v_2_values = [round(self.v_g2_min + j/num * (self.v_g2_max - self.v_g2_min), 4) for j in range(num)]
         # Goes through all the v_1 and v_2 values and generate the csd data
-        data = [
-                [v_1, v_2, (p:= self._lowest_energy(v_1, v_2))[0] * dot_1_multiplier + p[1] * dot_2_multiplier
+
+        # Checks if a version after 3.8 is running in order to use the more efficient Walrus operator 
+        if sys.version[0:3] >= '3.8': # not the cleanest version check, but will be good until python 10
+            data = [
+                    [v_1, v_2, (p:= self._lowest_energy(v_1, v_2))[0] * dot_1_multiplier + p[1] * dot_2_multiplier
+                    ] for v_1 in self.v_1_values for v_2 in self.v_2_values
+                ]
+        else: # run less efficient version of the code
+            data = [
+                [v_1, v_2, self._lowest_energy(v_1, v_2)[0] * dot_1_multiplier + self._lowest_energy(v_1, v_2)[1] * dot_2_multiplier
                 ] for v_1 in self.v_1_values for v_2 in self.v_2_values
                ]
 

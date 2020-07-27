@@ -54,11 +54,11 @@ class CSDAnalysis:
         None
 
         '''
-        if threshold_type == 'percentile':
+        if threshold_type.lower() == 'percentile':
             # Converts percentile type threshold into absolute type to use same for loop
             threshold = np.nanpercentile(self.csd.csd_der, threshold)
 
-        elif threshold_type == 'absolute':
+        elif threshold_type.lower() == 'absolute':
             # Do nothing to the threshold, but avoid raising an error
             pass
 
@@ -159,11 +159,11 @@ class CSDAnalysis:
         accumulator_threshold: 2D array with counts 
 
         '''
-        if threshold_type == 'percentile':
+        if threshold_type.lower() == 'percentile':
             # Converts percentile type threshold into absolute type to use same for loop
             threshold = np.nanpercentile(self.accumulator, threshold)
 
-        elif threshold_type == 'absolute':
+        elif threshold_type.lower() == 'absolute':
             # Do nothing to the threshold, but avoid raising an error
             pass
 
@@ -317,7 +317,9 @@ class CSDAnalysis:
 
     def find_tripletpoints(self):
         '''
-        Finds the location of triplet points in a charge stability diagram. 
+        Finds the location of triplet points in a charge stability diagram.
+        This function is NOT general and only works in the case of 4 main transition
+        lines with a middle transition that is missing.
 
         Parameters
         ----------
@@ -345,10 +347,8 @@ class CSDAnalysis:
 
         candidate_points = []
         for i in range(len(m_array)):
-            for j in range(len(m_array)):
-                # Make sure you aren't looping over the same pair twice
-                if i<=j:
-                    continue
+            # Make sure you aren't looping over the same pair twice
+            for j in range(i):
                 # Extract values and compute expected intersection point
                 m1_temp = m_array[i]
                 m2_temp = m_array[j]
