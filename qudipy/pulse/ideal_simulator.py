@@ -109,7 +109,7 @@ def construct_controlled(numOfQubits, control, target, operation):
         The number indcating the target qubit
     operation: string
         Specify what operation is done on the target qubit
-        options = ['X', 'Z']
+        options = ['X', 'Y', 'Z']
 
     Returns
     -------
@@ -119,6 +119,8 @@ def construct_controlled(numOfQubits, control, target, operation):
     # matrix of the target operation
     if operation == 'X': 
         op = X
+    if operation == 'Y': 
+        op = Y
     elif operation == 'Z':
         op = Z
 
