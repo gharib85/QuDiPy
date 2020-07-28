@@ -250,7 +250,43 @@ class HubbardCSD:
         self.n_2_up = np.kron(np.kron(self.identity, self.identity), np.kron(self.number, self.identity))
         self.n_2_down = np.kron(np.kron(self.identity, self.identity), np.kron(self.identity, self.number))
 
+        self.c_1_up_creation = np.kron(np.kron(self.creation, self.identity), np.kron(self.identity, self.identity))
+        self.c_1_up_annihilation = np.kron(np.kron(self.annihilation, self.identity), np.kron(self.identity, self.identity))
+        self.c_1_down_creation = np.kron(np.kron(self.identity, self.creation), np.kron(self.identity, self.identity))
+        self.c_1_down_annihilation = np.kron(np.kron(self.identity, self.annihilation), np.kron(self.identity, self.identity))
+
+        self.c_2_up_creation = np.kron(np.kron(self.identity, self.identity), np.kron(self.creation, self.identity))
+        self.c_2_up_annihilation = np.kron(np.kron(self.identity, self.identity), np.kron(self.annihilation, self.identity))
+        self.c_2_down_creation = self.n_1_down = np.kron(np.kron(self.identity, self.identity), np.kron(self.identity, self.creation))
+        self.c_2_down_annihilation = self.n_1_down = np.kron(np.kron(self.identity, self.identity), np.kron(self.identity, self.annihilation))
+
         self.hamiltonian = np.zeros((16,16))
+
+        def generate_csd_directly(self, U_1, U_2, U_12, t=0):
+
+            self.alpha_1 = abs(e) * ((U_2 - U_12) * U_1)/(U_1 * U_2 - U_12**2)
+            self.alpha_2 = abs(e) * ((U_1 - U_12) * U_2)/(U_1 * U_2 - U_12**2)
+
+            if self.h_mu is False:
+                raise Exception("Hamiltonian will be independent of gate volatges")
+            
+            if self.h_t is True:
+                tunnel_coupling_h = -t * (
+                                                self.c_1_down_creation @ self.c_2_down_annihilation + self.c_2_down_creation @ self.c_1_down_annihilation +
+                                                self.c_1_up_creation @ self.c_2_up_annihilation + self.c_2_up_creation @ self.c_1_up_annihilation
+                                            )
+                self.hamiltonian = self.hamiltonian + tunnel_coupling_h
+
+            if self.h_u is True:
+                coulomb_interaction = (
+                    U_1 * n_1_up @ n_1_down + U_2 * n_2_up @ n_2_down +
+                    U_12 * (
+                            n_1_up @ n_2_down + n_1_down @ n_2_up +
+                            n_1_up @ n_2_up + n_1_down @ n_2_down # ignoring exchange 
+                )
+                )
+                self.hamiltonian = self.hamiltonian + coulomb_interaction
+
 
         def load_potential(self, file_path):
         # TODO
