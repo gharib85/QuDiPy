@@ -1,11 +1,11 @@
 """
 Functions for handling control pulse files .ctrlp
 """
-
+import os, sys
 import pandas as pd
 import numpy as np
-import os
-from qudipy.circuit import ControlPulse, QuantumCircuit
+from quantumCircuit import QuantumCircuit
+from controlPulse import ControlPulse
 
 def _load_one_pulse(f_name):
     '''

@@ -1,6 +1,8 @@
+import os
 import math
 import numpy as np
 from scipy.linalg import expm
+import file_parsers
 
 ########## Elementary Matrices ##########
 
@@ -31,11 +33,11 @@ def construct_elementary(numOfQubits, axis, qubit):
     An 2^n * 2^n elementary matrix, where n is the number of qubits
 
     """
-    if axis == 'x':
+    if axis == 'X':
         sigma = X
-    elif axis == 'y':
+    elif axis == 'Y':
         sigma = Y
-    elif axis == 'z':
+    elif axis == 'Z':
         sigma = Z
     
     if qubit != 1:
@@ -49,7 +51,7 @@ def construct_elementary(numOfQubits, axis, qubit):
         output = np.kron(output, I)
     return output
 
-# test = construct_elementary(2, 'x', 1)
+# test = construct_elementary(2, 'X', 1)
 # print('elementary test: ', test)
 
 ########## Quantum Logic Gates from Elementary Matrices ##########
@@ -71,7 +73,7 @@ def construct_rotation(numOfQubits, axis, qubit, angle):
     qubit : int
         Specify which qubit the elementary matrix is about
     angle : float
-        The rotation angle
+        The rotation angle in radians
 
     Returns
     -------
@@ -80,18 +82,18 @@ def construct_rotation(numOfQubits, axis, qubit, angle):
     TODO: question there's an overall phase introduced
 
     """
-    if axis == 'x':
+    if axis == 'X':
         sigma = X
-    elif axis == 'y':
+    elif axis == 'Y':
         sigma = Y
-    elif axis == 'z':
+    elif axis == 'Z':
         sigma = Z
     elementary = construct_elementary(numOfQubits, axis, qubit)
     return expm(-1.j * angle * elementary / 2)
 
-# test = construct_rotation(1, 'x', 1, math.pi)
-# print('RX constructed: ', test)
-# print('RX:', expm(1.j * math.pi * X /2))
+# test = construct_rotation(1, 'Z', 1, math.pi)
+# print('RZ constructed: ', test)
+# print('RZ:', expm(1.j * math.pi * Z /2))
 
 def construct_controlled(numOfQubits, control, target, operation):
     """
@@ -113,7 +115,7 @@ def construct_controlled(numOfQubits, control, target, operation):
 
     Returns
     -------
-    An 2^n * 2^n matrix corresponding to a CNOT gate
+    An 2^n * 2^n matrix corresponding to a controlled-R gate
 
     """
     # matrix of the target operation
@@ -162,51 +164,191 @@ def construct_controlled(numOfQubits, control, target, operation):
 # test = construct_controlled(2, 1, 2, 'Z')
 # print('CZ constructed: ', test)
 
-SWAP = np.array([[1,0,0,0],[0,0,1,0],[0,1,0,0],[0,0,0,1]],dtype=complex)
-RSWAP = np.array([[1,0,0,0],[0,(1 + 1.j)/2,(1 - 1.j)/2,0],[0,(1 - 1.j)/2,(1 + 1.j)/2,0],[0,0,0,1]],dtype=complex)
-CTRLX = np.array([[1,0,0,0],[0,1,0,0],[0,0,0,1],[0,0,1,0]],dtype=complex)
-CTRLZ = np.array([[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,-1]],dtype=complex)
+# Function to generate all binary strings  
+def generateAllBinaryStrings_helper(n, arr, i, out):  
+    if i == n: 
+        temp = []
+        for i in range(0, n):  
+            temp.append(arr[i])
+        out.append(temp)
+        return 
+      
+    # First assign "0" at ith position  
+    # and try for all other permutations  
+    # for remaining positions  
+    arr[i] = 0
+    generateAllBinaryStrings_helper(n, arr, i + 1, out)  
+  
+    # And then assign "1" at ith position  
+    # and try for all other permutations  
+    # for remaining positions  
+    arr[i] = 1
+    generateAllBinaryStrings_helper(n, arr, i + 1, out) 
 
+def generateAllBinaryStrings(numOfQubits):
+    """
+    Returns a list of all possible states of a system with a specifc 
+    number of qubits. Each state is represente as a list of length n
+    """
+    output = []
+    arr = [None] * numOfQubits
+    generateAllBinaryStrings_helper(numOfQubits, arr, 0, output)
+    return output
 
-gates = {"X": X, "Y": Y, "Z": Z, "H": H, "SWAP": SWAP, 
-"RSWAP": RSWAP, "CTRLX": CTRLX, "CTRLZ": CTRLZ}
+def SWAP(numOfQubits, qubit1, qubit2):
+    """
+    Given the number of qubits in the system and the index of the
+    two qubits being swapped, this function results in a matrix of 
+    the corresponding SWAP operation
 
-########## Functions ##########    
-def main():
-    # open the quantum circuit file
-    f = open('test.qcirc', 'r')
-    line = f.readline()
-    cnt = 1
-    start = False
-    while line:
-        # print("Line {}: {}".format(cnt, line.strip()))
-        lineL = line.split()
+    Parameters
+    ----------
+    numOfQubits : int
+        Total number of qubits in the system
+    qubit1 : int
+        the qubit being swapped with a smaller index
+    qubit2 : int
+        the qubit being swapped with a larger index
 
-        if "Number of qubits" in line:
-            n = int(lineL[-1])
-            rho = np.zeros(2**n)
-            rho[0] = 1
-            # print(rho)
-            start = True
+    Returns
+    -------
+    An 2^n * 2^n matrix corresponding to a SWAP gate
+    """
+    # initialize the matrix of the gate
+    matrix = np.zeros((2**numOfQubits, 2**numOfQubits))
+    q1 = qubit1 - 1
+    q2 = qubit2 - 1
+    states = generateAllBinaryStrings(numOfQubits)
+    for i in range(len(states)):
+        s = states[i]
+        if s[q1] == s[q2]:
+            matrix[i][i] = 1
+        else:
+            # print(s)
+            qubit1_value = s[q1]
+            qubit2_value = s[q2]
+            s[q1] = qubit2_value
+            s[q2] = qubit1_value
+            states = generateAllBinaryStrings(numOfQubits)
+            swap_index = states.index(s)
+            matrix[i][swap_index] = 1
+    return matrix
+
+def RSWAP(numOfQubits, qubit1, qubit2):
+    """
+    Given the number of qubits in the system and the index of the
+    two qubits being swapped, this function results in a matrix of 
+    the corresponding RSWAP operation
+
+    Parameters
+    ----------
+    numOfQubits : int
+        Total number of qubits in the system
+    qubit1 : int
+        the qubit being swapped with a smaller index
+    qubit2 : int
+        the qubit being swapped with a larger index
+
+    Returns
+    -------
+    An 2^n * 2^n matrix corresponding to a RSWAP gate
+
+    TODO: fix
+    """
+    # initialize the matrix of the gate
+    matrix = np.zeros((2**numOfQubits, 2**numOfQubits))
+    q1 = qubit1 - 1
+    q2 = qubit2 - 1
+    states = generateAllBinaryStrings(numOfQubits)
+    for i in range(len(states)):
+        s = states[i]
+        if s[q1] == s[q2]:
+            matrix[i][i] = 1
+        else:
+            # print(s)
+            qubit1_value = s[q1]
+            qubit2_value = s[q2]
+            s[q1] = qubit2_value
+            s[q2] = qubit1_value
+            states = generateAllBinaryStrings(numOfQubits)
+            swap_index = states.index(s)
+            matrix[i][swap_index] = (1-1.j)/2
+            matrix[i][i] = (1+1.j)/2
+    return matrix
+
+# print(RSWAP(2, 1, 2))
+
+########## Load Circuit ##########
+# Load the qcirc file into a QuantumCircuit object
+qcirc = file_parsers.load_circuit('test.qcirc')
+qcirc.print_ideal_circuit()
+
+# number of qubits
+n = qcirc.n_qubits
+
+# circuit sequence
+circuit_seq = qcirc.circuit_sequence
+print(circuit_seq)
+
+# Initialize the system
+rho = np.zeros(2**n)
+rho[0] = 1
+print(rho)
+
+for op in circuit_seq:
+    gate = op[1]
+    if gate[0] == 'R' and gate[1] in ['X', 'Y']:
+        # print('gate[1]:', gate[1])
+        gate_mat = construct_rotation(n, gate[1], op[2][0], int(gate[2:])*math.pi/180)
+        # print(gate_mat)
+    elif gate[:4] == 'CTRL':
+        gate_mat = construct_controlled(n, op[2][0], op[2][1], gate[4])
+    elif gate == 'SWAP':
+        gate_mat = SWAP(n, op[2][0], op[2][1])
+    elif gate == 'RSWAP':
+        gate_mat = RSWAP(n, op[2][0], op[2][1])
+    # print(gate_mat)
+    rho = np.matmul(gate_mat,rho)
+    # rho = gate_mat @ rho @ gate_mat.conj().T
+
+print(rho)
+
+# ########## Functions ##########    
+# def main():
+#     # open the quantum circuit file
+#     f = open('test.qcirc', 'r')
+#     line = f.readline()
+#     cnt = 1
+#     start = False
+#     while line:
+#         # print("Line {}: {}".format(cnt, line.strip()))
+#         lineL = line.split()
+
+#         if "Number of qubits" in line:
+#             n = int(lineL[-1])
+#             rho = np.zeros(2**n)
+#             rho[0] = 1
+#             # print(rho)
+#             start = True
         
-        elif start: 
-            gate = gates[lineL[0]]
-            qubits = [int(i) for i in lineL[1:]]
-            if len(qubits) == 1:
-                if qubits[0] == 1: 
-                    op = np.kron(gate, I)
-                    rho = np.matmul(op,rho)
-                    # print(rho)
-                elif qubits[0] == 2:
-                    op = np.kron(I, gate)
-                    rho = np.matmul(op,rho)
-                    # print(rho)
-            elif len(qubits) == 2:
-                rho = np.matmul(gate,rho)
-                # print(rho)
+#         elif start: 
+#             gate = gates[lineL[0]]
+#             qubits = [int(i) for i in lineL[1:]]
+#             if len(qubits) == 1:
+#                 if qubits[0] == 1: 
+#                     op = np.kron(gate, I)
+#                     rho = np.matmul(op,rho)
+#                     # print(rho)
+#                 elif qubits[0] == 2:
+#                     op = np.kron(I, gate)
+#                     rho = np.matmul(op,rho)
+#                     # print(rho)
+#             elif len(qubits) == 2:
+#                 rho = np.matmul(gate,rho)
+#                 # print(rho)
 
-        line = f.readline()
-        cnt += 1
+#         line = f.readline()
+#         cnt += 1
 
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+#     main()
