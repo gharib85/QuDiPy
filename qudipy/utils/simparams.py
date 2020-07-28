@@ -11,6 +11,8 @@ class SimulationParameters:
         
         # [PATH/TO/WHERE/POTENTIAL/FILES/ARE/STORED]
         self.path_to_pot = ''
+        # [PATH/TO/WHERE/PULSE/FILES/ARE/STORED]
+        self.path_to_pulses = ''
         
         self.gate_voltages_to_load = {
               "V1": [0.1],

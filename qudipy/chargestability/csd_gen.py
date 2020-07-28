@@ -7,6 +7,8 @@ import seaborn as sb
 import pandas as pd
 import math
 import matplotlib.pyplot as plt
+from scipy.ndimage import gaussian_filter
+import sys
 
 e = 1.602176634 * 10**-19  # TODO figure out relative imports for common constants
 
@@ -115,7 +117,7 @@ class CSD:
         else:
             return [state[0], 0]
 
-    def generate_csd(self, v_g1_max, v_g2_max, v_g1_min=0, v_g2_min=0, c_cs_1=None, c_cs_2=None, num=100, plotting=False):
+    def generate_csd(self, v_g1_max, v_g2_max, v_g1_min=0, v_g2_min=0, c_cs_1=None, c_cs_2=None, num=100, plotting=False, blur=False, blur_sigma=0):
         ''' Generates the charge stability diagram between v_g1(2)_min and v_g1(2)_max with num by num data points in 2D
 
         Parameters
@@ -131,6 +133,8 @@ class CSD:
         c_cs_2: coupling between charge sensor and dot 2 (default to None)
         num: number of voltage point in 1d, which leads to a num^2 charge stability diagram (default 100)
         plotting: flag indicating whether charge stability diagram should be plotted after completion (default False)
+        blur: Flag which dictates whether to do a Gaussian blur on the data (default False)
+        blur_sigma: If blur is set to True, use this number as the stanaderd devation in the Gaussian blur (default 0)
 
         Returns
         -------
@@ -156,14 +160,25 @@ class CSD:
         self.v_1_values = [round(self.v_g1_min + i/num * (self.v_g1_max - self.v_g1_min), 4) for i in range(num)]
         self.v_2_values = [round(self.v_g2_min + j/num * (self.v_g2_max - self.v_g2_min), 4) for j in range(num)]
         # Goes through all the v_1 and v_2 values and generate the csd data
-        data = [
-                [v_1, v_2, (p:= self._lowest_energy(v_1, v_2))[0] * dot_1_multiplier + p[1] * dot_2_multiplier
-                ] for v_1 in self.v_1_values for v_2 in self.v_2_values
+
+        # Checks if a version after 3.8 is running in order to use the more efficient Walrus operator 
+        if sys.version[0:3] >= '3.8': # not the cleanest version check, but will be good until python 10
+            data = [
+                    [v_1, v_2, (p:= self._lowest_energy(v_1, v_2))[0] * dot_1_multiplier + p[1] * dot_2_multiplier
+                    ] for v_1 in self.v_1_values for v_2 in self.v_2_values
                 ]
+        else: # run less efficient version of the code
+            data = [
+                [v_1, v_2, self._lowest_energy(v_1, v_2)[0] * dot_1_multiplier + self._lowest_energy(v_1, v_2)[1] * dot_2_multiplier
+                ] for v_1 in self.v_1_values for v_2 in self.v_2_values
+               ]
 
         # Create DataFrame from data and pivot into num by num array
         df = pd.DataFrame(data, columns=['V_g1', 'V_g2', 'Current'])
         self.csd = df.pivot_table(index='V_g1', columns='V_g2', values='Current')
+
+        if blur is True:
+            self.csd = pd.DataFrame(gaussian_filter(self.csd, blur_sigma), columns=self.v_1_values, index=self.v_2_values) 
 
         # Create Dataframe that looks for differences between adjacent pixels, creating a "derivative" of the charge stability diagram
         df_der_row = self.csd.diff(axis=0)

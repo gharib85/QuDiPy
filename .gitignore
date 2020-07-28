@@ -1,3 +1,5 @@
 *.pyc
 *.ipynb_checkpoints
-Tutorial data/
+# I use tutorials/test.py for testing purposes and don't want it tracked
+tutorials/test.py
+tutorials/QuDiPy tutorial data
