@@ -52,9 +52,9 @@ def construct_elementary(numOfQubits, axis, qubit):
         output = np.kron(output, I)
     return output
 
-# test = construct_elementary(2, 'X', 1)
+test = construct_elementary(2, 'X', 2)
 # test2 = construct_elementary(2, 'X', 2)
-# print('elementary test: ', test)
+print('elementary test: ', test)
 # print('elementary test2: ', test2)
 
 
@@ -95,8 +95,8 @@ def construct_rotation(numOfQubits, axis, qubit, angle):
     elementary = construct_elementary(numOfQubits, axis, qubit)
     return expm(-1.j * angle * elementary / 2)
 
-# test = construct_rotation(1, 'Z', 1, math.pi)
-# print('RZ constructed: ', test)
+# test = construct_rotation(2, 'X', 1, math.pi)
+# print('RX constructed: ', test)
 # print('RZ:', expm(1.j * math.pi * Z /2))
 
 def construct_controlled(numOfQubits, control, target, operation):
