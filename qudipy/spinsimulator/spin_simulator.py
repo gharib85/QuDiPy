@@ -474,7 +474,7 @@ class SpinSys:
                     K4 = self.lindbladian(self.rho + delta_t*K3, cdict_N, next_pulse )
                     #updating density matrix
                     
-                    self.rho = self.rho + delta_t/6*(K1+K2+K3+K4)
+                    self.rho = self.rho + delta_t/6*(K1+2*K2+2*K3+K4)
                     
                     #implementing tracking:
                     if track_qubits is not None:
