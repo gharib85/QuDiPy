@@ -1,21 +1,22 @@
 '''
-File used to generate and plot charge stability diagrams assuming known capacitances of system.
-Based off of the analisys in section II.A and Appendix 3 in https://doi.org/10.1103/RevModPhys.75.1.
+File used to generate and plot charge stability diagrams.
 '''
-
-import seaborn as sb
-import pandas as pd
 import math
+import sys
+import numpy as np
+from numpy.core.numeric import identity
+import pandas as pd
+import seaborn as sb
 import matplotlib.pyplot as plt
 from scipy.ndimage import gaussian_filter
-import sys
 
 e = 1.602176634 * 10**-19  # TODO figure out relative imports for common constants
 
 
 class CSD:
     '''
-    Initialize the charge stability diagram class which generates charge stability diagrams based on given capacitance parameters. 
+    Initialize the charge stability diagram class which generates charge stability diagrams based on given capacitance parameters.
+    Based off of the analisys in section II.A and Appendix 3 in https://doi.org/10.1103/RevModPhys.75.1.
     This class is intended for testing of the analysis module and comparing extracted input parameter with known input parameters.
     '''
     def __init__(self, c_l, c_r, c_m, c_g1, c_g2):
@@ -207,3 +208,52 @@ class CSD:
             p2.axes.invert_yaxis()
             p2.set(xlabel=r'V$_1$', ylabel=r'V$_2$')
             plt.show()
+
+class HubbardCSD:
+    '''
+    Initialize the charge stability diagram class which generates charge stability diagrams based on given capacitance parameters.
+    Based on section III in https://doi.org/10.1103/PhysRevB.83.235314.
+    This class is intended for use with NextNano potentials to simulate charge stability diagrams of various designs, but can also be used with analytic potentials.
+    '''
+    def __init__(self, h_mu=False, h_t=False, h_u=False):
+        '''
+
+        Parameters
+        ----------
+        None
+
+        Keyword Arguments
+        -----------------
+        h_mu: Whether to include chemical potential term in Hamiltonian when Hamiltonian is created (default False)
+        h_t: Whether to include tunnel coupling term in Hamiltonian when Hamiltonian is created (default False)
+        h_u: Whether to include coulomb repulsion repulsion in Hamiltoninan when hamiltonian is created (default False)
+
+        Returns
+        -------
+        None
+        '''
+
+        # Save which parts of Hamiltonian to be used for later
+        self.h_mu = h_mu
+        self.h_t = h_t
+        self.h_u = h_u
+
+        # Define basic matrices that will be used to make matrix components
+        self.identity = np.array([[1,0],[0,1]])
+        self.creation = np.array([[0,0],[1,0]])
+        self.annihilation = np.array([[0,1],[0,0]])
+        self.number = np.array([[0,0],[0,1]])
+
+        # Define matrices that will construct the Hamiltonian
+        self.n_1_up = np.kron(np.kron(self.number, self.identity), np.kron(self.identity, self.identity))
+        self.n_1_down = np.kron(np.kron(self.identity, self.number), np.kron(self.identity, self.identity))
+        self.n_2_up = np.kron(np.kron(self.identity, self.identity), np.kron(self.number, self.identity))
+        self.n_2_down = np.kron(np.kron(self.identity, self.identity), np.kron(self.identity, self.number))
+
+        self.hamiltonian = np.zeros((16,16))
+
+        def load_potential(self, file_path):
+        # TODO
+            pass
+
+    
