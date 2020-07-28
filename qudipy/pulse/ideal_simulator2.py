@@ -58,4 +58,4 @@ def main():
     ideal_simulator(filename)
 
 if __name__ == "__main__":
-    main()
+    main() 
