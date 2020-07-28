@@ -42,7 +42,8 @@ def construct_elementary(numOfQubits, axis, qubit):
     
     if qubit != 1:
         output = I
-        for i in range(qubit-1):
+        for i in range(qubit-2):
+            print(i)
             output = np.kron(output, I)
         output = np.kron(output, sigma)
     else:
@@ -52,7 +53,10 @@ def construct_elementary(numOfQubits, axis, qubit):
     return output
 
 # test = construct_elementary(2, 'X', 1)
+# test2 = construct_elementary(2, 'X', 2)
 # print('elementary test: ', test)
+# print('elementary test2: ', test2)
+
 
 ########## Quantum Logic Gates from Elementary Matrices ##########
 
@@ -215,7 +219,7 @@ def SWAP(numOfQubits, qubit1, qubit2):
     An 2^n * 2^n matrix corresponding to a SWAP gate
     """
     # initialize the matrix of the gate
-    matrix = np.zeros((2**numOfQubits, 2**numOfQubits))
+    matrix = np.zeros((2**numOfQubits, 2**numOfQubits),dtype=complex)
     q1 = qubit1 - 1
     q2 = qubit2 - 1
     states = generateAllBinaryStrings(numOfQubits)
@@ -252,11 +256,9 @@ def RSWAP(numOfQubits, qubit1, qubit2):
     Returns
     -------
     An 2^n * 2^n matrix corresponding to a RSWAP gate
-
-    TODO: fix
     """
     # initialize the matrix of the gate
-    matrix = np.zeros((2**numOfQubits, 2**numOfQubits))
+    matrix = np.zeros((2**numOfQubits, 2**numOfQubits),dtype=complex)
     q1 = qubit1 - 1
     q2 = qubit2 - 1
     states = generateAllBinaryStrings(numOfQubits)
@@ -276,42 +278,44 @@ def RSWAP(numOfQubits, qubit1, qubit2):
             matrix[i][i] = (1+1.j)/2
     return matrix
 
-# print(RSWAP(2, 1, 2))
-
 ########## Load Circuit ##########
-# Load the qcirc file into a QuantumCircuit object
-qcirc = file_parsers.load_circuit('test.qcirc')
-qcirc.print_ideal_circuit()
+def load_circuit(filename):
+    # Load the qcirc file into a QuantumCircuit object
+    qcirc = file_parsers.load_circuit(filename)
+    qcirc.print_ideal_circuit()
 
-# number of qubits
-n = qcirc.n_qubits
+    # number of qubits
+    n = qcirc.n_qubits
 
-# circuit sequence
-circuit_seq = qcirc.circuit_sequence
-print(circuit_seq)
+    # circuit sequence
+    circuit_seq = qcirc.circuit_sequence
+    print(circuit_seq)
 
-# Initialize the system
-rho = np.zeros(2**n)
-rho[0] = 1
-print(rho)
+    # Initialize the system
+    rho = np.zeros(2**n)
+    rho[0] = 1
+    print(rho)
 
-for op in circuit_seq:
-    gate = op[1]
-    if gate[0] == 'R' and gate[1] in ['X', 'Y']:
-        # print('gate[1]:', gate[1])
-        gate_mat = construct_rotation(n, gate[1], op[2][0], int(gate[2:])*math.pi/180)
+    for op in circuit_seq:
+        gate = op[1]
+        if gate[0] == 'R' and gate[1] in ['X', 'Y', 'Z']:
+            # print('gate[1]:', gate[1])
+            gate_mat = construct_rotation(n, gate[1], op[2][0], int(gate[2:])*math.pi/180)
+        elif gate[:4] == 'CTRL':
+            gate_mat = construct_controlled(n, op[2][0], op[2][1], gate[4])
+        elif gate == 'SWAP':
+            gate_mat = SWAP(n, op[2][0], op[2][1])
+        elif gate == 'RSWAP':
+            gate_mat = RSWAP(n, op[2][0], op[2][1])
         # print(gate_mat)
-    elif gate[:4] == 'CTRL':
-        gate_mat = construct_controlled(n, op[2][0], op[2][1], gate[4])
-    elif gate == 'SWAP':
-        gate_mat = SWAP(n, op[2][0], op[2][1])
-    elif gate == 'RSWAP':
-        gate_mat = RSWAP(n, op[2][0], op[2][1])
-    # print(gate_mat)
-    rho = np.matmul(gate_mat,rho)
-    # rho = gate_mat @ rho @ gate_mat.conj().T
+        rho = np.matmul(gate_mat,rho)
+        # rho = gate_mat @ rho @ gate_mat.conj().T
 
-print(rho)
+    print(rho)
+    return rho
+
+filename = 'test.qcirc'
+load_circuit(filename)
 
 # ########## Functions ##########    
 # def main():
