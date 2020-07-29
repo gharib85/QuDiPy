@@ -154,13 +154,13 @@ def solve_schrodinger_eq(consts, gparams, n_sols=1):
         if gparams.grid_type == '1D':
             norm_val = inner_prod(gparams, curr_wf, curr_wf)
         
-            eig_vecs[:,idx] = curr_wf/norm_val
+            eig_vecs[:,idx] = curr_wf/np.sqrt(norm_val)
         
         if gparams.grid_type == '2D':
             norm_val = inner_prod(gparams, gparams.convert_NO_to_MG(
                 curr_wf), gparams.convert_NO_to_MG(curr_wf))
-        
-            curr_wf = curr_wf/norm_val
+                    
+            curr_wf = curr_wf/np.sqrt(norm_val)
             
             eig_vecs_mesh[:,:,idx] = gparams.convert_NO_to_MG(curr_wf)
             
