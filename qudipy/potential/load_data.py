@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from collections import namedtuple
 from scipy.interpolate import RegularGridInterpolator, interp2d
 from itertools import product
 import matplotlib.pyplot as plt
@@ -7,11 +8,10 @@ import matplotlib.cm as cm
 from scipy.signal import find_peaks
 from scipy.optimize import fminbound
 
+import qudipy as qd
 import qudipy.utils as utils
 from qudipy.qutils.solvers import solve_schrodinger_eq
 from qudipy.potential import GridParameters
-import qudipy as qd
-
 
 
 class PotentialInterpolator:
@@ -158,19 +158,20 @@ class PotentialInterpolator:
         # Do a 1D plot
         if plot_type == '1D':
             # Get the y-axis slice index
-            y_idx = utils.find_nearest(self.y_coords, y_slice)[0]
+            y_idx, y_val = utils.find_nearest(self.y_coords, y_slice)
             
             # If x-axis slice isn't sepcified, just show x-axis plot.
             if x_slice is None:
                 fig, ax = plt.subplots(figsize=(8,8))
                 ax.plot(self.x_coords/1E-9, int_pot[y_idx,:].T)
                 ax.set(xlabel='x-coords [nm]', ylabel='potential [J]',
-                   title=f'Potential along x-axis at y={y_slice/1E-9} nm')
+                   title=f'Potential along x-axis at y={y_val/1E-9:.2f} nm')
                 ax.grid()
+
             # If x-axis slice is specified, show both x- and y-axes plots
             else:
                 # Get the x-axis slice index
-                x_idx = utils.find_nearest(self.x_coords, x_slice)[0]
+                x_idx, x_val = utils.find_nearest(self.x_coords, x_slice)
                 
                 f = plt.figure(figsize=(12,8))
                 ax1 = f.add_subplot(121)
@@ -179,13 +180,13 @@ class PotentialInterpolator:
                 # potential along x-axis at y-axis slice
                 ax1.plot(self.x_coords/1E-9, int_pot[y_idx,:].T)
                 ax1.set(xlabel='x-coords [nm]', ylabel='potential [J]',
-                       title=f'Potential along x-axis at y={y_slice/1E-9} nm')
+                       title=f'Potential along x-axis at y={y_val/1E-9:.2f} nm')
                 ax1.grid()
                 
                 # potential along y-axis at x-axis slice
                 ax2.plot(self.y_coords/1E-9, int_pot[:,x_idx])
                 ax2.set(xlabel='y-coords [nm]', ylabel='potential [J]',
-                       title=f'Potential along y-axis at x={x_slice/1E-9} nm')
+                       title=f'Potential along y-axis at x={x_val/1E-9:.2f} nm')
                 ax2.grid()
         # Do a 2D plot
         elif plot_type == '2D':
@@ -199,8 +200,8 @@ class PotentialInterpolator:
             ax.set(xlabel='x-coords [nm]',ylabel='y-coords [nm]')
         # Raise an error
         else:
-            raise ValueError(f'plot_type {plot_type} specified. Either ''1D'''+
-                             ' ''2D'' allowed.')
+            raise ValueError(f'Error with specified plot_type {plot_type}. ' +
+                             'Either ''1D'' or ''2D'' allowed.')
                     
     
     def find_resonant_tc(self, volt_vec, swept_ctrl, bnds, peak_threshold=1000):
@@ -522,7 +523,9 @@ def load_potentials(ctrl_vals, ctrl_names, f_type='pot', f_dir=None,
             y *= 1E-9
         
         if idx == 0:
-            all_files['coords'] = (x,y)
+            # Have coordinates be a namedtuple
+            Coordinates = namedtuple('Coordinates',['x','y'])
+            all_files['coords'] = Coordinates(x,y)
             
         cval_array.append(list(curr_cvals))
         pots_array.append(pot)
@@ -568,12 +571,12 @@ if __name__ == "__main__":
     # pot_interp.plot(v_vec)
     
     # pot_interp.find_resonant_tc(v_vec,1,[0.261,0.262])
-    pot_interp.find_resonant_tc(v_vec,1,[0.255,0.257])
+    # pot_interp.find_resonant_tc(v_vec,1,[0.255,0.257])
     
     # pot_interp.plot(v_vec)
     # pot_interp.plot(v_vec, plot_type='2D')
     # pot_interp.plot(v_vec, plot_type='1D')
-    # pot_interp.plot(v_vec, plot_type='1D',y_slice=10E-9)
+    pot_interp.plot(v_vec, plot_type='1D',y_slice=10E-9)
     # pot_interp.plot(v_vec, plot_type='1D',y_slice=1E-9,x_slice=2E-9)
     # pot_interp.plot(v_vec, plot_type='1D',x_slice=20E-9)
     
