@@ -2,6 +2,6 @@
 Quantum utility helper module 
 '''
 
-from . import math
+from . import qmath
 from . import solvers
 from . import matrices

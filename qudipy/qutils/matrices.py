@@ -2,10 +2,12 @@
 """
 Constant matrices used to define quantum gates
 
-@author: hromecB
+@author: hromecB, keweizhou
 """
 
+import math
 import numpy as np
+from scipy.linalg import expm
 
 #Pauli matrices
 
@@ -37,7 +39,9 @@ def x(N,k):
     else:
         temp=PAULI_I
         for m in range(2,N+1):
-            if k is m:
+            print("k: ", k ,"m: ",  m)
+            if k == m:
+                print("X occurs here")
                 temp=np.kron(temp,PAULI_X)
             else:
                 temp=np.kron(temp,PAULI_I)
@@ -64,7 +68,7 @@ def y(N,k):
     else:
         temp=PAULI_I
         for m in range(2,N+1):
-            if k is m:
+            if k == m:
                 temp=np.kron(temp,PAULI_Y)
             else:
                 temp=np.kron(temp,PAULI_I)
@@ -91,11 +95,71 @@ def z(N,k):
     else:
         temp=PAULI_I
         for m in range(2,N+1):
-            if k is m:
+            if k == m:
                 temp=np.kron(temp,PAULI_Z)
             else:
                 temp=np.kron(temp,PAULI_I)
         return temp
+
+
+def rx(N,k,angle):
+    """
+    Parameters
+    ----------
+    Creates matrix RXxxx of dimensions 2**N x 2**N 
+    
+    N : number of electrons in the system
+    k : position of the X matrix
+    angle: rotation angle in degrees
+
+    Returns
+    -------
+    numpy array
+        Matrix RXxxx of dimensions 2**Nx2**N 
+
+    """
+    theta = angle * math.pi / 180
+    return expm(-1.j * theta * x(N,k) / 2)
+
+
+def ry(N,k,angle):
+    """
+    Parameters
+    ----------
+    Creates matrix RYxxx of dimensions 2**N x 2**N 
+    
+    N : number of electrons in the system
+    k : position of the Y matrix
+    angle: rotation angle in degrees
+
+    Returns
+    -------
+    numpy array
+        Matrix RYxxx of dimensions 2**Nx2**N 
+
+    """
+    theta = angle * math.pi / 180
+    return expm(-1.j * theta * y(N,k) / 2)
+
+
+def rz(N,k,angle):
+    """
+    Parameters
+    ----------
+    Creates matrix RZxxx of dimensions 2**N x 2**N 
+    
+    N : number of electrons in the system
+    k : position of the Z matrix
+    angle: rotation angle in degrees
+
+    Returns
+    -------
+    numpy array
+        Matrix RZxxx of dimensions 2**Nx2**N 
+
+    """
+    theta = angle * math.pi / 180
+    return expm(-1.j * theta * z(N,k) / 2)
 
 
 def sigma_plus(N,k):
@@ -123,6 +187,7 @@ def e_up(N,k):
     """
     return 0.5*(unit(N) + z(N,k))
     
+
 def e_down(N,k):
     """
     Defines matrix that projects k-th qubit on the state |1>
@@ -139,6 +204,7 @@ def e_down(N,k):
 
     """
     return 0.5*(unit(N) - z(N,k))
+
 
 def unit(N):
     """
@@ -175,6 +241,25 @@ def cnot(N, ctrl, trgt):
     return e_up(N, ctrl) + e_down(N, ctrl) @ x(N, trgt)
 
 
+def cz(N, ctrl, trgt):
+    """
+    Defines matrix for CZ gate 
+    
+    Parameters
+    ----------
+    N : number of electrons in the system
+    ctrl: control qubit
+    trgt: target qubit
+
+    Returns
+    -------
+    numpy array
+        Matrix for CZ gate
+
+    """
+    return e_up(N, ctrl) + e_down(N, ctrl) @ z(N, trgt)
+
+
 def swap(N, k1, k2):
     """
     Defines SWAP gate matrix for qubits # k1, k2
@@ -192,7 +277,6 @@ def swap(N, k1, k2):
     """
     return cnot(N, k1, k2) @ cnot(N, k2, k1) @ cnot(N, k1, k2)
     
-
 
 def sigma_product(N, k1, k2):
     """
@@ -232,4 +316,3 @@ def rswap(N, k1, k2):
 
     """
     return (1-1j)/4 * sigma_product(N, k1, k2) + (3+1j)/2 * unit(N)
-

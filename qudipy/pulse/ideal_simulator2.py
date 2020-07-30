@@ -27,14 +27,8 @@ def ideal_simulator(filename):
     for op in circuit_seq:
         gate = op[1]
         if gate[:2] == 'RX':
-            q = float(op[2][0])
-            print("x correct: ", mat.x(n, 2))  
-            print("x: ", mat.x(n, op[2][0]))        # TODO: wrong, this gives identity
-            
+            q = op[2][0]
             gate_mat = mat.rx(n, q, int(gate[2:]))
-            
-            print ("correct: ", mat.rx(2,2,180))
-            print("calculated: ", gate_mat)
         elif gate[:2] == 'RY':
             gate_mat = mat.ry(n, op[2][0], int(gate[2:]))
         elif gate[:2] == 'RZ':
@@ -47,7 +41,6 @@ def ideal_simulator(filename):
             gate_mat = mat.swap(n, op[2][0], op[2][1])
         elif gate == 'RSWAP':
             gate_mat = mat.rswap(n, op[2][0], op[2][1])
-        # print(gate_mat)
         rho = gate_mat @ rho @ gate_mat.conj().T
 
     print("The density matrix of the state after the circuit is: ", rho)
