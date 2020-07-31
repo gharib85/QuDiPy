@@ -345,13 +345,23 @@ class PotentialInterpolator:
         plt.show()
                     
     
-    def find_resonant_tc(self, volt_vec, swept_ctrl, bnds, peak_threshold=1E5):
+    def find_resonant_tc(self, volt_vec, swept_ctrl, bnds, peak_threshold=1E5,
+                         slice_axis='y', slice_val=0):
 
         # Right now... We are assuming a linear chain of quantum dots where
         # the axis of the linear chain is centered at y=0.
         gparams = GridParameters(self.x_coords, self.y_coords)
-        gparams_1D = GridParameters(self.x_coords) # Need for renormalizing 1D wfs
-        y_idx = utils.find_nearest(self.y_coords, 0)[0]
+        
+        if slice_axis=='y':
+            # Need for renormalizing 1D wfs
+            gparams_1D = GridParameters(self.x_coords)
+            slice_idx = utils.find_nearest(self.y_coords, slice_val)[0]
+        elif slice_axis=='x':
+            gparams_1D = GridParameters(self.y_coords)
+            slice_idx = utils.find_nearest(self.x_coords, slice_val)[0]
+        else:
+            raise ValueError(f'Inputted slice_axis {slice_axis} is not '+
+                                 'recognized. Supported values are ''x'' and ''y''.')
         
         # Check bnds window to see if a solution even exists.
         # We do this by tuning to the min/max bounds and seeing if the peak
@@ -367,7 +377,10 @@ class PotentialInterpolator:
         # Find wavefunction and probability distribution
         _, state = solve_schrodinger_eq(self.constants, gparams)
         # Get 1D wavefunction and renormalize
-        state = np.squeeze(state[y_idx,:])
+        if slice_axis=='y':
+            state = np.squeeze(state[slice_idx,:])
+        elif slice_axis=='x':
+            state = np.squeeze(state[:,slice_idx])
         state = state/np.sqrt(inner_prod(gparams_1D, state, state))
         # np.real shouldn't be needed, but numerical imprecision causes a warning
         state_prob = np.real(np.multiply(state, state.conj()))
@@ -385,7 +398,10 @@ class PotentialInterpolator:
         
         # Find wavefunction and probability distribution
         _, state = solve_schrodinger_eq(self.constants, gparams)
-        state = np.squeeze(state[y_idx,:])
+        if slice_axis=='y':
+            state = np.squeeze(state[slice_idx,:])
+        elif slice_axis=='x':
+            state = np.squeeze(state[:,slice_idx])
         state = state/np.sqrt(inner_prod(gparams_1D, state, state))
         # np.real shouldn't be needed, but numerical imprecision causes a warning
         state_prob = np.real(np.multiply(state, state.conj()))
@@ -483,17 +499,21 @@ class PotentialInterpolator:
             
             gparams.update_potential(curr_pot)
             
-            e_ens, e_vecs = solve_schrodinger_eq(self.constants, gparams)
-            y_idx = utils.find_nearest(self.y_coords, 0)[0]
-            state_1D = np.squeeze(e_vecs[y_idx,:,0])
-            state_1D = state_1D/np.sqrt(inner_prod(gparams_1D, state_1D, state_1D))
+            _, state = solve_schrodinger_eq(self.constants, gparams)
+            if slice_axis=='y':
+                state = np.squeeze(state[slice_idx,:])
+            elif slice_axis=='x':
+                state = np.squeeze(state[:,slice_idx])
+            state = state/np.sqrt(inner_prod(gparams_1D, state, state))
 
-            state_1D_prob = np.real(np.multiply(state_1D, state_1D.conj()))
+            state_prob = np.real(np.multiply(state, state.conj()))
 
-            peaks, _ = find_peaks(state_1D_prob,height=peak_threshold)
+            peaks, _ = find_peaks(state_prob,height=peak_threshold)
             
+            # If there are two peaks, then return the peak difference, otherwise
+            # return a large value to the minimzer.
             if len(peaks) == 2:
-                pk_diff = abs(np.diff(state_1D_prob[peaks]))
+                pk_diff = abs(np.diff(state_prob[peaks]))
             else:
                 pk_diff = 1E8
                         
