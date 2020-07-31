@@ -10,7 +10,6 @@ from scipy.optimize import fminbound
 import qudipy as qd
 import qudipy.utils as utils
 from qudipy.qutils.solvers import solve_schrodinger_eq
-from qudipy.qutils.math import inner_prod
 from qudipy.potential import GridParameters
 
 
@@ -129,7 +128,7 @@ class PotentialInterpolator:
         return result
     
     def plot(self, volt_vec, plot_type='2D', y_slice=0, x_slice=None,
-             show_wf=False):
+             show_wf=False, wf_n=0):
         '''
         Method for plotting the potential landscape at an arbitrary voltage 
         configuration.
@@ -158,6 +157,10 @@ class PotentialInterpolator:
             potential for 1D plots, and for 2D plots, there will be a subplot 
             added showing the wavefunction probability.
             The deafult is False.
+        wf_n : int, optional
+            Will plot the nth energy wavefunction. Indexing starts at 0
+            which indicates the ground state wavefunction.
+            The default is 0.
 
         Returns
         -------
@@ -165,11 +168,74 @@ class PotentialInterpolator:
 
         '''
 
+        # Helper function to help add wavefunction overlay to potential plots.
+        def _add_wf_overlay(ax, int_pot, slice_idx, slice_axis, wf_n=0):
+            '''
+            Adds the wavefunction probability to an already created axes 
+            object plot of the potential.
+
+            Parameters
+            ----------
+            ax : axis object
+                Axis object for the desired axis where you want to add the 
+                overlay of the wavefunction.
+            int_pot : 2D array
+                The 2D interpolated potential we are currently plotting.
+            slice_idx : int
+                The index indicating where to take a 1D slice of the 2D
+                wavefunction.
+            slice_axis : string, optional
+                String indicating which axis we are taking a slice of the 2D 
+                wavefunction. Changes how we take a slice of the wavefunction
+                meshgrid.
+            wf_n : int, optional
+                Will plot the nth energy wavefunction. Indexing starts at 0
+                which indicates the ground state wavefunction.
+                The default is 0.
+            
+            Returns
+            -------
+            None.
+
+            '''
+            # Update color for old axis
+            color = 'tab:blue'
+            ax.set_ylabel('1D potential [J]', color=color)
+            ax.tick_params(axis='y', labelcolor=color)
+            
+            # Make new axis for overlay
+            ax_wf = ax.twinx()
+            
+            # Set color of new axis to be red
+            color = 'tab:red'
+            ax_wf.set_ylabel(f'State {wf_n} probability', color=color)
+            ax_wf.tick_params(axis='y', labelcolor=color)
+            
+            # Find the nth wavefunction probabilty
+            gparams = GridParameters(self.x_coords, y=self.y_coords, 
+                                     potential=int_pot)
+            _, state = solve_schrodinger_eq(self.constants, gparams, 
+                                            n_sols=(wf_n+1))
+            
+            # Get correct slice of wavefunction
+            if slice_axis == 'y':
+                state = np.squeeze(state[slice_idx,:,wf_n])
+            elif slice_axis == 'x':
+                state = np.squeeze(state[:,slice_idx,wf_n])
+                
+            # Find probability and plot
+            state_prob = np.real(np.multiply(state, state.conj()))
+               
+            if slice_axis == 'y':
+                ax_wf.plot(self.x_coords/1E-9, state_prob, color=color)
+            elif slice_axis == 'x':
+                ax_wf.plot(self.y_coords/1E-9, state_prob, color=color)
+
         # Get the potential        
         int_pot = self(volt_vec)
         
         # Do a 1D plot
-        if plot_type == '1D':
+        if plot_type.upper() == '1D':
             # Get the y-axis slice index
             y_idx, y_val = utils.find_nearest(self.y_coords, y_slice)
             
@@ -177,59 +243,98 @@ class PotentialInterpolator:
             if x_slice is None:
                 fig, ax = plt.subplots(figsize=(8,8))
                 ax.plot(self.x_coords/1E-9, int_pot[y_idx,:].T)
-                ax.set(xlabel='x-coords [nm]', ylabel='potential [J]',
+                ax.set(xlabel='x-coords [nm]', ylabel='1D potential [J]',
                    title=f'Potential along x-axis at y={y_val/1E-9:.2f} nm')
                 ax.grid()
                 
-                ax_wf = ax.twinx()
-                ax_wf.set(ylabel='probability')
-                
-                gparams = GridParameters(self.x_coords, y=self.y_coords, 
-                                         potential=int_pot)
-                _, state = solve_schrodinger_eq(self.constants, gparams)
-                y_idx = utils.find_nearest(self.y_coords, 0)[0]
-                state = np.squeeze(state[y_idx,:,0])
-                # np.real shouldn't be needed, but numerical imprecision causes a warning
-                state_prob = np.real(np.multiply(state, state.conj()))
-                   
-                ax_wf.plot(self.x_coords/1E-9, state_prob)
-                
-                fig.tight_layout()  # otherwise the right y-label is slightly clipped
+                # Overlay wavefunction if desired
+                if show_wf:
+                    _add_wf_overlay(ax, int_pot, wf_n=wf_n,
+                                    slice_idx=y_idx, slice_axis='y')
+                    
+                    # otherwise the right y-label is slightly clipped
+                    fig.tight_layout()
 
             # If x-axis slice is specified, show both x- and y-axes plots
             else:
                 # Get the x-axis slice index
                 x_idx, x_val = utils.find_nearest(self.x_coords, x_slice)
                 
-                f = plt.figure(figsize=(12,8))
-                ax1 = f.add_subplot(121)
-                ax2 = f.add_subplot(122)
+                fig = plt.figure(figsize=(12,8))
+                ax1 = fig.add_subplot(121)
+                ax2 = fig.add_subplot(122)
                 
                 # potential along x-axis at y-axis slice
                 ax1.plot(self.x_coords/1E-9, int_pot[y_idx,:].T)
-                ax1.set(xlabel='x-coords [nm]', ylabel='potential [J]',
+                ax1.set(xlabel='x-coords [nm]', ylabel='1D potential [J]',
                        title=f'Potential along x-axis at y={y_val/1E-9:.2f} nm')
                 ax1.grid()
                                 
                 # potential along y-axis at x-axis slice
                 ax2.plot(self.y_coords/1E-9, int_pot[:,x_idx])
-                ax2.set(xlabel='y-coords [nm]', ylabel='potential [J]',
+                ax2.set(xlabel='y-coords [nm]', ylabel='1D potential [J]',
                        title=f'Potential along y-axis at x={x_val/1E-9:.2f} nm')
                 ax2.grid()
+                
+                # Overlay wavefunction if desired
+                if show_wf:
+                    
+                    _add_wf_overlay(ax1, int_pot, wf_n=wf_n,
+                                    slice_idx=y_idx, slice_axis='y')
+                    
+                    _add_wf_overlay(ax2, int_pot, wf_n=wf_n,
+                                    slice_idx=x_idx, slice_axis='x')
+                    
+                    # otherwise the right y-label is slightly clipped
+                fig.tight_layout()
         # Do a 2D plot
-        elif plot_type == '2D':
+        elif plot_type.upper() == '2D':
             
-            fig, ax = plt.subplots(figsize=(8,8))
-            ax.imshow(int_pot, interpolation='bilinear', cmap='viridis',
-                           origin='lower', extent=[self.x_coords.min()/1E-9, 
-                           self.x_coords.max()/1E-9, self.y_coords.min()/1E-9,
-                           self.y_coords.max()/1E-9]
-                           )
-            ax.set(xlabel='x-coords [nm]',ylabel='y-coords [nm]')
-        # Raise an error
+            if not show_wf:
+                fig, ax = plt.subplots(figsize=(8,8))
+                ax.imshow(int_pot, interpolation='bilinear', cmap='viridis',
+                               origin='lower', extent=[self.x_coords.min()/1E-9, 
+                               self.x_coords.max()/1E-9, self.y_coords.min()/1E-9,
+                               self.y_coords.max()/1E-9]
+                               )
+                ax.set(xlabel='x-coords [nm]',ylabel='y-coords [nm]',
+                       title='2D potential')
+            # Overlay wavefunction if desired
+            else:
+                fig, ax = plt.subplots(1,2,figsize=(12,8))
+                
+                # Plot potential in first subplot
+                ax[0].imshow(int_pot, interpolation='bilinear', cmap='viridis',
+                               origin='lower', extent=[self.x_coords.min()/1E-9, 
+                               self.x_coords.max()/1E-9, self.y_coords.min()/1E-9,
+                               self.y_coords.max()/1E-9]
+                               )
+                ax[0].set(xlabel='x-coords [nm]',ylabel='y-coords [nm]',
+                            title='2D potential')
+                
+                # Find the wavefunction probability
+                gparams = GridParameters(self.x_coords, y=self.y_coords, 
+                                             potential=int_pot)
+                _, state = solve_schrodinger_eq(self.constants, gparams,
+                                                n_sols=(wf_n+1))
+                state = np.squeeze(state[:,:,wf_n])
+                
+                state_prob = np.real(np.multiply(state, state.conj()))
+                       
+                ax[1].imshow(state_prob, interpolation='bilinear', cmap='viridis',
+                               origin='lower', extent=[self.x_coords.min()/1E-9, 
+                               self.x_coords.max()/1E-9, self.y_coords.min()/1E-9,
+                               self.y_coords.max()/1E-9]
+                               )
+                ax[1].set(xlabel='x-coords [nm]',ylabel='y-coords [nm]',
+                            title=f'State {wf_n} probability')
+                          
+        # Raise an error if we don't recognize the plot_type
         else:
             raise ValueError(f'Error with specified plot_type {plot_type}. ' +
                              'Either ''1D'' or ''2D'' allowed.')
+            
+        plt.show()
                     
     
     def find_resonant_tc(self, volt_vec, swept_ctrl, bnds, peak_threshold=1000):
@@ -617,6 +722,4 @@ def load_potentials(ctrl_vals, ctrl_names, f_type='pot', f_dir=None,
     return all_files
 
     
-
-
-
+    
