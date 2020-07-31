@@ -4,19 +4,20 @@ from collections import namedtuple
 from scipy.interpolate import RegularGridInterpolator, interp2d
 from itertools import product
 import matplotlib.pyplot as plt
-import matplotlib.cm as cm
 from scipy.signal import find_peaks
 from scipy.optimize import fminbound
 
 import qudipy as qd
 import qudipy.utils as utils
 from qudipy.qutils.solvers import solve_schrodinger_eq
+from qudipy.qutils.math import inner_prod
 from qudipy.potential import GridParameters
 
 
 class PotentialInterpolator:
     
-    def __init__(self, ctrl_vals, interp_data, single_dim_idx):
+    def __init__(self, ctrl_vals, interp_data, single_dim_idx, 
+                 constants=qd.Constants()):
         '''
         Initialize the class which, at its core, is basically a wrapper for 
         the scipy RegularGridInterpolator class.
@@ -32,6 +33,10 @@ class PotentialInterpolator:
             and y coords)
         single_dim_idx : list of ints
             List of all control indices which only have a singleton dimension.
+        constants : Constants object, optional
+            Constants object containing material parameter details.
+            The default is a Constants object assuming air as the material
+            system.
 
         Returns
         -------
@@ -59,6 +64,8 @@ class PotentialInterpolator:
             
             self.min_max_vals.append([min(curr_unique_volts),
                                       max(curr_unique_volts)])
+            
+        self.constants = constants
     
     def __call__(self, volt_vec_input):
         '''
@@ -121,7 +128,8 @@ class PotentialInterpolator:
         
         return result
     
-    def plot(self, volt_vec, plot_type='2D', y_slice=0, x_slice=None):
+    def plot(self, volt_vec, plot_type='2D', y_slice=0, x_slice=None,
+             show_wf=False):
         '''
         Method for plotting the potential landscape at an arbitrary voltage 
         configuration.
@@ -145,6 +153,11 @@ class PotentialInterpolator:
             potential along the y-axis to plot. Only applies if plot_type='1D'. 
             If not specified, then only a plot along the x-axis will be shown.
             The default is None.
+        show_wf : bool, optional
+            If True, the wavefunction probability will be overlaid on the 
+            potential for 1D plots, and for 2D plots, there will be a subplot 
+            added showing the wavefunction probability.
+            The deafult is False.
 
         Returns
         -------
@@ -167,6 +180,21 @@ class PotentialInterpolator:
                 ax.set(xlabel='x-coords [nm]', ylabel='potential [J]',
                    title=f'Potential along x-axis at y={y_val/1E-9:.2f} nm')
                 ax.grid()
+                
+                ax_wf = ax.twinx()
+                ax_wf.set(ylabel='probability')
+                
+                gparams = GridParameters(self.x_coords, y=self.y_coords, 
+                                         potential=int_pot)
+                _, state = solve_schrodinger_eq(self.constants, gparams)
+                y_idx = utils.find_nearest(self.y_coords, 0)[0]
+                state = np.squeeze(state[y_idx,:,0])
+                # np.real shouldn't be needed, but numerical imprecision causes a warning
+                state_prob = np.real(np.multiply(state, state.conj()))
+                   
+                ax_wf.plot(self.x_coords/1E-9, state_prob)
+                
+                fig.tight_layout()  # otherwise the right y-label is slightly clipped
 
             # If x-axis slice is specified, show both x- and y-axes plots
             else:
@@ -182,7 +210,7 @@ class PotentialInterpolator:
                 ax1.set(xlabel='x-coords [nm]', ylabel='potential [J]',
                        title=f'Potential along x-axis at y={y_val/1E-9:.2f} nm')
                 ax1.grid()
-                
+                                
                 # potential along y-axis at x-axis slice
                 ax2.plot(self.y_coords/1E-9, int_pot[:,x_idx])
                 ax2.set(xlabel='y-coords [nm]', ylabel='potential [J]',
@@ -206,13 +234,10 @@ class PotentialInterpolator:
     
     def find_resonant_tc(self, volt_vec, swept_ctrl, bnds, peak_threshold=1000):
 
-        
-        # We will need some Constants
-        cnst = qd.Constants("Si/SiO2")
 
         # Right now... We are assuming a linear chain of quantum dots where
         # the axis of the linear chain is centered at y=0.
-        gparams = GridParameters(self.x_coords)
+        gparams_1D = GridParameters(self.x_coords)
         y_idx = utils.find_nearest(self.y_coords, 0)[0]
         
         # Check bnds window to see if a solution even exists.
@@ -224,10 +249,11 @@ class PotentialInterpolator:
         min_volt_vec = volt_vec.copy()
         min_volt_vec[swept_ctrl] = bnds[0]
         min_pot = self(min_volt_vec)
-        gparams.update_potential(np.squeeze(min_pot[y_idx,:]))
+        gparams_1D.update_potential(np.squeeze(min_pot[y_idx,:]))
         
         # Find wavefunction and probability distribution
-        _, state = solve_schrodinger_eq(cnst, gparams)
+        _, state = solve_schrodinger_eq(self.constants, gparams_1D)
+        # Get 1D wavefunction and renormalize
         state = np.squeeze(state)
         # np.real shouldn't be needed, but numerical imprecision causes a warning
         state_prob = np.real(np.multiply(state, state.conj()))
@@ -241,10 +267,10 @@ class PotentialInterpolator:
         max_volt_vec = volt_vec.copy()
         max_volt_vec[swept_ctrl] = bnds[1]
         max_pot = self(max_volt_vec)
-        gparams.update_potential(np.squeeze(max_pot[y_idx,:]))
+        gparams_1D.update_potential(np.squeeze(max_pot[y_idx,:]))
         
         # Find wavefunction and probability distribution
-        _, state = solve_schrodinger_eq(cnst, gparams)
+        _, state = solve_schrodinger_eq(self.constants, gparams_1D)
         state = np.squeeze(state)
         # np.real shouldn't be needed, but numerical imprecision causes a warning
         state_prob = np.real(np.multiply(state, state.conj()))
@@ -253,21 +279,88 @@ class PotentialInterpolator:
         max_peaks, max_props = find_peaks(state_prob,
                                        height=peak_threshold,
                                        width=3)
+        # CHECK THE BOUNDARIES
+        # If min wavefunction has two peak locations, then the boundary point
+        # is actually a close guess. We need to make sure the largest peak
+        # of the two peaks does not move w.r.t to the max boundary though.
+        # Otherwise, we won't pass through the resonant tunnel coupling point.
+        if len(min_peaks) == 2 and len(max_peaks) == 1:
+            # Find the taller peak of the two.
+            tall_pk_idx = min_props['peak_heights'].argmax()
+            # If that peak location is the same as the location for the max
+            # boundary peak, then we won't find a resonant tc point.
+            if (abs(max_peaks - min_peaks[tall_pk_idx]) < np.mean(
+                    [min_props['widths'][tall_pk_idx], max_props['widths']])):
                 
-        # If the wavefunction location doesn't change more than the width of
-        # the wavefunction between the min and max bounds, then the 
-        # wavefunction is staying in the same location.
-        if abs(max_peaks - min_peaks) < np.mean(
-                [min_props['widths'], max_props['widths']]):
+                print('Invalid bounds to search for resonant tunnel coupling '+
+                  'point.\nThe min bound shows two peaks but the wavefunction '+
+                  'is more localized in\nthe same location as at the maximum '+
+                  'boundary point.\nNo control value in the given bounds will '+
+                  'be able to find the resonant tunnel coupling.\nPlease LOWER '+
+                  'the MINIMUM bounds and try again.\n')
+                
+                return None
+        # Same as above but vice versa for the max boundary
+        elif len(min_peaks) == 1 and len(max_peaks) == 2:
+            # Find the taller peak of the two.
+            tall_pk_idx = max_props['peak_heights'].argmax()
+            # If that peak location is the same as the location for the max
+            # boundary peak, then we won't find a resonant tc point.
+            if (abs(max_peaks[tall_pk_idx] - min_peaks) < np.mean(
+                    [min_props['widths'], max_props['widths'][tall_pk_idx]])):
+                
+                print('Invalid bounds to search for resonant tunnel coupling '+
+                  'point.\nThe max bound shows two peaks but the wavefunction '+
+                  'is more localized in\nthe same location as at the minimum '+
+                  'boundary point.\nNo control value in the given bounds will '+
+                  'be able to find the resonant tunnel coupling.\nPlease INCREASE '+
+                  'the MAXIMUM bounds and try again.\n')   
+                
+                return None
+        # If both bounds have only 1 peak, then do this check.
+        elif len(min_peaks) == 1 and len(max_peaks) == 1:
+            # If the wavefunction location doesn't change more than the width of
+            # the wavefunction between the min and max bounds, then the 
+            # wavefunction is staying in the same location.
+            if (abs(max_peaks - min_peaks) < np.mean(
+                  [min_props['widths'], max_props['widths']])):
+            
+                print('Invalid bounds to search for resonant tunnel coupling '+
+                      'point.\nThe min and max bounds showed the wavefunction '+
+                      'staying in the same potential minima.\nPlease change '+
+                      'the bounds so that the min and max boundaries have the '+
+                      'wavefunction\nlocalized in different potential minima.\n')
+            
+                return None
+        # If both boundaries have two peaks, then need to make sure the
+        # tallest peak for both boundary wavefunction changes.
+        elif len(min_peaks) == 2 and len(max_peaks) == 2:
+            # Get both tallest peaks
+            tall_pk_min_idx = min_props['peak_heights'].argmax()
+            tall_pk_max_idx = max_props['peak_heights'].argmax()
+            # Check that tallest peak moves location between boundary points
+            if (abs(max_peaks[tall_pk_max_idx] - min_peaks[tall_pk_min_idx]) <
+                np.mean([min_props['widths'][tall_pk_min_idx],
+                         max_props['widths'][tall_pk_max_idx]])):
+                
+                print('Invalid bounds to search for resonant tunnel coupling '+
+                      'point.\nThe min and max bounds showed the wavefunction '+
+                      'staying in the same potential minima.\nPlease change '+
+                      'the bounds so that the min and max boundaries have the '+
+                      'wavefunction\nlocalized in different potential minima.\n')
+                
+                return None
+        # Catch all other conditions.
+        else:
             print('Invalid bounds to search for resonant tunnel coupling '+
-                  'point.\nThe min and max bounds showed the wavefunction '+
-                  'staying in the same potential minima.\nPlease increase '+
-                  'the bounds so that the min and max boundaries have the '+
-                  'wavefunction\nlocalized in different potential minima.')
+                  f'point.\n{len(min_peaks)} peaks found at lower boundary.\n'+
+                  f'{len(max_peaks)} peaks found at higher boundary.\n'+
+                  'Provide new boundaries or change the input control value array.\n')
             
             return None
-        else:
-            pass
+        
+        print(min_peaks,max_peaks)
+        print(min_props,max_props)
         
         # Helper function for fminbounds search
         def find_peak_difference(curr_val):
@@ -275,22 +368,24 @@ class PotentialInterpolator:
             curr_volt_vec[swept_ctrl] = curr_val
             curr_pot = self(curr_volt_vec)
             
-            gparams.update_potential(curr_pot)
+            gparams_2D.update_potential(curr_pot)
             
-            e_ens, e_vecs = solve_schrodinger_eq(cnst, gparams)
+            e_ens, e_vecs = solve_schrodinger_eq(self.constants, gparams_2D)
             y_idx = utils.find_nearest(self.y_coords, 0)[0]
             state_1D = np.squeeze(e_vecs[y_idx,:,0])
-            gparams_1D = GridParameters(gparams.x)
+
             state_1D_prob = np.multiply(state_1D, state_1D.conj())
-            # state_1D_prob = state_1D_prob/np.sqrt(inner_prod(gparams_1D,state_1D_prob,state_1D_prob))
+
             peaks, _ = find_peaks(state_1D_prob,height=peak_threshold)
             
             if len(peaks) == 2:
                 pk_diff = abs(np.diff(state_1D_prob[peaks]))
             else:
-                pk_diff = 1E4
+                pk_diff = 1E8
                         
             return pk_diff
+        
+        gparams_2D = GridParameters(self.x_coords,y=self.y_coords)
         
         volt_tolerance = 1E-6 # muV
         if bnds is not None:
@@ -302,30 +397,12 @@ class PotentialInterpolator:
                             xtol=volt_tolerance)
         
         # Round value to the order of magnitude given by the tolerance.
-        # res = np.round(res,int(np.ceil(abs(np.log10(volt_tolerance)))))
+        res = np.round(res,int(np.ceil(abs(np.log10(volt_tolerance)))))
         # print('Result:',res)
+                
+        return res
         
-        # Plot final result
-        # curr_volt_vec = volt_vec.copy()
-        # curr_volt_vec[swept_ctrl] = res
-        # curr_pot = self(curr_volt_vec)
-        # gparams.update_potential(curr_pot)
-        # e_ens, e_vecs = solve_schrodinger_eq(cnst, gparams)
-        # y_idx = utils.find_nearest(self.y_coords, 0)[0]
-        # state_1D = np.squeeze(e_vecs[y_idx,:,0])
-        # gparams_1D = GridParameters(gparams.x)
-        # state_1D_prob = np.multiply(state_1D, state_1D.conj())
-        # state_1D_prob = state_1D_prob/np.sqrt(inner_prod(gparams_1D,state_1D_prob,state_1D_prob))
-        
-        # plt.figure()
-        # y_idx = utils.find_nearest(self.y_coords, 0)[0]
-        # plt.plot(gparams.x/1E-9, np.real(state_1D_prob))
-        
-        # self.plot(curr_volt_vec)
-        
-        # return res
-        
-def build_interpolator(load_data_dict):
+def build_interpolator(load_data_dict, constants=qd.Constants()):
     '''
     This function constructs an interpolator object for either a group of 
     potential or electric field files.
@@ -337,6 +414,9 @@ def build_interpolator(load_data_dict):
         the potential data for each loaded file, and the corresponding votlage
         vector for each file.
         Fields = ['coords', 'potentials', 'ctrl_vals']
+    constants : Constants object, optional
+        Constants object containing material parameter details. The default is
+        a Constants object assuming air as the material system.
 
     Returns
     -------
@@ -386,7 +466,7 @@ def build_interpolator(load_data_dict):
     # Construct the interpolator
     ctrl_values.extend([y_coords,x_coords])
     interp_obj = PotentialInterpolator(ctrl_values, all_data_stacked,
-                                             single_dims)
+                                             single_dims, constants)
     
     return interp_obj
     
@@ -535,62 +615,6 @@ def load_potentials(ctrl_vals, ctrl_names, f_type='pot', f_dir=None,
     
     
     return all_files
-
-    
-if __name__ == "__main__":
-    
-    # Enter the name of the folder where the potential files are located. 
-    # If this argument is not supplied it will assume the current working directory.
-    pot_dir = '/Users/simba/Documents/GitHub/Silicon-Modelling/tutorials/QuDiPy tutorial data/Pre-processed potentials/'
-    
-    # Specify the control voltage names (C#NAME as mentioned above)
-    ctrl_names = ['V1','V2','V3','V4','V5']
-    
-    # Specify the control voltage values you wish to load.
-    # The cartesian product of all these supplied voltages will be loaded and MUST exist in the directory.
-    V1 = [0.1]
-    V2 = [0.2, 0.22, 0.24, 0.26, 0.28]
-    V3 = [0.2, 0.22, 0.24, 0.26, 0.28, 0.29]
-    V4 = [0.2, 0.22, 0.24, 0.26, 0.28, 0.29]
-    V5 = [0.1]
-    # Add all voltage values to a list
-    ctrl_vals = [V1, V2, V3, V4, V5]    
-    
-    # Now load the potentials.  
-    # load_files returns a dictionary of all the information loaded
-    loaded_data = load_potentials(ctrl_vals, ctrl_names, f_type='pot', 
-                                  f_dir=pot_dir, f_pot_units="eV", 
-                                  f_dis_units="nm")
-    
-    # Now building the interpolator object is trivial
-    pot_interp = build_interpolator(loaded_data)
-        
-    # RIGHT ANSWER
-    # v_vec = [0.28,0.2616,0.27]
-    v_vec = [0.28,0.26,0.27]
-    # pot_interp.plot(v_vec)
-    
-    # pot_interp.find_resonant_tc(v_vec,1,[0.261,0.262])
-    # pot_interp.find_resonant_tc(v_vec,1,[0.255,0.257])
-    
-    # pot_interp.plot(v_vec)
-    # pot_interp.plot(v_vec, plot_type='2D')
-    # pot_interp.plot(v_vec, plot_type='1D')
-    pot_interp.plot(v_vec, plot_type='1D',y_slice=10E-9)
-    # pot_interp.plot(v_vec, plot_type='1D',y_slice=1E-9,x_slice=2E-9)
-    # pot_interp.plot(v_vec, plot_type='1D',x_slice=20E-9)
-    
-        # find_res_tc TODO
-        # Add Constants class as a class variable
-        # How to improve sweep if bnd window is too large?
-        # How to deal with noise? (only take highest value peak maybe?)
-        # Needs to be generalized to deal with 2D peaks
-        # Change find_res_tc to have swept_ctrl be index for the ctrl_values
-        # How to improve swept_ctrl (make more robust and maybe take in ctrl names as well)
-        # Update loading tutorial to use plot methods.
-        
-        # plot TODO
-        # Add functionality to overlay wavefunction?
 
     
 

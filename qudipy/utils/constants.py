@@ -5,7 +5,7 @@ for our simulations
 
 class Constants:
     
-    def __init__(self, material_system=None):
+    def __init__(self, material_system="air"):
         '''
         
         Parameters
@@ -13,7 +13,7 @@ class Constants:
         material_system : string, optional
             String specifying which material system the constant class is for.
             Currently allowed systems are: ["air","Si/SiO2", "Si/SiGe", "GaAs"].
-            Default is None.
+            Default is air.
 
         Returns
         -------
