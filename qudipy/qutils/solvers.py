@@ -1,5 +1,8 @@
-__all__ = [
-    'build_1DSE_hamiltonian','build_2DSE_hamiltonian','solve_schrodinger_eq']
+"""
+Quantum utility solver functions
+
+@author: simba
+"""
 
 import numpy as np
 from scipy import sparse

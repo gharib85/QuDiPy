@@ -5,3 +5,4 @@ software)
 
 from .gridparams import GridParameters
 from .load_data import *
+from .potentialinterpolator import PotentialInterpolator

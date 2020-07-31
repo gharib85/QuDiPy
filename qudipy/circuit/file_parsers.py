@@ -1,5 +1,7 @@
 """
 Functions for handling control pulse files .ctrlp
+
+@author: simba
 """
 
 import pandas as pd

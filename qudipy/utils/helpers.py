@@ -1,5 +1,7 @@
 """
-General helper utilities for the codebase
+General helper utilities
+
+@author: simba
 """
 
 import numpy as np

@@ -1,7 +1,5 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
-Created on Fri May 29 16:08:07 2020
+GridParameters class
 
 @author: simba
 """

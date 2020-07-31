@@ -1,7 +1,8 @@
-'''
-Class containing useful constants and controls which material system is used
-for our simulations
-'''
+"""
+Constants class
+
+@author: simba
+"""
 
 class Constants:
     

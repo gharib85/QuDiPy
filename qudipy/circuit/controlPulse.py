@@ -1,5 +1,7 @@
 """
 Class for a control pulse
+
+@author: simba
 """
 
 import numpy as np
