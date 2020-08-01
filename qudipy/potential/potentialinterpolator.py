@@ -18,7 +18,7 @@ from qudipy.potential import GridParameters
 
 class PotentialInterpolator:
     
-    def __init__(self, ctrl_vals, interp_data, single_dim_idx, 
+    def __init__(self, ctrl_vals, ctrl_names, interp_data, single_dim_idx, 
                  constants=qd.Constants()):
         '''
         Initialize the class which, at its core, is basically a wrapper for 
@@ -66,8 +66,11 @@ class PotentialInterpolator:
             
             self.min_max_vals.append([min(curr_unique_volts),
                                       max(curr_unique_volts)])
-            
+        # Store constants
         self.constants = constants
+        
+        # Store control names
+        self.ctrl_names = ctrl_names
     
     def __call__(self, volt_vec_input):
         '''
@@ -345,9 +348,50 @@ class PotentialInterpolator:
         plt.show()
                     
     
-    def find_resonant_tc(self, volt_vec, swept_ctrl, bnds, peak_threshold=1E5,
+    def find_resonant_tc(self, volt_vec, swept_ctrl, bnds=None, peak_threshold=1E5,
                          slice_axis='y', slice_val=0):
 
+        # If bnds are not supplied, then set as min max of available voltage
+        # ranges
+        bnds = [self.min_max_vals[swept_ctrl][0], self.min_max_vals[swept_ctrl][1]]
+
+        # If swept_ctrl is an integer, then no need to find the corresponding
+        # index. If swept_ctrl is a string, we need to check that it is one of
+        # the control names and then find the corresponding index.
+        if not isinstance(swept_ctrl,int):
+            
+            raise_error_flag = 0
+            try:
+                # Get corresponding control index
+                ctrl_idx = self.ctrl_names.index(swept_ctrl)
+            # Want to raise custom error message.
+            except ValueError:
+                raise_error_flag = 1
+                
+            if raise_error_flag:
+                raise ValueError(f'Supplied swept_ctrl name {swept_ctrl} is '+
+                                 'invalid.\nUseable control names are:\n'+
+                                 f'{self.ctrl_names}')
+                            
+            # If user omits singleton dimensions control from volt_vec, then
+            # we need to correct the ctrl_idx
+            if len(volt_vec) == self.n_voltage_ctrls + len(self.single_dims):
+                pass
+            else:
+                amt_to_sub = 0
+                for idx in self.single_dims:
+                    if idx < ctrl_idx:
+                        amt_to_sub += 1
+                
+                ctrl_idx -= amt_to_sub     
+            
+            # Swap out swept_ctrl for the index now instead
+            swept_ctrl = ctrl_idx
+        # If it is an int, check that it's not out of range w.r.t. volt_vec
+        elif swept_ctrl >= len(volt_vec):
+            raise ValueError(f'Supplied swept_ctrl index {swept_ctrl} is invalid.\n'+
+                             f'Voltage vector only has {len(volt_vec)} elements.')
+                        
         # Right now... We are assuming a linear chain of quantum dots where
         # the axis of the linear chain is centered at y=0.
         gparams = GridParameters(self.x_coords, self.y_coords)
@@ -363,53 +407,42 @@ class PotentialInterpolator:
             raise ValueError(f'Inputted slice_axis {slice_axis} is not '+
                                  'recognized. Supported values are ''x'' and ''y''.')
         
+        # Helper function to take in a voltage vector and return the peaks
+        def _find_peaks(curr_val):
+            curr_volt_vec = volt_vec.copy()
+            curr_volt_vec[swept_ctrl] = curr_val
+            curr_pot = self(curr_volt_vec)
+            
+            gparams.update_potential(curr_pot)
+        
+            # Find wavefunction and probability distribution
+            _, state = solve_schrodinger_eq(self.constants, gparams)
+            # Get 1D wavefunction and renormalize
+            if slice_axis=='y':
+                state = np.squeeze(state[slice_idx,:])
+            elif slice_axis=='x':
+                state = np.squeeze(state[:,slice_idx])
+            state = state/np.sqrt(inner_prod(gparams_1D, state, state))
+            # np.real shouldn't be needed, but numerical imprecision causes a warning
+            state_prob = np.real(np.multiply(state, state.conj()))
+            
+            # Find wavefunction peak
+            curr_peaks, curr_props = find_peaks(state_prob,
+                                           height=peak_threshold,
+                                           width=3)
+            
+            return curr_peaks, curr_props
+        
         # Check bnds window to see if a solution even exists.
         # We do this by tuning to the min/max bounds and seeing if the peak
         # changes position from dot to dot. If it does, then a solution exists.
         # If not, then better bounds need to be chosen.  
+                
+        # Find wavefunction peak at min boundary
+        min_peaks, min_props = _find_peaks(bnds[0])
         
-        # Get min volt vec/1D potential
-        min_volt_vec = volt_vec.copy()
-        min_volt_vec[swept_ctrl] = bnds[0]
-        min_pot = self(min_volt_vec)
-        gparams.update_potential(min_pot)
-        
-        # Find wavefunction and probability distribution
-        _, state = solve_schrodinger_eq(self.constants, gparams)
-        # Get 1D wavefunction and renormalize
-        if slice_axis=='y':
-            state = np.squeeze(state[slice_idx,:])
-        elif slice_axis=='x':
-            state = np.squeeze(state[:,slice_idx])
-        state = state/np.sqrt(inner_prod(gparams_1D, state, state))
-        # np.real shouldn't be needed, but numerical imprecision causes a warning
-        state_prob = np.real(np.multiply(state, state.conj()))
-        
-        # Find wavefunction peak
-        min_peaks, min_props = find_peaks(state_prob,
-                                       height=peak_threshold,
-                                       width=3)
-        
-        # Get max volt vec/1D potential
-        max_volt_vec = volt_vec.copy()
-        max_volt_vec[swept_ctrl] = bnds[1]
-        max_pot = self(max_volt_vec)
-        gparams.update_potential(max_pot)
-        
-        # Find wavefunction and probability distribution
-        _, state = solve_schrodinger_eq(self.constants, gparams)
-        if slice_axis=='y':
-            state = np.squeeze(state[slice_idx,:])
-        elif slice_axis=='x':
-            state = np.squeeze(state[:,slice_idx])
-        state = state/np.sqrt(inner_prod(gparams_1D, state, state))
-        # np.real shouldn't be needed, but numerical imprecision causes a warning
-        state_prob = np.real(np.multiply(state, state.conj()))
-        
-        # Find wavefunction peak
-        max_peaks, max_props = find_peaks(state_prob,
-                                       height=peak_threshold,
-                                       width=3)
+        # Find wavefunction peak at max boundary
+        max_peaks, max_props = _find_peaks(bnds[1])
         
         # CHECK THE BOUNDARIES TO SEE IF VALID
         # If min wavefunction has two peak locations, then the boundary point
@@ -491,29 +524,47 @@ class PotentialInterpolator:
             
             return None
         
+        # If the boundary window is very large (>1 mV), we will try to narrow 
+        # it down to help make fminbound work otherwise it can miss the 
+        # resonance point due to the way we define the find_peak_difference
+        # function.
+        # Need these for while loop. Get tallest peak location index for 
+        # min and max boundary points.
+        tall_min_peak_idx = min_peaks[min_props['peak_heights'].argmax()]
+        tall_max_peak_idx = max_peaks[max_props['peak_heights'].argmax()]
+        while np.diff(bnds) > 1E-3:
+            # Curr midpoint
+            bnd_mid = np.mean(bnds)
+            
+            # Get peaks at midpoint
+            mid_peaks, mid_props = _find_peaks(bnd_mid)
+            
+            # Get tallest peak location index
+            tall_mid_peak_idx = mid_peaks[mid_props['peak_heights'].argmax()]
+            
+            # See if tallest peak is closer to min or max boundary max peak
+            # and then replace closer boundary with the midpoint.
+            if (abs(tall_min_peak_idx - tall_mid_peak_idx) <
+                abs(tall_max_peak_idx - tall_mid_peak_idx)):
+                tall_min_peak_idx = tall_mid_peak_idx
+                bnds[0] = bnd_mid
+            else:
+                tall_max_peak_idx = tall_mid_peak_idx
+                bnds[1] = bnd_mid
+            
+            
+        print(bnds)
+        
         # Helper function for fminbound search
         def find_peak_difference(curr_val):
-            curr_volt_vec = volt_vec.copy()
-            curr_volt_vec[swept_ctrl] = curr_val
-            curr_pot = self(curr_volt_vec)
             
-            gparams.update_potential(curr_pot)
-            
-            _, state = solve_schrodinger_eq(self.constants, gparams)
-            if slice_axis=='y':
-                state = np.squeeze(state[slice_idx,:])
-            elif slice_axis=='x':
-                state = np.squeeze(state[:,slice_idx])
-            state = state/np.sqrt(inner_prod(gparams_1D, state, state))
-
-            state_prob = np.real(np.multiply(state, state.conj()))
-
-            peaks, _ = find_peaks(state_prob,height=peak_threshold)
+            # Find wavefunction peak at curr_val
+            peaks, props = _find_peaks(curr_val)
             
             # If there are two peaks, then return the peak difference, otherwise
             # return a large value to the minimzer.
             if len(peaks) == 2:
-                pk_diff = abs(np.diff(state_prob[peaks]))
+                pk_diff = abs(np.diff(props['peak_heights']))
             else:
                 pk_diff = 1E8
                         
@@ -523,15 +574,12 @@ class PotentialInterpolator:
         # are assumed to be similarly sized, this would be close to the 0
         # detuning point.        
         volt_tolerance = 1E-6 # muV
-        if bnds is not None:
-            res = fminbound(find_peak_difference, bnds[0], bnds[1], 
-                            xtol=volt_tolerance)
-        else:
-            res = fminbound(find_peak_difference, self.min_max_vals[swept_ctrl][0],
-                            self.min_max_vals[swept_ctrl][1], 
-                            xtol=volt_tolerance)
+        res = fminbound(find_peak_difference, bnds[0], bnds[1], 
+                        xtol=volt_tolerance)
         
         # Round value to the order of magnitude given by the tolerance.
         res = np.round(res,int(np.ceil(abs(np.log10(volt_tolerance)))))
                 
         return res
+    
+    

@@ -76,8 +76,8 @@ def build_interpolator(load_data_dict, constants=qd.Constants()):
     
     # Construct the interpolator
     ctrl_values.extend([y_coords,x_coords])
-    interp_obj = PotentialInterpolator(ctrl_values, all_data_stacked,
-                                             single_dims, constants)
+    interp_obj = PotentialInterpolator(ctrl_values, load_data_dict['ctrl_names'],
+                                       all_data_stacked, single_dims, constants)
     
     return interp_obj
     
@@ -222,6 +222,7 @@ def load_potentials(ctrl_vals, ctrl_names, f_type='pot', f_dir=None,
         pots_array.append(pot)
         
     all_files['ctrl_vals'] = cval_array
+    all_files['ctrl_names'] = ctrl_names
     all_files['potentials'] = pots_array
     
     
