@@ -64,7 +64,7 @@ def J_sigma_product(N, k1, k2):
     if k1==k2:
         return np.zeros((2**N, 2**N))
     else:
-        return 1j/(4*cst.hbar)*matr.sigma_product(N, k1, k2)
+        return 1/(4*cst.hbar)*matr.sigma_product(N, k1, k2)
     
     
 def x_sum(N):
@@ -115,7 +115,7 @@ def z_sum_omega(N, B_0, f_rf):
         Sum of Z_k-matrices for all k\in[1,N] weighted by i(omega-omega_tilde)
 
     """
-    return (1j*(cst.muB*B_0/cst.hbar-pi*f_rf)
+    return (1*(cst.muB*B_0/cst.hbar-pi*f_rf)
             *sum( matr.z(N,k) for k in range(1, N+1)))
 
 
