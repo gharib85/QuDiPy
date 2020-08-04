@@ -1,5 +1,5 @@
 import os, sys
-sys.path.append('../../')
+sys.path.append('/Users/keweizhou/Google_Drive/Research/20summer/Waterloo/QuDiPy/')
 
 import qudipy as qd
 import qudipy.potential as pot
@@ -58,8 +58,9 @@ def initialize_wf(consts, gparams):
 
     return psi, t_time
 
-def split_operator(psi_x, dt):
-    global consts, gparams, P
+def split_operator(psi_x):
+    global consts, gparams, P, dt
+
     # exponents present in evolution
     exp_K = np.exp(-1j*dt/2*np.multiply(P,P)/(2*consts.me*consts.hbar))
     # exp_KK = np.multiply(exp_K,exp_K)
@@ -78,7 +79,19 @@ def split_operator(psi_x, dt):
 
     return psi_x
 
+def init():
+    global psi_x, X
+    probability.set_data(X, psi_x)
+    return probability,
 
+def animate(i):
+    global psi_x, X
+    psi_x = split_operator(psi_x)
+    if i%100 == 0:
+        print(i, psi_x[:10])
+        prob_x = [abs(x)**2 for x in psi_x]
+        probability.set_data(X, prob_x)
+    return probability,
 
 ##############################################
 ########## Time Evolution Animation ##########
@@ -100,6 +113,7 @@ P = np.asarray([2 * consts.pi * consts.hbar * i / (gparams.nx*gparams.dx) for i 
 
 # initialize psi(t=0)
 psi_x, t_time = initialize_wf(consts, gparams)
+prob_x = [abs(x)**2 for x in psi_x]
 
 # print("Plotting the initial wavefunction...")
 # plt.plot(X, [abs(x)**2 for x in psi_x])
@@ -122,25 +136,9 @@ fig = plt.figure()
 ax = fig.add_subplot(111)
 
 # particles holds the locations of the particles
-probability, = ax.plot([], [],  ms=6)
+probability, = ax.plot(X, prob_x,  ms=6)
 
-def init():
-    """initialize animation"""
-    global X, psi_x
-    prob_x = [abs(x)**2 for x in psi_x]
-    probability.set_data(X, prob_x)
-    return probability
+ani = animation.FuncAnimation(fig, animate, init_func=init,frames=1000,
+                              interval=10, blit=True)
 
-def animate(i):
-    """perform animation step"""
-    global X, psi_x, dt
-    print(i)
-    psi_x = split_operator(psi_x, dt)
-    prob_x = [abs(x)**2 for x in psi_x]
-    probability.set_data(X, prob_x)
-    return probability
-
-ani = animation.FuncAnimation(fig, animate, frames=600,
-                              interval=10, blit=True, init_func=init)
-
-plt.show()
+plt.show(block=False)

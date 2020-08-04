@@ -10,8 +10,6 @@ from scipy import sparse
 from scipy.sparse import diags
 from scipy.linalg import expm
 import matplotlib.pyplot as plt
-import timeit
-
 # import matplotlib.animation as animation
 
 
@@ -105,15 +103,15 @@ psi_x, t_time = initialize_wf(consts, gparams)
 prob = [abs(x)**2 for x in psi_x]
 ymax = max(prob)
 
-# Calculate the runtime
-start = timeit.default_timer()
-
 plt.ion()
 fig = plt.figure()
 ax = fig.add_subplot(111)
 
 line1, = ax.plot(X, prob, 'r-')
 
+# print("Plotting the initial wavefunction...")
+# plt.plot(X, [abs(x)**2 for x in psi_x])
+# plt.show()
 
 nt = int(np.round(t_time/dt))
 for step in range(nt):
@@ -127,5 +125,9 @@ for step in range(nt):
         plt.pause(1e-15)
         plt.clf()
 
-stop = timeit.default_timer()
-print('Time: ', stop - start)  
+
+output = psi_x
+
+# print("Plotting the wavefunction at time ",nt * dt)
+# plt.plot(X, [abs(x)**2 for x in output])
+# plt.show() 
