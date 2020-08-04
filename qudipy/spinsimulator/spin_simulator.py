@@ -13,7 +13,6 @@ from math import pi, log2, exp, sin, cos
 import os, sys
 sys.path.append(os.path.dirname(os.getcwd()))
 
-
 import qudipy.qutils.matrices as matr
 import qudipy.qutils.math as mth
 
@@ -22,6 +21,7 @@ from qudipy.utils.constants import Constants
 
 #defining system constants
 cst = Constants()       #TODO add input("Enter the system name")
+# print(pi*cst.muB/cst.hbar)
 
 #helper functions
 
@@ -64,7 +64,7 @@ def J_sigma_product(N, k1, k2):
     if k1==k2:
         return np.zeros((2**N, 2**N))
     else:
-        return 1j/(4*cst.hbar)*matr.sigma_product(N, k1, k2)
+        return 1/(4*cst.hbar)*matr.sigma_product(N, k1, k2)
     
     
 def x_sum(N):
@@ -115,7 +115,7 @@ def z_sum_omega(N, B_0, f_rf):
         Sum of Z_k-matrices for all k\in[1,N] weighted by i(omega-omega_tilde)
 
     """
-    return (1j*(cst.muB*B_0/cst.hbar-pi*f_rf)
+    return (1*(cst.muB*B_0/cst.hbar-pi*f_rf)
             *sum( matr.z(N,k) for k in range(1, N+1)))
 
 
@@ -186,7 +186,13 @@ def const_dict(N_0, T, B_0, f_rf, T_1):
         
         J_sigma_products=[[J_sigma_product(N,k1,k2) for k2   in range(1,N+1)] for k1 in range(1,N+1)] 
                        
-        temp.append({"Xs":Xs, "Ys":Ys, "Zs":Zs,  "sigma_pluses":sigma_pluses, "sigma_minuses":sigma_minuses, "J_sigma_products":J_sigma_products, "x_sum":x_sum(N), "y_sum":y_sum(N), "z_sum_omega":z_sum_omega(N, B_0, f_rf), "z_sum_p":z_sum_p(N,B_0,T,T_1)})
+        temp.append({"Xs":Xs, "Ys":Ys, "Zs":Zs,
+                     "sigma_pluses":sigma_pluses,
+                     "sigma_minuses":sigma_minuses,
+                     "J_sigma_products":J_sigma_products,
+                     "x_sum":x_sum(N), "y_sum":y_sum(N),
+                     "z_sum_omega":z_sum_omega(N, B_0, f_rf),
+                     "z_sum_p":z_sum_p(N,B_0,T,T_1)})
     
     return temp
 
@@ -333,6 +339,8 @@ class SpinSys:
             if B_y != 0:
                 ham += const_dict_N["y_sum"]* B_y * sin(phi)
                 
+            # print("X_SUM: ",const_dict_N["x_sum"])
+            # print("Z_SUM_OMEGA: ",const_dict_N["z_sum_omega"])
         return ham
     
 
@@ -356,12 +364,30 @@ class SpinSys:
             #automatically calculating the size
         ham = np.zeros((2**N, 2**N))
         if pulse_params is not None:
+            # print(pulse_params)
+            # print(const_dict_N)
             ham = ham + self.hamiltonian(const_dict_N, pulse_params)
         
-        lin = ( 1j *( rho_mod.dot(ham) - ham.dot(rho_mod) ) + const_dict_N["z_sum_p"] - (2/self.T_1 + 1/(2*self.T_2)) * N * rho_mod )
+        # print(1j/6.626E-34/(2*3.14159))
+        hbar = 6.626E-34/(2*3.14519)
+        # import sys
+        # sys.exit()
         
-        for k in range(N):
-            lin += (  p(self.B_0, self.T) / self.T_1 * np.dot(const_dict_N["sigma_pluses"][k] , rho_mod.dot(const_dict_N["sigma_minuses"][k])) +  (1 - p(self.B_0, self.T)) / self.T_1 * np.dot(const_dict_N["sigma_minuses"][k], rho_mod.dot(const_dict_N["sigma_pluses"][k])))
+        lin = ( 1j *( rho_mod.dot(ham) - ham.dot(rho_mod) ) + const_dict_N["z_sum_p"] - (2/self.T_1 + 1/(2*self.T_2)) * N * rho_mod )
+        # lin = -1j *( ham @ rho_mod - rho_mod @ ham )
+        
+        # import scipy
+        # print("RHO",rho_mod)
+        # print('HAM:',ham)
+        # print()
+        # U = scipy.linalg.expm(1j*ham)
+        # print('UNITARY:',U)
+        # print('U*Udag:',U@U.conj().T)
+        # import sys
+        # sys.exit()
+        # print("LIN:",lin)
+        # for k in range(N):
+        #     lin += (  p(self.B_0, self.T) / self.T_1 * np.dot(const_dict_N["sigma_pluses"][k] , rho_mod.dot(const_dict_N["sigma_minuses"][k])) +  (1 - p(self.B_0, self.T)) / self.T_1 * np.dot(const_dict_N["sigma_minuses"][k], rho_mod.dot(const_dict_N["sigma_pluses"][k])))
  
         return lin
         
@@ -369,7 +395,7 @@ class SpinSys:
     def evolve(self, pulses, 
                rhos_expected=None, is_fidelity=False, is_purity=False,
                track_qubits=None, are_Bloch_vectors=False,
-                track_points_per_pulse=100
+                track_points_per_pulse=1000
                ):
         """
         Function that performs spin system evolution under the external pulse,
@@ -447,6 +473,8 @@ class SpinSys:
                 delta_t=self.T_2/100   #TODO change to an appropriate number
             else:
                 delta_t = pulse_time /  num_values
+
+            # print('Delta_t = ',delta_t)
                 
             #checking if dimensions of arrays in pulse are consistent
             dim_correct=True
@@ -469,12 +497,20 @@ class SpinSys:
                     avg_pulse={k:(0.5*(v[n-1]+v[n])) for (k,v) in pulse.items()}
                     
                     K1 = self.lindbladian(self.rho, cdict_N, cur_pulse)
+                    # print("K1",K1)
                     K2 = self.lindbladian(self.rho + 0.5*delta_t*K1, cdict_N, avg_pulse )
+                    # print("K2",K2)
                     K3 = self.lindbladian(self.rho + 0.5*delta_t*K2, cdict_N, avg_pulse )
+                    # print("K3",K3)
                     K4 = self.lindbladian(self.rho + delta_t*K3, cdict_N, next_pulse )
+                    # print("K4",K4)
                     #updating density matrix
-                    
+
                     self.rho = self.rho + delta_t/6*(K1+2*K2+2*K3+K4)
+                    # print("NEW RHO",self.rho)
+                    # print("NEW_RHO_PUR",np.trace(self.rho @ self.rho))
+                    # import sys
+                    # sys.exit()
                     
                     #implementing tracking:
                     if track_qubits is not None:
