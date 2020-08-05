@@ -84,7 +84,7 @@ class PotentialInterpolator:
 
         Returns
         -------
-        result : 2D array
+        result : 2D float array
             Interpolated 2D potential at the supplied voltage vector.
 
         '''
@@ -351,10 +351,6 @@ class PotentialInterpolator:
     def find_resonant_tc(self, volt_vec, swept_ctrl, bnds=None, peak_threshold=1E5,
                          slice_axis='y', slice_val=0):
 
-        # If bnds are not supplied, then set as min max of available voltage
-        # ranges
-        bnds = [self.min_max_vals[swept_ctrl][0], self.min_max_vals[swept_ctrl][1]]
-
         # If swept_ctrl is an integer, then no need to find the corresponding
         # index. If swept_ctrl is a string, we need to check that it is one of
         # the control names and then find the corresponding index.
@@ -391,7 +387,13 @@ class PotentialInterpolator:
         elif swept_ctrl >= len(volt_vec):
             raise ValueError(f'Supplied swept_ctrl index {swept_ctrl} is invalid.\n'+
                              f'Voltage vector only has {len(volt_vec)} elements.')
-                        
+          
+        # If bnds are not supplied, then set as min max of available voltage
+        # ranges
+        if bnds is None:
+            bnds = [self.min_max_vals[swept_ctrl][0], 
+                    self.min_max_vals[swept_ctrl][1]]
+              
         # Right now... We are assuming a linear chain of quantum dots where
         # the axis of the linear chain is centered at y=0.
         gparams = GridParameters(self.x_coords, self.y_coords)
@@ -523,7 +525,7 @@ class PotentialInterpolator:
                   'Provide new boundaries or change the input control value array.\n')
             
             return None
-        
+                
         # If the boundary window is very large (>1 mV), we will try to narrow 
         # it down to help make fminbound work otherwise it can miss the 
         # resonance point due to the way we define the find_peak_difference
@@ -552,9 +554,6 @@ class PotentialInterpolator:
                 tall_max_peak_idx = tall_mid_peak_idx
                 bnds[1] = bnd_mid
             
-            
-        print(bnds)
-        
         # Helper function for fminbound search
         def find_peak_difference(curr_val):
             
@@ -580,6 +579,6 @@ class PotentialInterpolator:
         # Round value to the order of magnitude given by the tolerance.
         res = np.round(res,int(np.ceil(abs(np.log10(volt_tolerance)))))
                 
-        return res
+        return float(res)
     
     

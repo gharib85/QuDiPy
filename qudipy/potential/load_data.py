@@ -11,7 +11,7 @@ from scipy.interpolate import interp2d
 from itertools import product
 
 import qudipy as qd
-from qudipy.potential import PotentialInterpolator
+from qudipy.potential.potentialinterpolator import PotentialInterpolator
         
 def build_interpolator(load_data_dict, constants=qd.Constants()):
     '''
