@@ -132,11 +132,6 @@ class GridParameters:
         self.potential = new_pot
         
         
-    def slice_potential(self, slice_coordinate, slice_axis):
-        
-        pass
-        
-        
         
         
         

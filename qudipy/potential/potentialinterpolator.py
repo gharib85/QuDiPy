@@ -109,8 +109,8 @@ class PotentialInterpolator:
             if len(volt_vec) != exp_num:
                 raise ValueError('Input voltage vector does not have' +
                                  ' correct number of elements.\n' + 
-                                 f"Expected {exp_num} or {exp_num-2} number" +
-                                 f" of elements, got {len(volt_vec)} instead.")
+                                 f'Expected {exp_num} or {exp_num-2} number' +
+                                 f' of elements, got {len(volt_vec)} instead.')
             else:
                 volt_vec = [volt_vec[idx] for idx in range(len(volt_vec)) if
                             idx not in self.single_dims]

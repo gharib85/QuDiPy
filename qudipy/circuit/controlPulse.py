@@ -10,7 +10,7 @@ from scipy.interpolate import interp1d
 
 class ControlPulse:
     
-    def __init__(self, pulse_name, pulse_type, pulse_length=0, ideal_gate=None):
+    def __init__(self, pulse_name, pulse_type, pulse_length=-1, ideal_gate=None):
         '''
         Initialize a ControlPulse object.
 
@@ -22,8 +22,8 @@ class ControlPulse:
             Specify whether pulse is described with "experimental" or 
             "effective" control variables.
         pulse_length : int, optional
-            Total length of pulse in ps. The default is 0.
-            This is in optional keyword because 
+            Total length of pulse in ps. The default is -1.
+            This is an optional keyword because 
             sometimes you may wish to vary the pulse length across different
             simulations for a given pulse. Pulse length can be set later using
             the set_pulse_length() method.
@@ -67,6 +67,13 @@ class ControlPulse:
 
         '''
         
+        # Check that we actually have a valid pulse length set
+        if self.length == -1:
+            print('Cannot call control pulse object.\nPulse length has not '+
+                  'been specified.\nPlease set using the .set_pulse_length()'+
+                  'method.')
+            return
+        
         # Check if the interpolators have been constructed. If not, then 
         # make them.
         if not hasattr(self,'ctrl_interps'):
@@ -80,7 +87,7 @@ class ControlPulse:
 
         return interp_pulse    
     
-    def plot(self, plot_ctrls='all', time_interval='full', n=250):
+    def plot(self, plot_ctrls='all', time_int='full', n=250):
         '''
         Plot the control pulse. Can plot a subset of the control variables 
         and within some time interval.
@@ -90,7 +97,7 @@ class ControlPulse:
         plot_ctrls : list of strings, optional
             Specify the name of each control variable pulse you wish to plot
             or plot 'all'. The default is 'all'.
-        time_interval : list of floats
+        time_int : list of floats
             Specify the time interval over which to plot the pulse. Cannot be
             less than 0 or greater than the current pulse length. The default 
             is the full time interval.
@@ -105,12 +112,12 @@ class ControlPulse:
         '''
         
         # Get the time interval and time points to plot
-        if time_interval == 'full':
+        if time_int == 'full':
             min_time = 0
             max_time = self.length
         else:
-            min_time = time_interval[0]
-            max_time = time_interval[1]
+            min_time = time_int[0]
+            max_time = time_int[1]
             
         t_pts = np.linspace(min_time,max_time,n)
         
@@ -143,18 +150,37 @@ class ControlPulse:
         for ctrl in plot_ctrls:
             ctrl_idxs.append(self.ctrl_names.index(ctrl))
             
+        # Figure out scale to apply (if any) on time axis to make more
+        # readable as default length units are ps
+        if 1E-3 < max(t_pts) <= 1E0:
+            scale = 1E3
+            units = '[fs]'
+        elif 1E0 < max(t_pts) <= 1E3:
+            scale = 1
+            units = '[ps]'
+        elif 1E3 < max(t_pts) <= 1E6:
+            scale = 1E-3
+            units = '[ns]'
+        elif 1E6 < max(t_pts) <= 1E9:
+            scale = 1E-6
+            units = '[us]'
+        elif 1E9 < max(t_pts):
+            scale = 1E-6
+            units = '[ms]'
+            
         # Generate fig
         plt.figure()
-        plt.plot(t_pts, pulse[:,ctrl_idxs])   
+        plt.plot(t_pts*scale, pulse[:,ctrl_idxs])   
         lgd_names = [self.ctrl_names[idx] for idx in ctrl_idxs]
         plt.legend(lgd_names,loc='best')
-        plt.xlabel('Time')
+        plt.xlabel('Time ' + units)
         plt.show()
         
         
     def set_pulse_length(self, pulse_length):
         '''
-        Change the pulse length parameter
+        Change the pulse length by scaling the time axis of the pulse with 
+        respect to the previously specified pulse.
 
         Parameters
         ----------
@@ -166,8 +192,25 @@ class ControlPulse:
         None.
 
         '''
-        
+                
+        # Keep track of old length
+        old_length = self.length
         self.length = pulse_length
+        
+        # If previous length is -1, then pulse length has not been specified
+        # yet so we can just set the attribute and then return
+        if old_length == -1:
+            return
+            
+        # If self.ctrl_time is defined, then we need to just scale all the
+        # current time points
+        if self.ctrl_time is not None:
+            self.ctrl_time *= pulse_length/old_length
+            
+        # Check if the interpolators have been constructed. If they have, 
+        # then we need to update them with the new ctrl_time attribute
+        if hasattr(self,'ctrl_interps'):
+            self._generate_ctrl_interpolators()
         
     def add_control_variable(self, var_name, var_pulse):
         '''
@@ -189,6 +232,11 @@ class ControlPulse:
         
         if var_name.lower() == 'time':
             self.ctrl_time = np.array(var_pulse)
+            # Double check that the time points start at 0.
+            if not np.isclose(self.ctrl_time[0], 0):
+                raise ValueError(f'Cannot load time variable for {self.name}'+
+                                 ' because time points do not start at 0.')
+
             self.set_pulse_length(var_pulse[-1])
         else:
             self.ctrl_pulses[var_name] = np.array(var_pulse)
@@ -214,21 +262,19 @@ class ControlPulse:
         
         # Check if the time array is set, if not, then assume each point in
         # the pulse is linearly spaced in time
-        linear_time_step = False
         if self.ctrl_time is None:
-            linear_time_step = True
+            # Get a pulse to find out how many points in the pulse there are
+            n_pts = len(self.ctrl_pulses[self.ctrl_names[0]])
+            
+            # Now build the time array
+            self.ctrl_time = np.linspace(0, self.length, n_pts)
         
         # For each pulse, find the time axis points and then make the 1D
         # interpolator. All ctrl pulses will be linearly interpolated.
         for ctrl in self.ctrl_names:
             curr_pulse = self.ctrl_pulses[ctrl]
-            
-            if linear_time_step:
-                curr_time = np.linspace(0,self.length, len(curr_pulse))
-            else:
-                curr_time = self.ctrl_time
                 
-            self.ctrl_interps[ctrl] = interp1d(curr_time, curr_pulse)        
+            self.ctrl_interps[ctrl] = interp1d(self.ctrl_time, curr_pulse)        
             
         
         
