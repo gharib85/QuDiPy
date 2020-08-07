@@ -5,6 +5,7 @@ Class for a control pulse
 """
 
 import numpy as np
+import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
 
 class ControlPulse:
@@ -66,17 +67,90 @@ class ControlPulse:
 
         '''
         
-        # Check if the interpolators have been constructed and if not, then 
+        # Check if the interpolators have been constructed. If not, then 
         # make them.
         if not hasattr(self,'ctrl_interps'):
             self._generate_ctrl_interpolators()
         
         # Loop through each control variable and get the interpolated pulse
+        # for each time point.
         interp_pulse = np.zeros((len(time_pts),len(self.ctrl_names)))
         for ctrl_idx, ctrl in enumerate(self.ctrl_names):
             interp_pulse[:,ctrl_idx] = self.ctrl_interps[ctrl](time_pts)
 
         return interp_pulse    
+    
+    def plot(self, plot_ctrls='all', time_interval='full', n=250):
+        '''
+        Plot the control pulse. Can plot a subset of the control variables 
+        and within some time interval.
+
+        Parameters
+        ----------
+        plot_ctrls : list of strings, optional
+            Specify the name of each control variable pulse you wish to plot
+            or plot 'all'. The default is 'all'.
+        time_interval : list of floats
+            Specify the time interval over which to plot the pulse. Cannot be
+            less than 0 or greater than the current pulse length. The default 
+            is the full time interval.
+        n : int, optional
+            Number of points to use in the pulse when plotting. The default is
+            250.
+
+        Returns
+        -------
+        None.
+
+        '''
+        
+        # Get the time interval and time points to plot
+        if time_interval == 'full':
+            min_time = 0
+            max_time = self.length
+        else:
+            min_time = time_interval[0]
+            max_time = time_interval[1]
+            
+        t_pts = np.linspace(min_time,max_time,n)
+        
+        # Get the actual pulse
+        pulse = self(t_pts)
+        
+        # Check the plot_ctrls input
+        if not isinstance(plot_ctrls,(list,tuple,set)):
+            if plot_ctrls.lower() == 'all':
+                plot_ctrls = self.ctrl_names
+            # A single control variable was inputted but wasn't wrapped in a
+            # list, tuple, or set, so we will wrap it in a list
+            elif plot_ctrls in self.ctrl_names:
+                plot_ctrls = [plot_ctrls]
+            else:
+                raise ValueError('Unrecognized input for control variables '+
+                                 f'to plot {plot_ctrls}.\nAllowed inputs are '+
+                                 'either ''all'' or a list of allowed names:\n'+
+                                 f' {self.ctrl_names}')
+        # If a list of names was specified, check that all are valid ctrl 
+        # variable names
+        elif not set(plot_ctrls).issubset(self.ctrl_names):
+            raise ValueError('Unrecognized input for control variables '+
+                             f'to plot {plot_ctrls}.\nAllowed inputs are '+
+                             'either ''all'' or a list of allowed names:\n'+
+                             f'{self.ctrl_names}')
+           
+        # For each pulse specified by ctrl_vars, plot those pulses
+        ctrl_idxs = []
+        for ctrl in plot_ctrls:
+            ctrl_idxs.append(self.ctrl_names.index(ctrl))
+            
+        # Generate fig
+        plt.figure()
+        plt.plot(t_pts, pulse[:,ctrl_idxs])   
+        lgd_names = [self.ctrl_names[idx] for idx in ctrl_idxs]
+        plt.legend(lgd_names,loc='best')
+        plt.xlabel('Time')
+        plt.show()
+        
         
     def set_pulse_length(self, pulse_length):
         '''

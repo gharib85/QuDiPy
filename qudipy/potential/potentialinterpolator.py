@@ -88,9 +88,15 @@ class PotentialInterpolator:
             Interpolated 2D potential at the supplied voltage vector.
 
         '''
+        
+        # If it's not a list (i.e. like a numpy array, convert to list)
+        if not isinstance(volt_vec_input,list):
+            volt_vec = list(volt_vec_input)
         # We append stuff to the voltage vector so need to make a copy to make
         # sure we don't change the vector used to actually call the function.
-        volt_vec = volt_vec_input.copy()
+        else:
+            volt_vec = volt_vec_input.copy()
+
         
         # First check if the singleton dimensions were included in volt_vec
         # and remove if so
