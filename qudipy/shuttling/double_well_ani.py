@@ -117,7 +117,7 @@ line1, = ax.plot(X, prob, 'r-')
 
 nt = int(np.round(t_time/dt))
 for step in range(nt):
-    psi_x = split_operator(psi_x, dt)
+    psi_x = split_operator(psi_x, dt
     if step%2000  == 0:
         prob = [abs(x)**2 for x in psi_x]
         plt.plot(X, prob)

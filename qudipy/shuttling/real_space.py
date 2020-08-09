@@ -56,7 +56,15 @@ def initialize_wf(consts, gparams):
 
     return psi, t_time
 
-def main():
+def simulate_real_space(pot_interp, ctrl_p):
+    """
+    potential interpolator, including system constants and grid points(x, y)
+    control pulse
+    save data flag (only saves 200 or 500 pts) 
+    plot evolution flag (every 5000)
+
+    """
+
     # initialize relevant constants and parameters for the calculation
     consts, gparams = initialize_params()
     # diagonal matrix of potential energy in position space
