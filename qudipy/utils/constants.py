@@ -10,9 +10,10 @@ class Constants:
         
         Parameters
         ----------
-        material_system : string
+        material_system : string, optional
             String specifying which material system the constant class is for.
-            Currently allowed systems are: ["Si/SiO2", "Si/SiGe", "GaAs"]
+            Currently allowed systems are: ["Si/SiO2", "Si/SiGe", "GaAs"].
+            Default is None.
 
         Returns
         -------

@@ -4,11 +4,10 @@ __all__ = [
 import numpy as np
 from scipy import sparse
 from scipy.sparse.linalg import eigs
-from qudipy.qutils.math import inner_prod
+from qudipy.qutils.qmath import inner_prod
 
 def build_1DSE_hamiltonian(consts, gparams):
-    '''
-    
+    ''' 
     Build a single electron Hamilonian for the 1-dimensional potential 
     specified in the gparams class. The laplacian operator is approximated by
     using a 1D 3-point stencil. The Hamilonian assumes a natural ordering 
@@ -18,7 +17,6 @@ def build_1DSE_hamiltonian(consts, gparams):
     ----------
     consts : Constants class
         Contains constants value for material system.
-    
     gparams : GridParameters class
         Contains grid and potential information
 
@@ -54,7 +52,6 @@ def build_1DSE_hamiltonian(consts, gparams):
 
 def build_2DSE_hamiltonian(consts, gparams):
     '''
-    
     Build a single electron Hamilonian for the 2-dimensional potential 
     specified in the gparams class. The laplacian operator is approximated by 
     using a 2D 5-point stencil. The Hamiltonian assumes a natural ordering
@@ -64,7 +61,6 @@ def build_2DSE_hamiltonian(consts, gparams):
     ----------
     consts : Constants class
         Contains constants value for material system.
-    
     gparams : GridParameters class
         Contains grid and potential information
 
@@ -109,7 +105,6 @@ def build_2DSE_hamiltonian(consts, gparams):
 
 def solve_schrodinger_eq(consts, gparams, n_sols=1):
     '''
-    
     Solve the time-independent Schrodinger-Equation H|Y> = E|Y> where H is
     the single-electron 1 (or 2)-dimensional Hamiltonian.
 
@@ -117,18 +112,15 @@ def solve_schrodinger_eq(consts, gparams, n_sols=1):
     ----------
     consts : Constants class
         Contains constants value for material system.
-    
     gparams : GridParameters class
-        Contains grid and potential information.
-        
-    n_sols: int
-        Number of eigenvectors and eigenenergies to return (default is 1).
+        Contains grid and potential information.    
+    n_sols: int, optional
+        Number of eigenvectors and eigenenergies to return. The default is 1.
 
     Returns
     -------
     eig_ens : complex 1D array
         Lowest eigenenergies sorted in ascending order.
-
     eig_vecs : complex 2D array
         Corresponding eigenvectors in natural order format. eig_vecs[:,i] is 
         the eigenvector for eigenvalue eig_ens[i].

@@ -24,9 +24,9 @@ class GridParameters:
             Grid coordinates along x with uniform spacing.
         y : array
             Grid coordinates along y with uniform spacing.
-        potential : array
+        potential : array, optional
             Potential values along x-y coordinates where 2DEG is formed. Must
-            be in meshgrid format (y,x).
+            be in meshgrid format (y,x). The default is an empty numpy array.
 
         Returns
         -------

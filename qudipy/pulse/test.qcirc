@@ -1,9 +1,2 @@
-# Quantum Circuit
-
 Number of qubits: 2
-RX180 1
-RY180 1
-RZ180 2
-CTRLX 1 2
-CTRLZ 1 2
-SWAP 1 2
+RX180 2
