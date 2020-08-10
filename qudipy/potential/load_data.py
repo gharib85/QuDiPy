@@ -13,7 +13,8 @@ from itertools import product
 import qudipy as qd
 from qudipy.potential.potentialinterpolator import PotentialInterpolator
         
-def build_interpolator(load_data_dict, constants=qd.Constants()):
+def build_interpolator(load_data_dict, constants=qd.Constants(), 
+                       y_slice=None):
     '''
     This function constructs an interpolator object for either a group of 
     potential or electric field files.
@@ -28,7 +29,12 @@ def build_interpolator(load_data_dict, constants=qd.Constants()):
     constants : Constants object, optional
         Constants object containing material parameter details. The default is
         a Constants object assuming air as the material system.
-
+    y_slice : float, optional
+        Used to create a interpolator of only 1D poetentials. Specify a slice 
+        along the y-axis at which to take the 1D potential when constructing
+        the interpolator. Units should be specified in [m]. 
+        The default is None.
+    
     Returns
     -------
     interp_obj : Mod_RegularGridInterpolator class
@@ -64,20 +70,34 @@ def build_interpolator(load_data_dict, constants=qd.Constants()):
     
     # Add the y and x coordinate lengths so we know the expected dimensions of 
     # the total nd array of data to interpolate
-    all_data_stacked = np.zeros((np.prod(n_dims),len(y_coords),len(x_coords)))
-    n_dims.extend([len(y_coords),len(x_coords)])  
+    if y_slice is None:
+        all_data_stacked = np.zeros((np.prod(n_dims),len(y_coords),len(x_coords)))
+        n_dims.extend([len(y_coords),len(x_coords)])  
+    else:
+        all_data_stacked = np.zeros((np.prod(n_dims),len(x_coords)))
+        n_dims.extend([len(x_coords)])  
 
     # Go and stack the potential data together and then reshape it into
-    # correct format    
+    # correct format
+    if y_slice is not None:
+        y_idx = qd.utils.find_nearest(y_coords, y_slice)[0]
     for idx, curr_gate_idx in enumerate(product(*temp_n_dims)):
-        all_data_stacked[idx,:,:] = load_data_dict['potentials'][idx]
+        if y_slice is None:
+            all_data_stacked[idx,:,:] = load_data_dict['potentials'][idx]
+        else:
+            all_data_stacked[idx,:] = np.squeeze(
+                load_data_dict['potentials'][idx][y_idx,:])
     
     all_data_stacked = np.reshape(all_data_stacked,(n_dims))
     
     # Construct the interpolator
-    ctrl_values.extend([y_coords,x_coords])
+    if y_slice is None:
+        ctrl_values.extend([y_coords,x_coords])
+    else:
+        ctrl_values.extend([x_coords])
     interp_obj = PotentialInterpolator(ctrl_values, load_data_dict['ctrl_names'],
-                                       all_data_stacked, single_dims, constants)
+                                        all_data_stacked, single_dims, constants,
+                                        y_slice)
     
     return interp_obj
     

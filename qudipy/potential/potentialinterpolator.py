@@ -19,7 +19,7 @@ from qudipy.potential import GridParameters
 class PotentialInterpolator:
     
     def __init__(self, ctrl_vals, ctrl_names, interp_data, single_dim_idx, 
-                 constants=qd.Constants()):
+                 constants=qd.Constants(), y_slice=None):
         '''
         Initialize the class which, at its core, is basically a wrapper for 
         the scipy RegularGridInterpolator class.
@@ -31,14 +31,19 @@ class PotentialInterpolator:
             x and y coords).
         interp_data : nd array
             Array of 2D potential (or electric field) data which is to be
-            interpolated. Number of dimensions should be num_ctrls + 2 (for x
-            and y coords)
+            interpolated. Number of dimensions should be number of controls +2
+            (where the +2 is for x and y coords)
         single_dim_idx : list of ints
             List of all control indices which only have a singleton dimension.
         constants : Constants object, optional
             Constants object containing material parameter details.
             The default is a Constants object assuming air as the material
             system.
+        y_slice : float, optional
+            Used to create a interpolator of only 1D poetentials. Specify a 
+            slice along the y-axis at which to take the 1D potential when 
+            constructing the interpolator. Units should be specified in [m]. 
+            The default is None.
 
         Returns
         -------
@@ -52,12 +57,20 @@ class PotentialInterpolator:
         # Track how many of the originally inputted grid vectors had only a 
         # single dimension
         self.single_dims = single_dim_idx
-        self.n_voltage_ctrls = len(ctrl_vals)-2
+        if y_slice is None:
+            self.grid_type = '2D'
+            self.n_voltage_ctrls = len(ctrl_vals)-2
+        else:
+            self.grid_type = '1D'
+            self.n_voltage_ctrls = len(ctrl_vals)-1
         
         # Extract grid vectors
-        self.gate_values = ctrl_vals[:-2]
         self.x_coords = ctrl_vals[-1]
-        self.y_coords = ctrl_vals[-2]
+        if self.grid_type == '2D':
+            self.gate_values = ctrl_vals[:-2]
+            self.y_coords = ctrl_vals[-2]
+        elif self.grid_type == '1D':
+            self.gate_values = ctrl_vals[:-1]
         
         # Get min/max values for each voltage control
         self.min_max_vals = []
@@ -125,7 +138,10 @@ class PotentialInterpolator:
                                  ' range of grid vectors.')
             
         # Add the x and y coordinates so we interpolate the whole 2D potenial
-        volt_vec.extend([self.y_coords, self.x_coords])
+        if self.grid_type == '2D':
+            volt_vec.extend([self.y_coords, self.x_coords])
+        elif self.grid_type == '1D':
+            volt_vec.extend([self.x_coords])
         
         # Now build up meshgrid of points we want to query the interpolant
         # object at
@@ -150,11 +166,13 @@ class PotentialInterpolator:
         ----------
         volt_vec : 1D float array
             Array of voltage vectors at which we wish to find the interpolated
-            2D potential.
+            1D or 2D potential.
         plot_type : string, optional
             Type of plot to show of the potential. Accepted arguments are:
             - '2D': show a 2D plot of the potential landscape. 
             - '1D': show 1D slices of the potential landscape along x- and y-axes.
+            If the potentialInterpolator is for 1D potentials, then this
+            keyword argument will do nothing.
             The default is '2D'.
         y_slice : float, optional
             Location in [m] along y-axis of where to take a 1D slice of the 
@@ -164,6 +182,8 @@ class PotentialInterpolator:
             Location in [m] along x-axis of where to take a 1D slice of the 
             potential along the y-axis to plot. Only applies if plot_type='1D'. 
             If not specified, then only a plot along the x-axis will be shown.
+            If the potentialInterpolator is for 1D potentials, then this
+            keyword argument will do nothing.
             The default is None.
         show_wf : bool, optional
             If True, the wavefunction probability will be overlaid on the 
@@ -181,8 +201,14 @@ class PotentialInterpolator:
 
         '''
 
+        # If the potentialInterpolator only supports 1D potentials, then
+        # fix the default plot_type
+        if self.grid_type == '1D':
+            plot_type = '1D'
+
         # Helper function to help add wavefunction overlay to potential plots.
-        def _add_wf_overlay(ax, int_pot, slice_idx, slice_axis, wf_n=0):
+        def _add_wf_overlay(ax, int_pot, slice_idx, slice_axis,
+                            wf_n=0):
             '''
             Adds the wavefunction probability to an already created axes 
             object plot of the potential.
@@ -197,7 +223,7 @@ class PotentialInterpolator:
             slice_idx : int
                 The index indicating where to take a 1D slice of the 2D
                 wavefunction.
-            slice_axis : string, optional
+            slice_axis : string
                 String indicating which axis we are taking a slice of the 2D 
                 wavefunction. Changes how we take a slice of the wavefunction
                 meshgrid.
@@ -211,6 +237,7 @@ class PotentialInterpolator:
             None.
 
             '''
+             
             # Update color for old axis
             color = 'tab:blue'
             ax.set_ylabel('1D potential [J]', color=color)
@@ -225,15 +252,23 @@ class PotentialInterpolator:
             ax_wf.tick_params(axis='y', labelcolor=color)
             
             # Find the nth wavefunction probabilty
-            gparams = GridParameters(self.x_coords, y=self.y_coords, 
-                                     potential=int_pot)
-            _, state = solve_schrodinger_eq(self.constants, gparams, 
-                                            n_sols=(wf_n+1))
+            if self.grid_type == '2D':
+                gparams = GridParameters(self.x_coords, y=self.y_coords, 
+                                         potential=int_pot)
+                _, state = solve_schrodinger_eq(self.constants, gparams, 
+                                                n_sols=(wf_n+1))
+            elif self.grid_type == '1D':
+                gparams = GridParameters(self.x_coords, potential=int_pot)
+                _, state = solve_schrodinger_eq(self.constants, gparams, 
+                                                n_sols=(wf_n+1))
             
             # Get correct slice of wavefunction
             if slice_axis == 'y':
                 gparams_1D = GridParameters(self.x_coords)
-                state = np.squeeze(state[slice_idx,:,wf_n])
+                if self.grid_type == '2D':
+                    state = np.squeeze(state[slice_idx,:,wf_n])
+                elif self.grid_type == '1D':
+                    state = np.squeeze(state[:,wf_n])
             elif slice_axis == 'x':
                 gparams_1D = GridParameters(self.y_coords)
                 state = np.squeeze(state[:,slice_idx,wf_n])
@@ -253,20 +288,32 @@ class PotentialInterpolator:
         # Do a 1D plot
         if plot_type.upper() == '1D':
             # Get the y-axis slice index
-            y_idx, y_val = utils.find_nearest(self.y_coords, y_slice)
+            if self.grid_type == '2D':
+                y_idx, y_val = utils.find_nearest(self.y_coords, y_slice)
             
             # If x-axis slice isn't sepcified, just show x-axis plot.
             if x_slice is None:
                 fig, ax = plt.subplots(figsize=(8,8))
-                ax.plot(self.x_coords/1E-9, int_pot[y_idx,:].T)
-                ax.set(xlabel='x-coords [nm]', ylabel='1D potential [J]',
-                   title=f'Potential along x-axis at y={y_val/1E-9:.2f} nm')
+                if self.grid_type == '2D':
+                    pot_1D = int_pot[y_idx,:].T
+                elif self.grid_type == '1D':
+                    pot_1D = int_pot
+                ax.plot(self.x_coords/1E-9, pot_1D)
+                if self.grid_type == '2D':
+                    ax.set(xlabel='x-coords [nm]', ylabel='1D potential [J]',
+                       title=f'Potential along x-axis at y={y_val/1E-9:.2f} nm')
+                elif self.grid_type == '1D':
+                    ax.set(xlabel='x-coords [nm]', ylabel='1D potential [J]')  
                 ax.grid()
                 
                 # Overlay wavefunction if desired
                 if show_wf:
-                    _add_wf_overlay(ax, int_pot, wf_n=wf_n,
-                                    slice_idx=y_idx, slice_axis='y')
+                    if self.grid_type == '2D':
+                        _add_wf_overlay(ax, int_pot, wf_n=wf_n,
+                                        slice_idx=y_idx, slice_axis='y')
+                    elif self.grid_type == '1D':
+                        _add_wf_overlay(ax, int_pot, wf_n=wf_n, slice_idx=None,
+                                        slice_axis='y')    
                     
                     # otherwise the right y-label is slightly clipped
                     fig.tight_layout()
@@ -356,6 +403,42 @@ class PotentialInterpolator:
     
     def find_resonant_tc(self, volt_vec, swept_ctrl, bnds=None, peak_threshold=1E5,
                          slice_axis='y', slice_val=0):
+        '''
+        Find the resonant tunnel coupling point for a individual control
+        variable in a given control vector.
+
+        Parameters
+        ----------
+        volt_vec : float array
+            Control variable vector. Aside from the swept control, the other 
+            supplied control variable values will remain fixed during the 
+            search for the resonant tunnel coupling point.
+        swept_ctrl : int or string
+            Index of the control variable to sweep in the supplied volt_vec
+            argument OR the corresponding control variable name of the variable
+            to sweep.
+        bnds : float array, optional
+            An array specifying the min and max bounds of the swept control
+            variable. The default is the full min and max bounds of the
+            corresponding control variable as defined in the 
+            potentialInterpolator object.
+        peak_threshold : float, optional
+            The minimum amplitude in peak height to be considered a peak.
+            The default is 1E5.
+        slice_axis : string, optional
+            Specify which axis along 'x' or 'y' to find the wavefunction peaks
+            along. The default is 'y'.
+        slice_val : float, optional
+            Specify the location along the slice_axis at which to find the 
+            wavefunction peaks along. Units must be in [m]. 
+            The default is 0 [m].
+
+        Returns
+        -------
+        TYPE
+            DESCRIPTION.
+
+        '''
 
         # If swept_ctrl is an integer, then no need to find the corresponding
         # index. If swept_ctrl is a string, we need to check that it is one of
@@ -402,12 +485,16 @@ class PotentialInterpolator:
               
         # Right now... We are assuming a linear chain of quantum dots where
         # the axis of the linear chain is centered at y=0.
-        gparams = GridParameters(self.x_coords, self.y_coords)
+        if self.grid_type == '2D':
+            gparams = GridParameters(self.x_coords, self.y_coords)
+        elif self.grid_type == '1D':
+            gparams = GridParameters(self.x_coords)
         
         if slice_axis=='y':
             # Need for renormalizing 1D wfs
             gparams_1D = GridParameters(self.x_coords)
-            slice_idx = utils.find_nearest(self.y_coords, slice_val)[0]
+            if self.grid_type == '2D':
+                slice_idx = utils.find_nearest(self.y_coords, slice_val)[0]
         elif slice_axis=='x':
             gparams_1D = GridParameters(self.y_coords)
             slice_idx = utils.find_nearest(self.x_coords, slice_val)[0]
@@ -417,6 +504,22 @@ class PotentialInterpolator:
         
         # Helper function to take in a voltage vector and return the peaks
         def _find_peaks(curr_val):
+            '''
+            Find the wavefunction peaks for a potential landscape.
+
+            Parameters
+            ----------
+            curr_val : float
+                The current search value of the swept control index.
+
+            Returns
+            -------
+            curr_peaks : 1D float array
+                Indicies of the found peaks.
+            curr_props : dictionary
+                Diciontary of properties related to the found peaks.
+
+            '''
             curr_volt_vec = volt_vec.copy()
             curr_volt_vec[swept_ctrl] = curr_val
             curr_pot = self(curr_volt_vec)
@@ -426,10 +529,14 @@ class PotentialInterpolator:
             # Find wavefunction and probability distribution
             _, state = solve_schrodinger_eq(self.constants, gparams)
             # Get 1D wavefunction and renormalize
-            if slice_axis=='y':
-                state = np.squeeze(state[slice_idx,:])
-            elif slice_axis=='x':
-                state = np.squeeze(state[:,slice_idx])
+            if self.grid_type == '2D':
+                if slice_axis=='y':
+                    state = np.squeeze(state[slice_idx,:])
+                elif slice_axis=='x':
+                    state = np.squeeze(state[:,slice_idx])
+            elif self.grid_type == '1D':
+                state = np.squeeze(state)
+                
             state = state/np.sqrt(inner_prod(gparams_1D, state, state))
             # np.real shouldn't be needed, but numerical imprecision causes a warning
             state_prob = np.real(np.multiply(state, state.conj()))
@@ -562,6 +669,20 @@ class PotentialInterpolator:
             
         # Helper function for fminbound search
         def find_peak_difference(curr_val):
+            '''
+            Find the difference in peak height between two wavefunction peaks.
+
+            Parameters
+            ----------
+            curr_val : float
+                The current search value of the swept control index.
+
+            Returns
+            -------
+            pk_diff : float
+                Difference in height between the two peaks.
+
+            '''
             
             # Find wavefunction peak at curr_val
             peaks, props = _find_peaks(curr_val)
@@ -584,7 +705,8 @@ class PotentialInterpolator:
         
         # Round value to the order of magnitude given by the tolerance.
         res = np.round(res,int(np.ceil(abs(np.log10(volt_tolerance)))))
-                
-        return float(res)
+        res = float(res)        
+        
+        return res
     
     
