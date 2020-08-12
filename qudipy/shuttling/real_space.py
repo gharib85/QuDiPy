@@ -10,6 +10,8 @@ from scipy import sparse
 from scipy.sparse import diags
 from scipy.linalg import expm
 import matplotlib.pyplot as plt
+import timeit
+
 
 def initialize_params():
     """
@@ -56,7 +58,8 @@ def initialize_wf(consts, gparams):
 
     return psi, t_time
 
-def simulate_real_space(pot_interp, ctrl_p):
+# def simulate_real_space(pot_interp, ctrl_p):
+def main():
     """
     potential interpolator, including system constants and grid points(x, y)
     control pulse
