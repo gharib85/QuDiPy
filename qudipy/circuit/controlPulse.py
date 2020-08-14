@@ -153,19 +153,19 @@ class ControlPulse:
         # Figure out scale to apply (if any) on time axis to make more
         # readable as default length units are ps
         if 1E-15 < max(t_pts) <= 1E-12:
-            scale = 1E-15
+            scale = 1E15
             units = '[fs]'
         elif 1E-12 < max(t_pts) <= 1E-9:
-            scale = 1E-12
+            scale = 1E12
             units = '[ps]'
         elif 1E-9 < max(t_pts) <= 1E-6:
-            scale = 1E-9
+            scale = 1E9
             units = '[ns]'
         elif 1E-6 < max(t_pts) <= 1E-3:
-            scale = 1E-6
+            scale = 1E6
             units = '[us]'
         elif 1E-3 < max(t_pts):
-            scale = 1E-3
+            scale = 1E3
             units = '[ms]'
             
         # Generate fig
