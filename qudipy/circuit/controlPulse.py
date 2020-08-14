@@ -230,6 +230,18 @@ class ControlPulse:
 
         '''
         
+        # Check that the new control variable pulse has the same number of 
+        # points as all the other control variables (if this is first one, 
+        # then save the number of points)
+        if hasattr(self,'n_pts'):
+            if len(var_pulse) != self.n_pts:
+                raise ValueError('Number of pulse points is not equal to the '+
+                                 'current\nnumber of pulse points in previously '+
+                                 'loaded control variable pulses.\n'+
+                                 f'Expected {self.n_pts}, got {len(var_pulse)}.')
+        else:
+            self.n_pts = len(var_pulse)
+        
         if var_name.lower() == 'time':
             self.ctrl_time = np.array(var_pulse)
             # Double check that the time points start at 0.
@@ -263,11 +275,8 @@ class ControlPulse:
         # Check if the time array is set, if not, then assume each point in
         # the pulse is linearly spaced in time
         if self.ctrl_time is None:
-            # Get a pulse to find out how many points in the pulse there are
-            n_pts = len(self.ctrl_pulses[self.ctrl_names[0]])
-            
-            # Now build the time array
-            self.ctrl_time = np.linspace(0, self.length, n_pts)
+            # Build a linear time array
+            self.ctrl_time = np.linspace(0, self.length, self.n_pts)
         
         # For each pulse, find the time axis points and then make the 1D
         # interpolator. All ctrl pulses will be linearly interpolated.
