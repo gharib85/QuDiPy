@@ -22,7 +22,7 @@ class ControlPulse:
             Specify whether pulse is described with "experimental" or 
             "effective" control variables.
         pulse_length : int, optional
-            Total length of pulse in ps. The default is -1.
+            Total length of pulse in s. The default is -1.
             This is an optional keyword because 
             sometimes you may wish to vary the pulse length across different
             simulations for a given pulse. Pulse length can be set later using
@@ -39,7 +39,7 @@ class ControlPulse:
         self.pulse_type = pulse_type
         
         self.name = pulse_name
-        self.length = pulse_length # Units are ps
+        self.length = pulse_length # Units are s
         
         self.ctrl_pulses = {
             }
@@ -152,20 +152,20 @@ class ControlPulse:
             
         # Figure out scale to apply (if any) on time axis to make more
         # readable as default length units are ps
-        if 1E-3 < max(t_pts) <= 1E0:
-            scale = 1E3
+        if 1E-15 < max(t_pts) <= 1E-12:
+            scale = 1E-15
             units = '[fs]'
-        elif 1E0 < max(t_pts) <= 1E3:
-            scale = 1
+        elif 1E-12 < max(t_pts) <= 1E-9:
+            scale = 1E-12
             units = '[ps]'
-        elif 1E3 < max(t_pts) <= 1E6:
-            scale = 1E-3
+        elif 1E-9 < max(t_pts) <= 1E-6:
+            scale = 1E-9
             units = '[ns]'
-        elif 1E6 < max(t_pts) <= 1E9:
+        elif 1E-6 < max(t_pts) <= 1E-3:
             scale = 1E-6
             units = '[us]'
-        elif 1E9 < max(t_pts):
-            scale = 1E-6
+        elif 1E-3 < max(t_pts):
+            scale = 1E-3
             units = '[ms]'
             
         # Generate fig
@@ -185,7 +185,7 @@ class ControlPulse:
         Parameters
         ----------
         pulse_length : int
-            Pulse legnth for control pulse in ps.
+            Pulse legnth for control pulse in s.
 
         Returns
         -------
@@ -198,7 +198,7 @@ class ControlPulse:
         self.length = pulse_length
         
         # If previous length is -1, then pulse length has not been specified
-        # yet so we can just set the attribute and then return
+        # yet so we can just set the attribute as we did above and then return
         if old_length == -1:
             return
             
