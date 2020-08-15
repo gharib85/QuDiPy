@@ -11,18 +11,6 @@ from scipy.linalg import expm
 import matplotlib.pyplot as plt
 import timeit
 
-# def real_space(init_wf, pot, t):
-#     """
-#     Parameters:
-#         init_wf: array, representing the initial wave function
-#         pot: array, the potential
-#         t: float, duration of this pot
-
-#     Returns:
-#         final_wf: the resulting wave function
-#     """
-
-
 ############################################
 ########## Potential Interpolator ##########
 ############################################
@@ -114,7 +102,6 @@ prob = [abs(x)**2 for x in psi_x]
 ymax = 2* max(prob)              # TODO: delete
 # print(psi_x)
 
-
 ########## Constants necessary for the computation ##########
 
 # time step
@@ -131,14 +118,55 @@ exp_KK = np.multiply(exp_K,exp_K)
 
 ########## Time Evolution ##########
 
-# # Calculate the runtime
-# start = timeit.default_timer()
+# Calculate the runtime
+start = timeit.default_timer()
 
-# a total of 10ps with time steps of dt
+# Get the list of pulses
+# 10ps with time steps of dt
 t_pts = np.linspace(0,10, round(10E-12/dt))
 int_p = shut_pulse(t_pts)
 
+# Plot evolution
+plt.ion()
+fig = plt.figure()
+ax = fig.add_subplot(111)
+line1, = ax.plot(X, prob, 'r-')
 
-# stop = timeit.default_timer()
-# print('Time: ', stop - start) 
+# Convert to momentum space
+psi_p = fftshift(fft(psi_x))
+psi_p = np.multiply(exp_K,psi_p)
+
+# Loop through each time step
+for t_idx in range(len(t_pts)):
+    potential = pot_interp(int_p[t_idx,:])
+
+    # gparams = pot.GridParameters(X, potential=potential)
+    # # find the ground state under this pulse
+    # e_ens, e_vecs = qt.solvers.solve_schrodinger_eq(consts, gparams, n_sols=1)
+    # ground_psi = e_vecs[:,0]
+
+    # diagonal matrix of potential energy in position space
+    exp_P = np.exp(-1j*dt/consts.hbar * potential)
+
+    # Start the split operator method
+    psi_x = ifft(ifftshift(psi_p))
+    if t_idx%100  == 0:
+            prob = [abs(x)**2 for x in psi_x]
+            plt.plot(X, prob)
+            plt.xlim(-1e-7, 1e-7)
+            plt.ylim(-5e6, ymax + 5e6)
+            plt.draw()
+            plt.pause(1e-15)
+            plt.clf()
+    psi_x = np.multiply(exp_P,psi_x)
+    psi_p = fftshift(fft(psi_x))     
+    if t_idx != len(t_pts)-1:
+        psi_p = np.multiply(exp_KK,psi_p)
+    else:
+        psi_p = np.multiply(exp_K,psi_p)
+        psi_x = ifft(ifftshift(psi_p))
+
+# Pring the runtime
+stop = timeit.default_timer()
+print('Time: ', stop - start) 
     
