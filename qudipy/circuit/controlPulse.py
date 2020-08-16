@@ -22,7 +22,7 @@ class ControlPulse:
             Specify whether pulse is described with "experimental" or 
             "effective" control variables.
         pulse_length : int, optional
-            Total length of pulse in s. The default is -1.
+            Total length of pulse in [s]. The default is -1.
             This is an optional keyword because 
             sometimes you may wish to vary the pulse length across different
             simulations for a given pulse. Pulse length can be set later using
@@ -168,7 +168,7 @@ class ControlPulse:
             scale = 1E3
             units = '[ms]'
             
-        # Generate fig
+        # Generate figure
         plt.figure()
         plt.plot(t_pts*scale, pulse[:,ctrl_idxs])   
         lgd_names = [self.ctrl_names[idx] for idx in ctrl_idxs]
@@ -185,7 +185,7 @@ class ControlPulse:
         Parameters
         ----------
         pulse_length : int
-            Pulse legnth for control pulse in s.
+            Pulse legnth for control pulse in [s].
 
         Returns
         -------

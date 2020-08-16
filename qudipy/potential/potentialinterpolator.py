@@ -91,26 +91,25 @@ class PotentialInterpolator:
 
         Parameters
         ----------
-        volt_vec : 1D float array
-            Array of voltage vectors at which we wish to find the interpolated
-            2D potential.
+        volt_vec : 2D float array
+            Array of control variable value vectors at which we wish to find 
+            the interpolated 2D potential. Each row corresponds to a new 
+            control variable vector.
 
         Returns
         -------
         result : 2D float array
-            Interpolated 2D potential at the supplied voltage vector.
+            Interpolated 2D potential at the supplied control variable value
+            vectors.
 
         '''
         
-        # If it's not a list (i.e. like a numpy array, convert to list)
-        if not isinstance(volt_vec_input,list):
-            volt_vec = list(volt_vec_input)
-        # We append stuff to the voltage vector so need to make a copy to make
-        # sure we don't change the vector used to actually call the function.
-        else:
-            volt_vec = volt_vec_input.copy()
-
-        
+        # Convert to numpy array
+        # volt_vec = np.array(volt_vec_input)
+        # Make a list where each element in the list contains the grid points
+        # for each respective control variable
+        volt_vec = list(np.array(volt_vec_input).T)
+                        
         # First check if the singleton dimensions were included in volt_vec
         # and remove if so
         # if True ==> they were NOT included
@@ -130,8 +129,8 @@ class PotentialInterpolator:
         
         # Check if values are out of min/max range
         for idx in range(self.n_voltage_ctrls):
-            if (volt_vec[idx] >= self.min_max_vals[idx][0] and
-                volt_vec[idx] <= self.min_max_vals[idx][1]):
+            if (np.all(volt_vec[idx] >= self.min_max_vals[idx][0]) and
+                np.all(volt_vec[idx] <= self.min_max_vals[idx][1])):
                 pass
             else:
                 raise ValueError('Input voltage vector values are out of' +
@@ -146,10 +145,31 @@ class PotentialInterpolator:
         # Now build up meshgrid of points we want to query the interpolant
         # object at
         points = np.meshgrid(*volt_vec)
+
+        try:
+            n_pts = len(volt_vec[0])
+        except:
+            n_pts = 1
+        # Get only diagonal elements of meshgrid, because we don't actually
+        # want every combination of volt_vec points
+        t = []
+        for idx in range(len(points)-1):
+            t.extend([np.arange(n_pts)])
+        
+        if self.grid_type == '2D':
+            t.extend([None,None])
+        elif self.grid_type == '1D':
+            t.extend([None])
+            
+        for idx in range(len(points)):
+            points[idx] = points[idx][tuple(t)]
+            
         # Flatten it so the interpolator is happy
         flat = np.array([m.flatten() for m in points])
+        
         # Do the interpolation
         out_array = self.interp_obj(flat.T)
+        
         # Reshape back to our original shape
         result = np.squeeze(out_array.reshape(*points[0].shape))
         
