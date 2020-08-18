@@ -104,8 +104,6 @@ class PotentialInterpolator:
 
         '''
         
-        # Convert to numpy array
-        # volt_vec = np.array(volt_vec_input)
         # Make a list where each element in the list contains the grid points
         # for each respective control variable
         volt_vec = list(np.array(volt_vec_input).T)
@@ -135,44 +133,50 @@ class PotentialInterpolator:
             else:
                 raise ValueError('Input voltage vector values are out of' +
                                  ' range of grid vectors.')
-            
-        # Add the x and y coordinates so we interpolate the whole 2D potenial
-        if self.grid_type == '2D':
-            volt_vec.extend([self.y_coords, self.x_coords])
-        elif self.grid_type == '1D':
-            volt_vec.extend([self.x_coords])
-        
-        # Now build up meshgrid of points we want to query the interpolant
-        # object at
-        points = np.meshgrid(*volt_vec)
-
+        # Get number of control vector inputs
         try:
             n_pts = len(volt_vec[0])
         except:
-            n_pts = 1
-        # Get only diagonal elements of meshgrid, because we don't actually
-        # want every combination of volt_vec points
-        t = []
-        for idx in range(len(points)-1):
-            t.extend([np.arange(n_pts)])
-        
+            n_pts = 1 
+            
+        # Get a 1D array of all coordinate points we need to query the
+        # interpolator at
         if self.grid_type == '2D':
-            t.extend([None,None])
+            coord_data_x, coord_data_y = np.meshgrid(self.x_coords,
+                                                     self.y_coords)
+            coord_data_x = coord_data_x.flatten()
+            coord_data_y = coord_data_y.flatten()
+            coord_data = np.vstack([coord_data_y, coord_data_x])
+            
+            # Get number of coordinate points
+            n_coords = coord_data.shape[1]
         elif self.grid_type == '1D':
-            t.extend([None])
+            coord_data = self.x_coords     
             
-        for idx in range(len(points)):
-            points[idx] = points[idx][tuple(t)]
-            
-        # Flatten it so the interpolator is happy
-        flat = np.array([m.flatten() for m in points])
+            # Get number of coordinate points
+            n_coords = coord_data.shape[0]
+                                
+        # Repeat the set of coordinate points n times, 1 for each control 
+        # vector input
+        coord_data = np.tile(coord_data,n_pts)
+        
+        # Now stack the control vector inputs and repeat them for each
+        # coordinate point
+        ctrl_vec_stack = np.repeat(np.vstack(volt_vec),n_coords,axis=1)
+        
+        # Now stack the control vector inputs and the coordinate points
+        interp_stacked = np.vstack([ctrl_vec_stack, coord_data])
         
         # Do the interpolation
-        out_array = self.interp_obj(flat.T)
+        out_array = self.interp_obj(interp_stacked.T)
         
         # Reshape back to our original shape
-        result = np.squeeze(out_array.reshape(*points[0].shape))
-        
+        if self.grid_type == '2D':
+            result = np.squeeze(out_array.reshape((n_pts, self.y_coords.size,
+                                               self.x_coords.size)))
+        elif self.grid_type == '1D':
+            result = np.squeeze(out_array.reshape((n_pts, self.x_coords.size)))
+            
         return result
         
     
