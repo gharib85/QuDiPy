@@ -99,8 +99,11 @@ gparams = pot.GridParameters(X, potential=init_pot)
 e_ens, e_vecs = qt.solvers.solve_schrodinger_eq(consts, gparams, n_sols=1)
 psi_x = e_vecs[:,0]
 prob = [abs(x)**2 for x in psi_x]
-ymax = 2* max(prob)              # TODO: delete
-# print(psi_x)
+
+# Define the limits of the plots
+ymax = 2 * max(prob)
+potmax = max(init_pot) + 1E-21
+potmin = min(init_pot) - 3E-21
 
 ########## Constants necessary for the computation ##########
 
@@ -129,8 +132,14 @@ int_p = shut_pulse(t_pts)
 # Plot evolution
 plt.ion()
 fig = plt.figure()
-ax = fig.add_subplot(111)
-line1, = ax.plot(X, prob, 'r-')
+ax1 = fig.add_subplot(211)
+ax2 = fig.add_subplot(212)
+plt.tight_layout(pad=2)
+fig.suptitle('Time Evolution of 1D potential and Electron Shuttling', y = 1)
+
+
+line1, = ax1.plot(X, init_pot)
+line2, = ax2.plot(X, prob)
 
 # Convert to momentum space
 psi_p = fftshift(fft(psi_x))
@@ -151,13 +160,24 @@ for t_idx in range(len(t_pts)):
     # Start the split operator method
     psi_x = ifft(ifftshift(psi_p))
     if t_idx%100  == 0:
-            prob = [abs(x)**2 for x in psi_x]
-            plt.plot(X, prob)
-            plt.xlim(-1e-7, 1e-7)
-            plt.ylim(-5e6, ymax + 5e6)
-            plt.draw()
-            plt.pause(1e-15)
-            plt.clf()
+        prob = [abs(x)**2 for x in psi_x]
+        line1.set_data(X, potential)
+        line2.set_data(X, prob)
+
+        # ax1.autoscale_view(True,True,True)
+        # ax1.relim()
+        ax1.set_xlabel("x(m)")
+        ax1.set_ylabel("Potential")
+        ax1.set_xlim(-2e-7, 2e-7)
+        ax1.set_ylim(potmin,potmax)
+
+        ax2.set_xlabel("x(m)")
+        ax2.set_ylabel("Probability")
+        ax2.set_xlim(-1e-7, 1e-7)
+        ax2.set_ylim(-5e6, ymax)
+
+        plt.draw()
+        plt.pause(1e-15)
     psi_x = np.multiply(exp_P,psi_x)
     psi_p = fftshift(fft(psi_x))     
     if t_idx != len(t_pts)-1:
