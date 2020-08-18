@@ -100,53 +100,9 @@ def build_interpolator(load_data_dict, constants=qd.Constants(),
                                         y_slice)
     
     return interp_obj
-    
-def _load_one_file(fname):
-    '''
-    This function loads a single file of either potential or electric field
-    data and returns the coordinate and 2D data. The data is always upsampled
-    via a spline interpolation to the next power of 2.
-
-    Parameters
-    ----------
-    fname : string
-        Name of file to be loaded.
-
-    Returns
-    -------
-    new_x_coord : float 1D array
-        x-coordinate data after loading and interpolation.
-    new_y_coord : float 1D array
-        y-coordinate data after loading and interpolation.
-    new_pot_xy : float 2D array
-        Potential or electric field data after loading and interpolation.
-
-    '''
-
-    # Load file
-    data = pd.read_csv(fname, header=None).to_numpy()
-    
-    # Extract items
-    x_coord = data[0,1:]
-    y_coord = data[1:,0]
-    pot_xy = data[1:,1:]
-    
-    # Do a spline interpolation to increase number of x/y coordinates to the
-    # highest power of 2 (for faster ffts if needed)
-    new_x_len = 1 if len(x_coord) == 0 else 2**(len(x_coord) - 1).bit_length()
-    new_y_len = 1 if len(y_coord) == 0 else 2**(len(y_coord) - 1).bit_length()
-    
-    new_x_coord = np.linspace(x_coord.min(), x_coord.max(), new_x_len)
-    new_y_coord = np.linspace(y_coord.min(), y_coord.max(), new_y_len)
-    
-    f = interp2d(x_coord, y_coord, pot_xy, kind='cubic')
-    new_pot_xy = f(new_x_coord, new_y_coord)
-    
-    return new_x_coord, new_y_coord, new_pot_xy
-
 
 def load_potentials(ctrl_vals, ctrl_names, f_type='pot', f_dir=None, 
-                    f_pot_units='J', f_dis_units='m'):
+                    f_pot_units='J', f_dis_units='m', trim_x=None, trim_y=None):
     '''
     This function loads many potential files specified by all combinations of 
     the control values given in ctrl_vals and the control names given in
@@ -181,6 +137,14 @@ def load_potentials(ctrl_vals, ctrl_names, f_type='pot', f_dir=None,
         Units of the x and y coordinates in the files to load. Units from file
         will be converted to m. 
         Supported inputs are 'm' and 'nm'. 
+    trim_x : list of floats, optional
+        Specify min and max bounds of x-axis in [m] to save when loading the 
+        files. Data points outside this window will be trimmed and not saved 
+        in the loaded files. The default is None.
+    trim_y : list of floats, optional
+        Specify min and max bounds of y-axis in [m] to save when loading the 
+        files. Data points outside this window will be trimmed and not saved 
+        in the loaded files. The default is None.
     
     Returns
     -------
@@ -221,8 +185,15 @@ def load_potentials(ctrl_vals, ctrl_names, f_type='pot', f_dir=None,
         
         # After file name is constructed, load the data from file into a larger
         # list containing information about all the loaded files.
-        x, y, pot = _load_one_file(f_dir + f_name)
+
+        # Load file
+        data = pd.read_csv(f_dir+f_name, header=None).to_numpy()
         
+        # Extract items
+        x = data[0,1:]
+        y = data[1:,0]
+        pot = data[1:,1:]        
+
         # Convert units if needed
         if f_pot_units == 'eV':
             # Just need to get electron charge
@@ -234,12 +205,38 @@ def load_potentials(ctrl_vals, ctrl_names, f_type='pot', f_dir=None,
             y *= 1E-9
         
         if idx == 0:
+            # If trim wasn't specified then we want to store the whole x axis
+            if trim_x is None:
+                trim_x = [np.min(x), np.max(x)]
+            # If trim wasn't specified then we want to store the whole y axis
+            if trim_y is None:
+                trim_y = [np.min(y), np.max(y)]
+                
+            # Get bool mask and trim coordinates
+            x_idx_mask = np.logical_and(x >= trim_x[0], x <= trim_x[1])
+            y_idx_mask = np.logical_and(y >= trim_y[0], y <= trim_y[1])
+            
+            new_x = x[x_idx_mask]
+            new_y = y[y_idx_mask]
+            
+            # Get new coordinate points by rounding number of coordinates 
+            # points to a power of 2 for both x and y (for faster ffts).
+            new_x_len = 1 if len(new_x) == 0 else 2**(len(new_x) - 1).bit_length()
+            new_y_len = 1 if len(new_y) == 0 else 2**(len(new_y) - 1).bit_length()
+            new_x = np.linspace(new_x.min(), new_x.max(), new_x_len)
+            new_y = np.linspace(new_y.min(), new_y.max(), new_y_len)
+            
             # Have coordinates be a namedtuple
             Coordinates = namedtuple('Coordinates',['x','y'])
-            all_files['coords'] = Coordinates(x,y)
+            all_files['coords'] = Coordinates(new_x,new_y)
             
         cval_array.append(list(curr_cvals))
-        pots_array.append(pot)
+
+        # Do a spline interpolation to find potential at the 'trimmed' and 
+        # power of 2 coordiante points.
+        f = interp2d(x, y, pot, kind='cubic')
+        new_pot = f(new_x, new_y)
+        pots_array.append(new_pot)
         
     all_files['ctrl_vals'] = cval_array
     all_files['ctrl_names'] = ctrl_names
@@ -247,6 +244,6 @@ def load_potentials(ctrl_vals, ctrl_names, f_type='pot', f_dir=None,
     
     
     return all_files
-
+    
     
     
