@@ -129,55 +129,32 @@ start = timeit.default_timer()
 t_pts = np.linspace(0,10, round(10E-12/dt))
 int_p = shut_pulse(t_pts)
 
-# Plot evolution
-plt.ion()
-fig = plt.figure()
-ax1 = fig.add_subplot(211)
-ax2 = fig.add_subplot(212)
-plt.tight_layout(pad=2)
-fig.suptitle('Time Evolution of 1D potential and Electron Shuttling', y = 1)
-
-
-line1, = ax1.plot(X, init_pot)
-line2, = ax2.plot(X, prob)
-
 # Convert to momentum space
 psi_p = fftshift(fft(psi_x))
 psi_p = np.multiply(exp_K,psi_p)
+
+t_selected = []
+adiabacity = []
 
 # Loop through each time step
 for t_idx in range(len(t_pts)):
     potential = pot_interp(int_p[t_idx,:])
 
-    # gparams = pot.GridParameters(X, potential=potential)
-    # # find the ground state under this pulse
-    # e_ens, e_vecs = qt.solvers.solve_schrodinger_eq(consts, gparams, n_sols=1)
-    # ground_psi = e_vecs[:,0]
+    gparams = pot.GridParameters(X, potential=potential)
+    # find the ground state under this pulse
+    e_ens, e_vecs = qt.solvers.solve_schrodinger_eq(consts, gparams, n_sols=1)
+    ground_psi = e_vecs[:,0]
 
     # diagonal matrix of potential energy in position space
     exp_P = np.exp(-1j*dt/consts.hbar * potential)
 
     # Start the split operator method
     psi_x = ifft(ifftshift(psi_p))
-    if t_idx%100  == 0:
-        prob = [abs(x)**2 for x in psi_x]
-        line1.set_data(X, potential)
-        line2.set_data(X, prob)
-
-        # ax1.autoscale_view(True,True,True)
-        # ax1.relim()
-        ax1.set_xlabel("x(m)")
-        ax1.set_ylabel("Potential")
-        ax1.set_xlim(-2e-7, 2e-7)
-        ax1.set_ylim(potmin,potmax)
-
-        ax2.set_xlabel("x(m)")
-        ax2.set_ylabel("Probability")
-        ax2.set_xlim(-1e-7, 1e-7)
-        ax2.set_ylim(-5e6, ymax)
-
-        plt.draw()
-        plt.pause(1e-15)
+    if t_idx%500  == 0:
+        inner = abs(qd.qutils.math.inner_prod(gparams, psi_x, ground_psi))**2
+        # print(t_pts[t_idx], inner)
+        t_selected.append(t_pts[t_idx])
+        adiabacity.append(inner)
     psi_x = np.multiply(exp_P,psi_x)
     psi_p = fftshift(fft(psi_x))     
     if t_idx != len(t_pts)-1:
@@ -189,4 +166,13 @@ for t_idx in range(len(t_pts)):
 # Pring the runtime
 stop = timeit.default_timer()
 print('Time: ', stop - start) 
+
+print(len(t_selected), len(adiabacity))
+plt.plot(t_selected,adiabacity)
+plt.xlabel("Time(ps)")
+plt.ylabel("Adiabacity")
+plt.title("Adiabacity over time")
+plt.show()
+
+
     
