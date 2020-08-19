@@ -42,6 +42,10 @@ class PotentialInterpolator:
             slice along the y-axis at which to take the 1D potential when 
             constructing the interpolator. Units should be specified in [m]. 
             The default is None.
+<<<<<<< HEAD
+=======
+
+>>>>>>> f81574cfaa1170804568197e7e0685839dd43135
         Returns
         -------
         None.
@@ -86,6 +90,7 @@ class PotentialInterpolator:
         Call method for class
         Parameters
         ----------
+<<<<<<< HEAD
         volt_vec : 1D float array
             Array of voltage vectors at which we wish to find the interpolated
             2D potential.
@@ -93,17 +98,25 @@ class PotentialInterpolator:
         -------
         result : 2D float array
             Interpolated 2D potential at the supplied voltage vector.
+=======
+        volt_vec : 2D float array
+            Array of control variable value vectors at which we wish to find 
+            the interpolated 2D potential. Each row corresponds to a new 
+            control variable vector.
+
+        Returns
+        -------
+        result : 2D float array
+            Interpolated 2D potential at the supplied control variable value
+            vectors.
+
+>>>>>>> f81574cfaa1170804568197e7e0685839dd43135
         '''
         
-        # If it's not a list (i.e. like a numpy array, convert to list)
-        if not isinstance(volt_vec_input,list):
-            volt_vec = list(volt_vec_input)
-        # We append stuff to the voltage vector so need to make a copy to make
-        # sure we don't change the vector used to actually call the function.
-        else:
-            volt_vec = volt_vec_input.copy()
-
-        
+        # Make a list where each element in the list contains the grid points
+        # for each respective control variable
+        volt_vec = list(np.array(volt_vec_input).T)
+                        
         # First check if the singleton dimensions were included in volt_vec
         # and remove if so
         # if True ==> they were NOT included
@@ -123,29 +136,61 @@ class PotentialInterpolator:
         
         # Check if values are out of min/max range
         for idx in range(self.n_voltage_ctrls):
-            if (volt_vec[idx] >= self.min_max_vals[idx][0] and
-                volt_vec[idx] <= self.min_max_vals[idx][1]):
+            if (np.all(volt_vec[idx] >= self.min_max_vals[idx][0]) and
+                np.all(volt_vec[idx] <= self.min_max_vals[idx][1])):
                 pass
             else:
                 raise ValueError('Input voltage vector values are out of' +
                                  ' range of grid vectors.')
+        # Get number of control vector inputs
+        try:
+            n_pts = len(volt_vec[0])
+        except:
+            n_pts = 1 
+            
+        # Get a 1D array of all coordinate points we need to query the
+        # interpolator at
+        if self.grid_type == '2D':
+            coord_data_x, coord_data_y = np.meshgrid(self.x_coords,
+                                                     self.y_coords)
+            coord_data_x = coord_data_x.flatten()
+            coord_data_y = coord_data_y.flatten()
+            coord_data = np.vstack([coord_data_y, coord_data_x])
+            
+            # Get number of coordinate points
+            n_coords = coord_data.shape[1]
+        elif self.grid_type == '1D':
+            coord_data = self.x_coords     
             
         # Add the x and y coordinates so we interpolate the whole 2D potenial
         if self.grid_type == '2D':
             volt_vec.extend([self.y_coords, self.x_coords])
         elif self.grid_type == '1D':
             volt_vec.extend([self.x_coords])
+            # Get number of coordinate points
+            n_coords = coord_data.shape[0]
+                                
+        # Repeat the set of coordinate points n times, 1 for each control 
+        # vector input
+        coord_data = np.tile(coord_data,n_pts)
         
-        # Now build up meshgrid of points we want to query the interpolant
-        # object at
-        points = np.meshgrid(*volt_vec)
-        # Flatten it so the interpolator is happy
-        flat = np.array([m.flatten() for m in points])
+        # Now stack the control vector inputs and repeat them for each
+        # coordinate point
+        ctrl_vec_stack = np.repeat(np.vstack(volt_vec),n_coords,axis=1)
+        
+        # Now stack the control vector inputs and the coordinate points
+        interp_stacked = np.vstack([ctrl_vec_stack, coord_data])
+        
         # Do the interpolation
-        out_array = self.interp_obj(flat.T)
-        # Reshape back to our original shape
-        result = np.squeeze(out_array.reshape(*points[0].shape))
+        out_array = self.interp_obj(interp_stacked.T)
         
+        # Reshape back to our original shape
+        if self.grid_type == '2D':
+            result = np.squeeze(out_array.reshape((n_pts, self.y_coords.size,
+                                               self.x_coords.size)))
+        elif self.grid_type == '1D':
+            result = np.squeeze(out_array.reshape((n_pts, self.x_coords.size)))
+            
         return result
         
     
@@ -394,6 +439,7 @@ class PotentialInterpolator:
         '''
         Find the resonant tunnel coupling point for a individual control
         variable in a given control vector.
+
         Parameters
         ----------
         volt_vec : float array
@@ -419,10 +465,12 @@ class PotentialInterpolator:
             Specify the location along the slice_axis at which to find the 
             wavefunction peaks along. Units must be in [m]. 
             The default is 0 [m].
+
         Returns
         -------
         TYPE
             DESCRIPTION.
+
         '''
 
         # If swept_ctrl is an integer, then no need to find the corresponding
@@ -491,16 +539,19 @@ class PotentialInterpolator:
         def _find_peaks(curr_val):
             '''
             Find the wavefunction peaks for a potential landscape.
+
             Parameters
             ----------
             curr_val : float
                 The current search value of the swept control index.
+
             Returns
             -------
             curr_peaks : 1D float array
                 Indicies of the found peaks.
             curr_props : dictionary
                 Diciontary of properties related to the found peaks.
+
             '''
             curr_volt_vec = volt_vec.copy()
             curr_volt_vec[swept_ctrl] = curr_val
@@ -653,14 +704,17 @@ class PotentialInterpolator:
         def find_peak_difference(curr_val):
             '''
             Find the difference in peak height between two wavefunction peaks.
+
             Parameters
             ----------
             curr_val : float
                 The current search value of the swept control index.
+
             Returns
             -------
             pk_diff : float
                 Difference in height between the two peaks.
+
             '''
             
             # Find wavefunction peak at curr_val
@@ -687,4 +741,5 @@ class PotentialInterpolator:
         res = float(res)        
         
         return res
+    
     
