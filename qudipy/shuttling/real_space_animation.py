@@ -163,9 +163,12 @@ line2, = ax2.plot(X, prob)
 psi_p = fftshift(fft(psi_x))
 psi_p = np.multiply(exp_K,psi_p)
 
+# Calculate interpolated potentials at each time step
+potential_L = pot_interp(int_p)
+
 # Loop through each time step
 for t_idx in range(len(t_pts)):
-    potential = pot_interp(int_p[t_idx,:])
+    potential = potential_L[t_idx]
 
     # gparams = pot.GridParameters(X, potential=potential)
     # # find the ground state under this pulse

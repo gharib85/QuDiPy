@@ -39,7 +39,7 @@ ctrl_vals = [V1, V2, V3, V4, V5]
 # load_files returns a dictionary of all the information loaded
 loaded_data = qd.potential.load_potentials(ctrl_vals, ctrl_names, f_type='pot', 
                               f_dir=pot_dir, f_pot_units="eV", 
-                              f_dis_units="nm")
+                              f_dis_units="nm", trim_x= [-110E-9,110E-9])
 
 # Now building the interpolator object is trivial
 pot_interp = qd.potential.build_interpolator(loaded_data, 
@@ -91,12 +91,15 @@ pt9[1] = min_v
 
 shuttle_pulse = np.array([pt1, pt2, pt3, pt4, pt5, pt6, pt7, pt8, pt9])
 
+# Define the pulse length
+p_length = 40
+
 shut_pulse = qd.circuit.ControlPulse('shuttle_test', 'experimental', 
-                                     pulse_length=10)
+                                     pulse_length=p_length)
 shut_pulse.add_control_variable('V2',shuttle_pulse[:,0])
 shut_pulse.add_control_variable('V3',shuttle_pulse[:,1])
 shut_pulse.add_control_variable('V4',shuttle_pulse[:,2])
-ctrl_time_L = 10.0 * np.array([0, 1/20, 1/4, 1/2-1/20, 1/2, 1/2+1/20, 3/4, 19/20, 1])
+ctrl_time_L = p_length * np.array([0, 1/20, 1/4, 1/2-1/20, 1/2, 1/2+1/20, 3/4, 19/20, 1])
 shut_pulse.add_control_variable('time',ctrl_time_L)
 
 ############################################
@@ -146,7 +149,7 @@ start = timeit.default_timer()
 
 # Get the list of pulses
 # 10ps with time steps of dt
-t_pts = np.linspace(0,10, round(10E-12/dt))
+t_pts = np.linspace(0,p_length, round(p_length*1E-12/dt))
 int_p = shut_pulse(t_pts)
 
 # Convert to momentum space
@@ -154,11 +157,17 @@ psi_p = fftshift(fft(psi_x))
 psi_p = np.multiply(exp_K,psi_p)
 
 t_selected = []
-adiabacity = []
+adiabaticity = []
+
+# Calculate interpolated potentials at each time step
+potential_L = pot_interp(int_p)
+
+# Calculate how often we save the data to get a resolution of 500 points
+checkpoint_counter = len(t_pts)//500
 
 # Loop through each time step
 for t_idx in range(len(t_pts)):
-    potential = pot_interp(int_p[t_idx,:])
+    potential = potential_L[t_idx]
 
     gparams = pot.GridParameters(X, potential=potential)
     # find the ground state under this pulse
@@ -170,11 +179,12 @@ for t_idx in range(len(t_pts)):
 
     # Start the split operator method
     psi_x = ifft(ifftshift(psi_p))
-    if t_idx%500  == 0:
+
+    if t_idx%checkpoint_counter  == 0:
         inner = abs(qd.qutils.math.inner_prod(gparams, psi_x, ground_psi))**2
         # print(t_pts[t_idx], inner)
         t_selected.append(t_pts[t_idx])
-        adiabacity.append(inner)
+        adiabaticity.append(inner)
     psi_x = np.multiply(exp_P,psi_x)
     psi_p = fftshift(fft(psi_x))     
     if t_idx != len(t_pts)-1:
@@ -187,11 +197,11 @@ for t_idx in range(len(t_pts)):
 stop = timeit.default_timer()
 print('Time: ', stop - start) 
 
-print(len(t_selected), len(adiabacity))
-plt.plot(t_selected,adiabacity)
+print(len(t_selected), len(adiabaticity))
+plt.plot(t_selected,adiabaticity)
 plt.xlabel("Time(ps)")
-plt.ylabel("Adiabacity")
-plt.title("Adiabacity over time")
+plt.ylabel("adiabaticity")
+plt.title("adiabaticity over time")
 plt.show()
 
 
