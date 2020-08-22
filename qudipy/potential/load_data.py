@@ -2,6 +2,8 @@
 Functions for loading data from files.
 @author: simba
 """
+import os, sys
+sys.path.append("/Users/keweizhou/Google_Drive/Research/20summer/Waterloo/QuDiPy")
 
 import numpy as np
 import pandas as pd

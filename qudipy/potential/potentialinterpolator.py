@@ -42,10 +42,6 @@ class PotentialInterpolator:
             slice along the y-axis at which to take the 1D potential when 
             constructing the interpolator. Units should be specified in [m]. 
             The default is None.
-<<<<<<< HEAD
-=======
-
->>>>>>> f81574cfaa1170804568197e7e0685839dd43135
         Returns
         -------
         None.
@@ -90,27 +86,15 @@ class PotentialInterpolator:
         Call method for class
         Parameters
         ----------
-<<<<<<< HEAD
-        volt_vec : 1D float array
-            Array of voltage vectors at which we wish to find the interpolated
-            2D potential.
-        Returns
-        -------
-        result : 2D float array
-            Interpolated 2D potential at the supplied voltage vector.
-=======
         volt_vec : 2D float array
             Array of control variable value vectors at which we wish to find 
             the interpolated 2D potential. Each row corresponds to a new 
             control variable vector.
-
         Returns
         -------
         result : 2D float array
             Interpolated 2D potential at the supplied control variable value
             vectors.
-
->>>>>>> f81574cfaa1170804568197e7e0685839dd43135
         '''
         
         # Make a list where each element in the list contains the grid points
@@ -162,11 +146,6 @@ class PotentialInterpolator:
         elif self.grid_type == '1D':
             coord_data = self.x_coords     
             
-        # Add the x and y coordinates so we interpolate the whole 2D potenial
-        if self.grid_type == '2D':
-            volt_vec.extend([self.y_coords, self.x_coords])
-        elif self.grid_type == '1D':
-            volt_vec.extend([self.x_coords])
             # Get number of coordinate points
             n_coords = coord_data.shape[0]
                                 
@@ -439,7 +418,6 @@ class PotentialInterpolator:
         '''
         Find the resonant tunnel coupling point for a individual control
         variable in a given control vector.
-
         Parameters
         ----------
         volt_vec : float array
@@ -465,12 +443,10 @@ class PotentialInterpolator:
             Specify the location along the slice_axis at which to find the 
             wavefunction peaks along. Units must be in [m]. 
             The default is 0 [m].
-
         Returns
         -------
         TYPE
             DESCRIPTION.
-
         '''
 
         # If swept_ctrl is an integer, then no need to find the corresponding
@@ -539,19 +515,16 @@ class PotentialInterpolator:
         def _find_peaks(curr_val):
             '''
             Find the wavefunction peaks for a potential landscape.
-
             Parameters
             ----------
             curr_val : float
                 The current search value of the swept control index.
-
             Returns
             -------
             curr_peaks : 1D float array
                 Indicies of the found peaks.
             curr_props : dictionary
                 Diciontary of properties related to the found peaks.
-
             '''
             curr_volt_vec = volt_vec.copy()
             curr_volt_vec[swept_ctrl] = curr_val
@@ -704,17 +677,14 @@ class PotentialInterpolator:
         def find_peak_difference(curr_val):
             '''
             Find the difference in peak height between two wavefunction peaks.
-
             Parameters
             ----------
             curr_val : float
                 The current search value of the swept control index.
-
             Returns
             -------
             pk_diff : float
                 Difference in height between the two peaks.
-
             '''
             
             # Find wavefunction peak at curr_val
@@ -741,5 +711,3 @@ class PotentialInterpolator:
         res = float(res)        
         
         return res
-    
-    

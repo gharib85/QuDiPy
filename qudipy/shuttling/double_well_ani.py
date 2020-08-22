@@ -1,5 +1,5 @@
 import os, sys
-sys.path.append('/Users/keweizhou/Google_Drive/Research/20summer/Waterloo/QuDiPy/')
+sys.path.append('../../')
 
 import qudipy as qd
 import qudipy.potential as pot
@@ -11,8 +11,6 @@ from scipy.sparse import diags
 from scipy.linalg import expm
 import matplotlib.pyplot as plt
 import timeit
-
-# import matplotlib.animation as animation
 
 
 def initialize_params():
@@ -60,72 +58,100 @@ def initialize_wf(consts, gparams):
 
     return psi, t_time
 
-def split_operator(psi_x, dt):
-    global consts, gparams, P
+def main():
+    # initialize relevant constants and parameters for the calculation
+    consts, gparams = initialize_params()
+    # diagonal matrix of potential energy in position space
+    PE_1D = gparams.potential
+    
+    dt = 5E-16
+    # vector of position grid
+    X = gparams.x                
+
+    # indices of grid points
+    I = [(idx-gparams.nx/2) for idx in range(gparams.nx)]   
+    # vector of momentum grid
+    P = np.asarray([2 * consts.pi * consts.hbar * i / (gparams.nx*gparams.dx) for i in I])
+
+    # diagonal matrix of kinetic energy in momentum space
+    #KE_1D = np.multiply(P,P)/(2*consts.me)
+
     # exponents present in evolution
     exp_K = np.exp(-1j*dt/2*np.multiply(P,P)/(2*consts.me*consts.hbar))
-    # exp_KK = np.multiply(exp_K,exp_K)
+    exp_KK = np.multiply(exp_K,exp_K)
     exp_P = np.exp(-1j*dt/consts.hbar*gparams.potential)
 
+    # initialize psi(t=0)
+    psi_x, t_time = initialize_wf(consts, gparams)
+    prob = [abs(x)**2 for x in psi_x]
+    ymax = max(prob)
+    # print("initial: ", psi_x)
+    # print("initial probability is: ", [abs(x)**2 for x in psi_x])
+    # print("Plotting the initial wavefunction...")
+    # plt.plot(X, [abs(x)**2 for x in psi_x])
+    # plt.plot(X, psi_x)
+    # plt.show()
+
+    # Calculate the runtime
+    start = timeit.default_timer()
+
+    # print(consts.me)
+    # print(consts.hbar)
+    # print(P)
+    # print(exp_K)
+
+    # Plot
+    plt.ion()
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    line1, = ax.plot(X, prob, 'r-')
+        
     psi_p = fftshift(fft(psi_x))
     psi_p = np.multiply(exp_K,psi_p)
-
-    psi_x = ifft(ifftshift(psi_p))     
-    psi_x = np.multiply(exp_P,psi_x)
     
-    psi_p = fftshift(fft(psi_x))   
-    psi_p = np.multiply(exp_K,psi_p)  
+    # iterate through nprint time steps
+    # number of time steps
+    print(t_time)
+    nt = int(np.round(t_time/dt))
+    print("Number of time steps:",nt)
+    # nt = 20000
+    for step in range(nt):
+        psi_x = ifft(ifftshift(psi_p))     
+        if step%2000  == 0:
+            prob = [abs(x)**2 for x in psi_x]
+            plt.plot(X, prob)
+            plt.xlim(-1e-7, 1e-7)
+            plt.ylim(-5e6, ymax + 5e6)
+            plt.draw()
+            plt.pause(1e-15)
+            plt.clf()
+        psi_x = np.multiply(exp_P,psi_x)
+        
+        psi_p = fftshift(fft(psi_x))     
+        
+        if step != nt-1:
+            psi_p = np.multiply(exp_KK,psi_p)
+        else:
+            psi_p = np.multiply(exp_K,psi_p)
+            psi_x = ifft(ifftshift(psi_p))
 
-    psi_x = ifft(ifftshift(psi_p))
+    stop = timeit.default_timer()
+    print('Time: ', stop - start) 
 
-    return psi_x
+    output = psi_x
+    print("output norm:", qd.qutils.math.inner_prod(gparams,psi_x,psi_x))
+    #print("output: ", output)
+    # print("the resultant probability is: ", [abs(x)**2 for x in output])
+    # print("Plotting the wavefunction at time ",nt * dt)
+    # plt.plot(X, [abs(x)**2 for x in output])
+    # plt.show() 
 
+    
+if __name__ == "__main__":
+    main()
 
-
-##############################################
-########## Time Evolution Animation ##########
-##############################################
-
-# initialize relevant constants and parameters for the calculation
-consts, gparams = initialize_params()
-# diagonal matrix of potential energy in position space
-PE_1D = gparams.potential
-
-dt = 5E-16
-# vector of position grid
-X = gparams.x                
-
-# indices of grid points
-I = [(idx-gparams.nx/2) for idx in range(gparams.nx)]   
-# vector of momentum grid
-P = np.asarray([2 * consts.pi * consts.hbar * i / (gparams.nx*gparams.dx) for i in I])
-
-# initialize psi(t=0)
-psi_x, t_time = initialize_wf(consts, gparams)
-prob = [abs(x)**2 for x in psi_x]
-ymax = max(prob)
-
-# Calculate the runtime
-start = timeit.default_timer()
-
-plt.ion()
-fig = plt.figure()
-ax = fig.add_subplot(111)
-
-line1, = ax.plot(X, prob, 'r-')
-
-
-nt = int(np.round(t_time/dt))
-for step in range(nt):
-    psi_x = split_operator(psi_x, dt
-    if step%2000  == 0:
-        prob = [abs(x)**2 for x in psi_x]
-        plt.plot(X, prob)
-        plt.xlim(-1e-7, 1e-7)
-        plt.ylim(-5e6, ymax + 5e6)
-        plt.draw()
-        plt.pause(1e-15)
-        plt.clf()
-
-stop = timeit.default_timer()
-print('Time: ', stop - start)  
+# without plotting
+# Time:  8.709156446
+# 
+# with plotting every 2000 steps
+# Time:  17.507490322
