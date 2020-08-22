@@ -14,6 +14,32 @@ import csv
 
 
 def generate_shut_pulse(min_v, max_v, pulse_length, pot_interp, plot_pulse = False):
+    '''
+    Generate a shuttling pulse that would make the electron tunnel through three dots.
+
+    Parameters
+    ----------
+    min_v: float
+        initial voltage of the second and third dot
+
+    max_v: float
+        initial voltage of the first dot
+
+    pulse_length: float
+        the total length of the pulse in picoseconds
+
+    pot_interp: PotentialInterpolator object
+        potential interpolator object calculated from next_nano files
+
+    plot_pulse: boolean
+
+    Returns
+    -------
+    shut_pulse: ControlPulse object
+
+    '''
+
+    # Define the pulse with 9 points
 
     pt1 = [max_v, min_v, min_v]
     # pot_interp.plot(pt1, plot_type='1D', show_wf=True)
@@ -22,19 +48,15 @@ def generate_shut_pulse(min_v, max_v, pulse_length, pot_interp, plot_pulse = Fal
     most_vv = vv - 0.035 * (max_v - min_v)
     pt2 = pt1.copy()
     pt2[1] = most_vv
-    # pot_interp.plot(pt2, plot_type='1D', show_wf=True)
 
     pt3 = pt2.copy()
     pt3[1] = vv
-    # pot_interp.plot(pt3, plot_type='1D', show_wf=True)
 
     pt4 = pt3.copy()
     pt4[0] = most_vv
-    # pot_interp.plot(pt4, plot_type='1D', show_wf=True)
 
     pt5 = pt4.copy()
     pt5[0] = min_v
-    # pot_interp.plot(pt5, plot_type='1D', show_wf=True)
 
     vv = pot_interp.find_resonant_tc(pt5, 2)
     most_vv = vv - 0.035 * (max_v - min_v)
@@ -67,6 +89,38 @@ def generate_shut_pulse(min_v, max_v, pulse_length, pot_interp, plot_pulse = Fal
 
 def time_evolution(loaded_data, pot_interp, shut_pulse, animation = True, adiabaticity_data = False, 
         animation_res = 100, adiabaticity_res = 500):
+    '''
+    Displays the animation of time evolution of the wave functions or save adiabaticity evolution to csv file.
+
+    Parameters
+    ----------
+    loaded_data: dictionary
+        data loaded from nextnano files
+
+    pot_interp: PotentialInterpolator object
+        potential interpolator calculated from loaded data
+
+    shut_pulse: ControlPulse object
+        a shuttling pulse that would make the electron tunnel through three dots
+
+    animation: boolean
+        whether the animation is displayed
+
+    adiabaticity_data: boolean
+        whether the adiabaticity data is saved
+
+    animation_res: int
+        how often the animation updates its frame
+
+    adiabaticity_res: int
+        how many total points are saved
+
+    Returns
+    -------
+    None.
+
+    '''
+
     # Find the initial potential
     init_pulse = shut_pulse([0])[0]
     init_pot = pot_interp(init_pulse)
