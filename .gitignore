@@ -3,3 +3,6 @@ QuDiPy tutorial data/
 *.ipynb_checkpoints
 animation_plot/
 testing.py
+# I use tutorials/test.py for testing purposes and don't want it tracked
+tutorials/test.py
+tutorials/QuDiPy tutorial data

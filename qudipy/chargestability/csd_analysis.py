@@ -30,25 +30,46 @@ class CSDAnalysis:
         '''
         self.csd = csd
 
-    def generate_bitmap(self, threshold, plotting=False):
+    def generate_bitmap(self, threshold, threshold_type='percentile', plotting=False):
         '''
         Transforms the charge stability diagram into a bitmap. Threshold determines whether bit is considered 'on' or 'off'
 
         Parameters
         ----------
-        threshold: threshold which determines whether bit is considered 'on' or 'off' 
+        threshold: threshold which determines whether bit is considered 'on' or 'off'
+        threshold: number which specifies the threshold. Behaves differently depending on threshold_type
+
+        Keyword Arguments
+        -----------------
+        threshold_type: String flag for which type of thresholding to do (default 'percentile')
+            - 'percentile': will set all elements in the array above the set percentile to 1 and all those below to 0, ignoring NaN values 
+                    e.g with threshold=99, only elements above the 99th percentile will be set to 1
+            - 'absolute': will set all elements in the array above the specified value to 1 and all those below to 0 
+                    e.g with threshold=20, only elements whos is value greater or equal 20 will be set to 1
+        plotting: flag which determines whether or not to plot the resulting thresholded Hough accumulator (default False)
 
         Returns
         -------
         None
 
         '''
+        if threshold_type.lower() == 'percentile':
+            # Converts percentile type threshold into absolute type to use same for loop
+            threshold = np.nanpercentile(self.csd.csd_der, threshold)
+
+        elif threshold_type.lower() == 'absolute':
+            # Do nothing to the threshold, but avoid raising an error
+            pass
+
+        else:
+            raise ValueError('Unrecognized threshold type: ' + str(threshold_type))
+
         self.csd_bitmap = self.csd.csd_der.mask(abs(self.csd.csd_der) > threshold, other=1).mask(abs(self.csd.csd_der) <= threshold, other=0)
         if plotting is True:
-            self._plot_heatmap(self.csd_bitmap, self.csd.v_1_values, self.csd.v_2_values, r'V$_1$', r'V$_2$')
+            self.plot_heatmap(self.csd_bitmap, self.csd.v_1_values, self.csd.v_2_values, r'V$_1$', r'V$_2$')
 
 
-    def hough_transform(self, num_thetas=180, rho_num=100, plotting=False):
+    def hough_transform(self, num_thetas=180, theta_min=-90, theta_max=90, plotting=False):
         '''
         Performs the Hough transform on the charge stability diagram bitmap stored in the object
 
@@ -58,8 +79,9 @@ class CSDAnalysis:
 
         Keyword Arguments
         -----------------
-        num_thetas: number of angle points to sweep over (default 180) 
-        rho_num: number of distance numbers to start with. Number of distnce points in the end will be roughly 2^(3/2) times the original amount (default 100)
+        num_thetas: number of angle points to sweep over (default 180)
+        theta_min: smallest angle (in degrees) to start the sweep from, which should not be smaller than -90 (default -90)
+        theta_max: largest angle (in degrees) to sweep to, which should not be greater than 90 (default 90)
         plotting: flag which determines whether or not to plot the resulting Hough accumulator (default False)
 
         Returns
@@ -73,7 +95,7 @@ class CSDAnalysis:
         img = self.csd_bitmap
         
         # Rho and Theta ranges
-        thetas = np.deg2rad(np.linspace(-90.0, 90.0, num=num_thetas))
+        thetas = np.deg2rad(np.linspace(theta_min, theta_max, num=num_thetas))
         width = img.columns[-1]
         height = img.index[-1]
         diag_len = np.sqrt(width ** 2 + height ** 2)   # max_dist
@@ -110,7 +132,7 @@ class CSDAnalysis:
             rhos = np.round(self.rhos, 3)
             thetas = np.round(self.thetas, 3)
             # Call heatmap plotting function
-            self._plot_heatmap(self.accumulator, thetas, rhos, r'$\theta$ (rad)', r'$\rho$ (V)')
+            self.plot_heatmap(self.accumulator, thetas, rhos, r'$\theta$ (rad)', r'$\rho$ (V)')
 
         return accumulator, thetas, rhos
 
@@ -126,7 +148,7 @@ class CSDAnalysis:
         Keyword Arguments
         -----------------
         threshold_type: String flag for which type of thresholding to do (default 'percentile')
-            - 'percentile': will set all elements in the array above the set percentile to 1 and all those below to 0 
+            - 'percentile': will set all elements in the array above the set percentile to 1 and all those below to 0, ignoring NaN values  
                     e.g with threshold=99, only elements above the 99th percentile will be set to 1
             - 'absolute': will set all elements in the array above the specified value to 1 and all those below to 0 
                     e.g with threshold=20, only elements whos is value greater or equal 20 will be set to 1
@@ -137,11 +159,11 @@ class CSDAnalysis:
         accumulator_threshold: 2D array with counts 
 
         '''
-        if threshold_type == 'percentile':
+        if threshold_type.lower() == 'percentile':
             # Converts percentile type threshold into absolute type to use same for loop
-            threshold = np.percentile(self.accumulator, threshold)
+            threshold = np.nanpercentile(self.accumulator, threshold)
 
-        elif threshold_type == 'absolute':
+        elif threshold_type.lower() == 'absolute':
             # Do nothing to the threshold, but avoid raising an error
             pass
 
@@ -160,7 +182,7 @@ class CSDAnalysis:
             rhos = np.round(self.rhos, 3)
             thetas = np.round(self.thetas, 3)
             # Call heatmap plotting function
-            self._plot_heatmap(accumulator_threshold, thetas, rhos, r'$\theta$ (rad)', r'$\rho$ (V)')
+            self.plot_heatmap(accumulator_threshold, thetas, rhos, r'$\theta$ (rad)', r'$\rho$ (V)')
 
         return accumulator_threshold
 
@@ -194,7 +216,6 @@ class CSDAnalysis:
 
         # Number of clusters in labels, ignoring noise if present.
         n_clusters_ = len(set(labels)) - (1 if -1 in labels else 0)
-        n_noise_ = list(labels).count(-1)
 
         # Convert from indices to pairs of the for [theta, rho] and convert into a numpy array
         points = []
@@ -209,7 +230,7 @@ class CSDAnalysis:
             # Create uniques colors for each cluster
             unique_labels = set(labels)
             colors = [plt.cm.viridis(each) for each in np.linspace(0, 1, len(unique_labels))]
-            # Loop over each
+            # Loop over each group and corresponding color
             for k, col in zip(unique_labels, colors):
                 if k == -1:
                     # Black used for noise.
@@ -232,15 +253,20 @@ class CSDAnalysis:
         # get centroids of each cluster and save for later
         clf = NearestCentroid()
         clf.fit(points, labels)
-        centroid = clf.centroids_
+        centroids = clf.centroids_
+
+        # Remove the noise from the clustering if it is present (since it's label is -1 and all others are positive, it will alwasy be the first in the list of centroids)
+        if -1 in labels:
+            centroids = np.delete(centroids, 0, 0)
+
         # TODO determine better way to determine invalid charge transitions and exclude them
         # drop centroids where theta < 0 (which correcpond to positive slope)
-        valid_centroids = np.array([i for i in centroid if i[0]>0])
+        valid_centroids = np.array([i for i in centroids if i[0]>0])
         self.centroids = valid_centroids
 
         return valid_centroids
 
-    def _plot_heatmap(self, data, x_values, y_values, x_label, y_label):
+    def plot_heatmap(self, data, x_values, y_values, x_label, y_label):
         df1 = pd.DataFrame(data, index=y_values, columns=x_values)
         s = sb.heatmap(df1, cbar=True, xticklabels=int(self.csd.num/5), yticklabels=int(self.csd.num/5))
         s.axes.invert_yaxis()
@@ -264,7 +290,7 @@ class CSDAnalysis:
         num = self.csd.csd.shape[0]
 
         # Create the heatmap figure
-        f, ax = plt.subplots()
+        f, ax = plt.subplots(1,1)
         sb.heatmap(self.csd.csd, cbar=False, xticklabels=int(num/5), yticklabels=int(num/5))
         ax.axes.invert_yaxis()
 
@@ -277,9 +303,133 @@ class CSDAnalysis:
             rho = centroid[1]
             m = -np.cos(theta)/np.sin(theta)
             b = rho/np.sin(theta)
-            x = np.linspace(self.csd.v_g1_min, self.csd.v_g1_max, num=num)
+            x = np.linspace(self.csd.v_g1_min, self.csd.v_g1_max)
             y = m * x + b
             sb.lineplot(x=x, y=y, ax=ax2)
+
+        # format the secodn axis and show the plot
+        ax2.set_xlim([self.csd.v_g1_min,self.csd.v_g1_max])
+        ax2.set_ylim([self.csd.v_g2_min,self.csd.v_g2_max])
+        ax2.get_yaxis().set_ticks([])
+        ax2.get_xaxis().set_ticks([])
+        ax.set(xlabel=r'V$_1$', ylabel=r'V$_2$')
+        plt.show()
+
+    def find_tripletpoints(self):
+        '''
+        Finds the location of triple points in a charge stability diagram.
+        This function is NOT general and only works in the case of 4 main transition lines with a middle transition that is missing.
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        triple_points: list of tuples with correspond to coordinates (x,y) of the triple point
+        '''
+        m_list = []
+        b_list = []
+
+        for centroid in self.centroids:
+            theta = centroid[0]
+            rho = centroid[1]
+            m_list.append(-np.cos(theta)/np.sin(theta))
+            b_list.append(rho/np.sin(theta))
+
+        # Sort m, then use the same sorting index so each (m,b) pair is kept
+        m_array = np.array(m_list)
+        b_array = np.array(b_list)
+        m_sort = m_array.argsort()
+        m_array = m_array[m_sort[::]]
+        b_array = b_array[m_sort[::]]
+
+        candidate_points = []
+        for i in range(len(m_array)):
+            # Make sure you aren't looping over the same pair twice
+            for j in range(i):
+                # Extract values and compute expected intersection point
+                m1_temp = m_array[i]
+                m2_temp = m_array[j]
+                b1_temp = b_array[i]
+                b2_temp = b_array[j]
+                x_temp = (b2_temp-b1_temp)/(m1_temp-m2_temp)
+                y_temp = m1_temp * x_temp + b1_temp
+                # Discard if expected interection point lies outside the CSD
+                if (x_temp < self.csd.v_g1_min) or (x_temp > self.csd.v_g1_max) or (y_temp < self.csd.v_g2_min) or (y_temp > self.csd.v_g2_max):
+                    continue
+                candidate_points.append([x_temp, y_temp])
+
+        # Convert to numpy arrays for ease of manipulation
+        candidate_points = np.array(candidate_points)
+
+        # Remove max and min x elements from points, which removes the invalid triple points
+        candidate_points = np.delete(candidate_points, np.argmin(candidate_points, axis=0)[0], axis=0)
+        triple_points = np.delete(candidate_points, np.argmax(candidate_points, axis=0)[0], axis=0)
+        # Sort so the triple point with the smallest x comes first
+        triple_points = triple_points[triple_points[:,0].argsort()]
+
+        self.triple_points = triple_points
+
+        return triple_points
+
+    def plot_csd_with_lines_and_triple_points(self):
+        '''
+        Plots charge stability diagram with fitted lines (terminated at the correct triple points)
+        This function is NOT general and only works in the case of 4 main transition lines with a middle transition that is missing.
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        None
+        '''
+
+        # Extract the coordinates for the two triple points
+        x_electron = self.triple_points[0][0]
+        y_electron = self.triple_points[0][1]
+        
+        x_hole = self.triple_points[1][0]
+        y_hole = self.triple_points[1][1]
+
+        # Create the heatmap figure
+        f, ax = plt.subplots(1,1)
+        num = self.csd.csd.shape[0]
+        sb.heatmap(self.csd.csd, cbar=False, xticklabels=int(num/5), yticklabels=int(num/5))
+        ax.axes.invert_yaxis()
+
+        # Create second axis with same x and y axis as the heatmap
+        ax2 = ax.twinx().twiny()
+
+        # Create the x ranges for the various lines to plot on
+        x_1 = [x_electron, self.csd.v_g1_max]
+        x_2 = [self.csd.v_g1_min, x_electron]
+        x_3 = [self.csd.v_g1_min, x_hole]
+        x_4 = [x_hole, self.csd.v_g1_max]
+        x_5 = [x_electron, x_hole]
+        x_ranges = np.array([x_1, x_2, x_3, x_4, x_5])
+
+        line_params = []
+        for centroid in self.centroids:
+            line_params.append([-np.cos(centroid[0])/np.sin(centroid[0]), centroid[1]/np.sin(centroid[0])])
+
+        line_params = np.array(line_params)
+        line_params = np.sort(line_params, axis = 1)
+        
+        # Add the last line for the transition betweent the two points
+        m_5 = (y_hole - y_electron)/(x_hole - x_electron)
+        b_5 = y_electron - m_5 * x_electron
+        line_5 = np.array([m_5, b_5])
+        line_params = np.vstack((line_params, line_5))
+
+        for x_range, line in zip(x_ranges, line_params):
+            y = line[0] * x_range + line[1]
+            sb.lineplot(x=x_range, y=y, ax=ax2)
+
+        # Plot the two triple points
+        sb.scatterplot(x=[x_hole, x_electron], y=[y_hole, y_electron], ax=ax2)
 
         # format the secodn axis and show the plot
         ax2.set_xlim([self.csd.v_g1_min,self.csd.v_g1_max])
