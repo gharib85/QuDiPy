@@ -1,5 +1,7 @@
 """
 Functions for handling control pulse files .ctrlp
+
+@author: simba
 """
 
 import pandas as pd
@@ -109,6 +111,8 @@ def load_circuit(f_name, gate_dict={}):
     f_name : string
         Full file path to the circuit file.
         
+    Keyword Arguments
+    ----------
     gate_dict : dictionary of controlPulse objects, optional
         Contains all loaded control pulse objects to be used in the 
         quantumCircuit's circuit sequence. Default is {}.
@@ -212,6 +216,9 @@ def check_ideal_gate(gate_name, qubit_idx=[]):
     ----------
     gate_name : string
         Gate name to be tested.
+        
+    Keyword Arguments
+    ----------
     qubit_idx : list of ints, optional
         Indices of qubits used by gate. Default is [].
 

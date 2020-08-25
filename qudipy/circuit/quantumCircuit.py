@@ -1,5 +1,7 @@
 """
 Class for a quantum circuit
+
+@author: simba
 """
 
 class QuantumCircuit:

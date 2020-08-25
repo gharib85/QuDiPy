@@ -1,5 +1,8 @@
-__all__ = [
-    'build_1DSE_hamiltonian','build_2DSE_hamiltonian','solve_schrodinger_eq']
+"""
+Quantum utility solver functions
+
+@author: simba
+"""
 
 import numpy as np
 from scipy import sparse
@@ -113,7 +116,10 @@ def solve_schrodinger_eq(consts, gparams, n_sols=1):
     consts : Constants class
         Contains constants value for material system.
     gparams : GridParameters class
-        Contains grid and potential information.    
+        Contains grid and potential information.   
+        
+    Keyword Arguments
+    ----------
     n_sols: int, optional
         Number of eigenvectors and eigenenergies to return. The default is 1.
 
@@ -154,13 +160,13 @@ def solve_schrodinger_eq(consts, gparams, n_sols=1):
         if gparams.grid_type == '1D':
             norm_val = inner_prod(gparams, curr_wf, curr_wf)
         
-            eig_vecs[:,idx] = curr_wf/norm_val
+            eig_vecs[:,idx] = curr_wf/np.sqrt(norm_val)
         
         if gparams.grid_type == '2D':
             norm_val = inner_prod(gparams, gparams.convert_NO_to_MG(
                 curr_wf), gparams.convert_NO_to_MG(curr_wf))
-        
-            curr_wf = curr_wf/norm_val
+                    
+            curr_wf = curr_wf/np.sqrt(norm_val)
             
             eig_vecs_mesh[:,:,idx] = gparams.convert_NO_to_MG(curr_wf)
             
