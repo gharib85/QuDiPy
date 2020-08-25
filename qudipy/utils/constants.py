@@ -9,7 +9,7 @@ class Constants:
     def __init__(self, material_system="air"):
         '''
         
-        Parameters
+        Keyword Arguments
         ----------
         material_system : string, optional
             String specifying which material system the constant class is for.

@@ -26,6 +26,9 @@ def build_interpolator(load_data_dict, constants=qd.Constants(),
         the potential data for each loaded file, and the corresponding votlage
         vector for each file.
         Fields = ['coords', 'potentials', 'ctrl_vals']
+        
+    Keyword Arguments
+    ----------
     constants : Constants object, optional
         Constants object containing material parameter details. The default is
         a Constants object assuming air as the material system.
@@ -122,6 +125,9 @@ def load_potentials(ctrl_vals, ctrl_names, f_type='pot', f_dir=None,
     ctrl_names : list of strings
         List of each ctrl variable name. Must be the same length as ctrl_vals 
         first dimension.
+        
+    Keyword Arguments
+    ----------
     f_type : string, optional
         Type of file to load (either potential or electric field). Acceptable 
         arguments include ['pot','potential','Uxy','electric','field','Ez'].

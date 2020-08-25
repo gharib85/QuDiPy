@@ -21,6 +21,9 @@ class ControlPulse:
         pulse_type : string
             Specify whether pulse is described with "experimental" or 
             "effective" control variables.
+            
+        Keyword Arguments
+        ----------
         pulse_length : int, optional
             Total length of pulse in [s]. The default is -1.
             This is an optional keyword because 
@@ -92,7 +95,7 @@ class ControlPulse:
         Plot the control pulse. Can plot a subset of the control variables 
         and within some time interval.
 
-        Parameters
+        Keyword Arguments
         ----------
         plot_ctrls : list of strings, optional
             Specify the name of each control variable pulse you wish to plot

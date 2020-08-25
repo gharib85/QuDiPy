@@ -35,9 +35,12 @@ class PotentialInterpolator:
             (where the +2 is for x and y coords)
         single_dim_idx : list of ints
             List of all control indices which only have a singleton dimension.
+
+        Keyword Arguments
+        ----------
         constants : Constants object, optional
             Constants object containing material parameter details.
-            The default is a Constants object assuming air as the material
+            The default is a Constants object assuming vacuum as the material
             system.
         y_slice : float, optional
             Used to create a interpolator of only 1D poetentials. Specify a 
@@ -91,7 +94,7 @@ class PotentialInterpolator:
 
         Parameters
         ----------
-        volt_vec : 2D float array
+        volt_vec_input : 2D float array
             Array of control variable value vectors at which we wish to find 
             the interpolated 2D potential. Each row corresponds to a new 
             control variable vector.
@@ -191,6 +194,9 @@ class PotentialInterpolator:
         volt_vec : 1D float array
             Array of voltage vectors at which we wish to find the interpolated
             1D or 2D potential.
+            
+        Keyword Arguments
+        ----------
         plot_type : string, optional
             Type of plot to show of the potential. Accepted arguments are:
             - '2D': show a 2D plot of the potential landscape. 
@@ -251,6 +257,9 @@ class PotentialInterpolator:
                 String indicating which axis we are taking a slice of the 2D 
                 wavefunction. Changes how we take a slice of the wavefunction
                 meshgrid.
+                
+            Keyword Arguments
+            ----------
             wf_n : int, optional
                 Will plot the nth energy wavefunction. Indexing starts at 0
                 which indicates the ground state wavefunction.
@@ -441,6 +450,9 @@ class PotentialInterpolator:
             Index of the control variable to sweep in the supplied volt_vec
             argument OR the corresponding control variable name of the variable
             to sweep.
+        
+        Keyword Arguments
+        ----------
         bnds : float array, optional
             An array specifying the min and max bounds of the swept control
             variable. The default is the full min and max bounds of the
@@ -459,8 +471,9 @@ class PotentialInterpolator:
 
         Returns
         -------
-        TYPE
-            DESCRIPTION.
+        res_ctrl : float
+            The value of the control variable which gives the resonant tunnel
+            coupling point.
 
         '''
 
@@ -720,13 +733,13 @@ class PotentialInterpolator:
         # are assumed to be similarly sized, this would be close to the 0
         # detuning point.        
         volt_tolerance = 1E-6 # muV
-        res = fminbound(find_peak_difference, bnds[0], bnds[1], 
+        res_ctrl = fminbound(find_peak_difference, bnds[0], bnds[1], 
                         xtol=volt_tolerance)
         
         # Round value to the order of magnitude given by the tolerance.
-        res = np.round(res,int(np.ceil(abs(np.log10(volt_tolerance)))))
-        res = float(res)        
+        res_ctrl = np.round(res_ctrl,int(np.ceil(abs(np.log10(volt_tolerance)))))
+        res_ctrl = float(res_ctrl)        
         
-        return res
+        return res_ctrl
     
     
