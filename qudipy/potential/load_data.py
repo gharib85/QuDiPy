@@ -1,9 +1,8 @@
+  
 """
 Functions for loading data from files.
 @author: simba
 """
-import os, sys
-sys.path.append("/Users/keweizhou/Google_Drive/Research/20summer/Waterloo/QuDiPy")
 
 import numpy as np
 import pandas as pd
@@ -26,6 +25,9 @@ def build_interpolator(load_data_dict, constants=qd.Constants(),
         the potential data for each loaded file, and the corresponding votlage
         vector for each file.
         Fields = ['coords', 'potentials', 'ctrl_vals']
+        
+    Keyword Arguments
+    ----------
     constants : Constants object, optional
         Constants object containing material parameter details. The default is
         a Constants object assuming air as the material system.
@@ -99,47 +101,6 @@ def build_interpolator(load_data_dict, constants=qd.Constants(),
                                         y_slice)
     
     return interp_obj
-    
-def _load_one_file(fname):
-    '''
-    This function loads a single file of either potential or electric field
-    data and returns the coordinate and 2D data. The data is always upsampled
-    via a spline interpolation to the next power of 2.
-    Parameters
-    ----------
-    fname : string
-        Name of file to be loaded.
-    Returns
-    -------
-    new_x_coord : float 1D array
-        x-coordinate data after loading and interpolation.
-    new_y_coord : float 1D array
-        y-coordinate data after loading and interpolation.
-    new_pot_xy : float 2D array
-        Potential or electric field data after loading and interpolation.
-    '''
-
-    # Load file
-    data = pd.read_csv(fname, header=None).to_numpy()
-    
-    # Extract items
-    x_coord = data[0,1:]
-    y_coord = data[1:,0]
-    pot_xy = data[1:,1:]
-    
-    # Do a spline interpolation to increase number of x/y coordinates to the
-    # highest power of 2 (for faster ffts if needed)
-    new_x_len = 1 if len(x_coord) == 0 else 2**(len(x_coord) - 1).bit_length()
-    new_y_len = 1 if len(y_coord) == 0 else 2**(len(y_coord) - 1).bit_length()
-    
-    new_x_coord = np.linspace(x_coord.min(), x_coord.max(), new_x_len)
-    new_y_coord = np.linspace(y_coord.min(), y_coord.max(), new_y_len)
-    
-    f = interp2d(x_coord, y_coord, pot_xy, kind='cubic')
-    new_pot_xy = f(new_x_coord, new_y_coord)
-    
-    return new_x_coord, new_y_coord, new_pot_xy
-
 
 def load_potentials(ctrl_vals, ctrl_names, f_type='pot', f_dir=None, 
                     f_pot_units='J', f_dis_units='m', trim_x=None, trim_y=None):
@@ -161,6 +122,9 @@ def load_potentials(ctrl_vals, ctrl_names, f_type='pot', f_dir=None,
     ctrl_names : list of strings
         List of each ctrl variable name. Must be the same length as ctrl_vals 
         first dimension.
+        
+    Keyword Arguments
+    ----------
     f_type : string, optional
         Type of file to load (either potential or electric field). Acceptable 
         arguments include ['pot','potential','Uxy','electric','field','Ez'].
@@ -282,8 +246,3 @@ def load_potentials(ctrl_vals, ctrl_names, f_type='pot', f_dir=None,
     
     
     return all_files
-
-    
-    
-    
-    
