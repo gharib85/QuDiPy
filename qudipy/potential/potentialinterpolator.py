@@ -469,15 +469,11 @@ class PotentialInterpolator:
         # the control names and then find the corresponding index.
         if not isinstance(swept_ctrl,int):
             
-            raise_error_flag = 0
             try:
                 # Get corresponding control index
                 ctrl_idx = self.ctrl_names.index(swept_ctrl)
             # Want to raise custom error message.
             except ValueError:
-                raise_error_flag = 1
-                
-            if raise_error_flag:
                 raise ValueError(f'Supplied swept_ctrl name {swept_ctrl} is '+
                                  'invalid.\nUseable control names are:\n'+
                                  f'{self.ctrl_names}')

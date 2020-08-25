@@ -253,8 +253,8 @@ class ControlPulse:
         else:
             self.ctrl_pulses[var_name] = np.array(var_pulse)
             # self.ctrl_pulses.keys() should be in the order items are added 
-            # to the dict... But just to make sure we will manually append 
-            # our own list.
+            # to the dict if using python >3.7. But to keep things backwards
+            # compatible, we will manually append our own list.
             self.ctrl_names.append(var_name)
             self.n_ctrls = len(self.ctrl_names)
             
