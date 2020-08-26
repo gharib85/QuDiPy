@@ -20,6 +20,9 @@ class GridParameters:
         ----------
         x : array
             Grid coordinates along x with uniform spacing.
+            
+        Keyword Arguments
+        ----------
         y : array
             Grid coordinates along y with uniform spacing.
         potential : array, optional

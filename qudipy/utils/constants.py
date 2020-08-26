@@ -9,12 +9,12 @@ class Constants:
     def __init__(self, material_system="air"):
         '''
         
-        Parameters
+        Keyword Arguments
         ----------
         material_system : string, optional
             String specifying which material system the constant class is for.
-            Currently allowed systems are: ["air","Si/SiO2", "Si/SiGe", "GaAs"].
-            Default is air.
+            Currently allowed systems are: ["vacuum","Si/SiO2", "Si/SiGe", "GaAs"].
+            Default is vacuum.
 
         Returns
         -------
@@ -53,7 +53,7 @@ class Constants:
             self.epsR = 12.4                # Dielectric constant
             self.eps = self.eps0*self.epsR  # Permitivity [F/m]
             self.me = self.m0*0.067         # Effective mass [kg]
-        elif material_system.lower() == "air":
+        elif material_system.lower() == "vacuum":
             self.epsR = 1                   # Dielectric constant
             self.eps = self.eps0*self.epsR  # Permitivity [F/m]
             self.me = self.m0               # Effective mass [kg]
@@ -63,8 +63,8 @@ class Constants:
             self.eps = self.eps0*self.epsR  # Permitivity [F/m]
             self.me = self.m0               # Effective mass [kg]
             print("WARNING: Material system either not recognized or defined.\n\
-                  Assuming ""air"" as the material system.\n\
+                  Assuming ""vacuum"" as the material system.\n\
                   Allowed material systems are: [""Si/SiO2"", ""Si/SiGe"",\
-                                                 ""GaAs"",""air""]")        
+                                                 ""GaAs"",""vacuum""]")        
         
         
