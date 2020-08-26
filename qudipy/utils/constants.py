@@ -10,7 +10,7 @@ class Constants:
         '''
         
         Keyword Arguments
-        ----------
+        -----------------
         material_system : string, optional
             String specifying which material system the constant class is for.
             Currently allowed systems are: ["vacuum","Si/SiO2", "Si/SiGe", "GaAs"].

@@ -119,7 +119,7 @@ def solve_schrodinger_eq(consts, gparams, n_sols=1):
         Contains grid and potential information.   
         
     Keyword Arguments
-    ----------
+    -----------------
     n_sols: int, optional
         Number of eigenvectors and eigenenergies to return. The default is 1.
 

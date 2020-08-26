@@ -113,6 +113,7 @@ def load_potentials(ctrl_vals, ctrl_names, f_type='pot', f_dir=None,
     'TYPE_C1NAME_C1VAL_C2NAME_C2VAL_..._CNNAME_CNVAL.txt'
     where TYPE = 'Uxy' or 'Ez'. 
     Refer to tutorial for a more explicit example.
+    
     Parameters
     ----------
     ctrl_vals : list of list of floats
@@ -124,7 +125,7 @@ def load_potentials(ctrl_vals, ctrl_names, f_type='pot', f_dir=None,
         first dimension.
         
     Keyword Arguments
-    ----------
+    -----------------
     f_type : string, optional
         Type of file to load (either potential or electric field). Acceptable 
         arguments include ['pot','potential','Uxy','electric','field','Ez'].

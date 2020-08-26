@@ -20,32 +20,33 @@ import timeit
 import csv
 
 
-def time_evolution(pot_interp, shut_pulse, show_animation = True, save_data = False, 
-        update_ani_frames = 100, save_data_points = 500):
+def time_evolution(pot_interp, shut_pulse, show_animation=True, save_data=False, 
+        update_ani_frames=2000, save_data_points=500):
     '''
-    Displays the animation of time evolution of the wave functions or save adiabaticity evolution to csv file.
-
+    Perform a time evolution of a real space Hamiltonian (i.e. one that has
+    the form H = K + V(x)) according to an arbitrary control pulse. Simulation
+    is done using the split-operator method.
+    
     Parameters
     ----------
-
     pot_interp: PotentialInterpolator object
         A 1D potential interpolator object for the quantum dot system.
-
     shut_pulse: ControlPulse object
-        A shuttling pulse that that tunnels an electron through a quantum dot system.
-
+        An arbitrary shuttling control pulse.
+    
+    Keyword Arguments
+    -----------------
     show_animation: boolean
-        whether the animation is displayed
-
-    save_data: boolean
-        whether the adiabaticity data is saved
-
-    update_ani_frames: int
-        how often the animation updates its frame
-
-    save_data_points: int
-        how many total points are saved
-
+        Specifies whether the animation is displayed. The default is True.
+    save_data: boolean, optional
+        Specifies whether the adiabaticity data is saved. The default is True.
+    update_ani_frames: int, optional
+        How many simulated times steps between new animation frames. The 
+        default is 2000.
+    save_data_points: int, optional
+        How many total data points are saved during the simulation. The 
+        default is 500.
+        
     Returns
     -------
     None.
@@ -68,7 +69,6 @@ def time_evolution(pot_interp, shut_pulse, show_animation = True, save_data = Fa
     # Find the initial ground state wavefunction
     __, e_vecs = qt.solvers.solve_schrodinger_eq(consts, gparams, n_sols=1)
     psi_x = e_vecs[:,0]
-
 
     # time step
     dt = 5E-16
@@ -140,8 +140,6 @@ def time_evolution(pot_interp, shut_pulse, show_animation = True, save_data = Fa
                 line1.set_data(X, potential)
                 line2.set_data(X, prob)
 
-                # ax1.autoscale_view(True,True,True)
-                # ax1.relim()
                 ax1.set_xlabel("x(m)")
                 ax1.set_ylabel("Potential")
                 ax1.set_xlim(min(X), max(X))
@@ -149,7 +147,6 @@ def time_evolution(pot_interp, shut_pulse, show_animation = True, save_data = Fa
 
                 ax2.set_xlabel("x(m)")
                 ax2.set_ylabel("Probability")
-                # ax2.set_xlim(-2e-7, 2e-7)
                 ax2.set_ylim(-5e6, ymax)
 
                 plt.draw()
@@ -158,9 +155,10 @@ def time_evolution(pot_interp, shut_pulse, show_animation = True, save_data = Fa
                 # find the ground state under this pulse
                 __, e_vecs = qt.solvers.solve_schrodinger_eq(consts, gparams, n_sols=1)
                 ground_psi = e_vecs[:,0]
+                
                 # calculate the inner product between the ground state and the current state
                 inner = abs(qd.qutils.math.inner_prod(gparams, psi_x, ground_psi))**2
-                # print(t_pts[t_idx], inner)
+
                 writer.writerow([p_length, t_pts[t_idx], inner])
                 t_selected[t_idx//checkpoint_counter] = t_pts[t_idx]
                 adiabaticity[t_idx//checkpoint_counter] = inner
@@ -173,6 +171,6 @@ def time_evolution(pot_interp, shut_pulse, show_animation = True, save_data = Fa
                 psi_p = np.multiply(exp_K,psi_p)
                 psi_x = ifft(ifftshift(psi_p))
 
-        # Pring the runtime
+        # Print the runtime
         stop = timeit.default_timer()
         print('Time: ', stop - start) 

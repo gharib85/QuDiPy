@@ -23,7 +23,7 @@ class ControlPulse:
             "effective" control variables.
             
         Keyword Arguments
-        ----------
+        -----------------
         pulse_length : int, optional
             Total length of pulse in [s]. The default is -1.
             This is an optional keyword because 
@@ -96,7 +96,7 @@ class ControlPulse:
         and within some time interval.
 
         Keyword Arguments
-        ----------
+        -----------------
         plot_ctrls : list of strings, optional
             Specify the name of each control variable pulse you wish to plot
             or plot 'all'. The default is 'all'.
