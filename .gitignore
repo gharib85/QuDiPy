@@ -6,3 +6,4 @@ testing.py
 tutorials/test.py
 tutorials/QuDiPy tutorial data
 *.pyc
+__pycache__/
