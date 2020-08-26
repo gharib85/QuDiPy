@@ -1,6 +1,6 @@
-  
 """
 Functions for loading data from files.
+
 @author: simba
 """
 
@@ -200,7 +200,7 @@ def load_potentials(ctrl_vals, ctrl_names, f_type='pot', f_dir=None,
         # Convert units if needed
         if f_pot_units == 'eV':
             # Just need to get electron charge
-            constants = qd.Constants('air')
+            constants = qd.Constants('vacuum')
             pot *= constants.e
             
         if f_dis_units == 'nm':

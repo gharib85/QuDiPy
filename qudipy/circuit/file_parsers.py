@@ -3,13 +3,11 @@ Functions for handling control pulse files .ctrlp
 
 @author: simba
 """
-import os, sys
-sys.path.append("/Users/keweizhou/Google_Drive/Research/20summer/Waterloo/QuDiPy/qudipy/circuit")
-
+import os
 import pandas as pd
 import numpy as np
-from quantumCircuit import QuantumCircuit
-from controlPulse import ControlPulse
+from .quantumCircuit import QuantumCircuit
+from .controlPulse import ControlPulse
 
 def _load_one_pulse(f_name):
     '''

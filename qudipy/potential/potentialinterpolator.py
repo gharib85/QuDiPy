@@ -1,5 +1,6 @@
 """
 PotentialInterpolator class
+
 @author: simba
 """
 

@@ -7,7 +7,7 @@ Quantum utility solver functions
 import numpy as np
 from scipy import sparse
 from scipy.sparse.linalg import eigs
-from qudipy.qutils.qmath import inner_prod
+from qudipy.qutils.math import inner_prod
 
 def build_1DSE_hamiltonian(consts, gparams):
     ''' 
