@@ -94,8 +94,10 @@ def RSP_time_evolution_1D(pot_interp, ctrl_pulse, dt=5E-16,
     #*********OUTER PULSE LOOP**********#
     # Iterate over all the control pulses
     #***********************************#
-    for curr_pulse in ctrl_pulse:        
-        print(f'Running RSPTE1D simulation of control pulse: {curr_pulse.name}.')
+    for pulse_idx, curr_pulse in enumerate(ctrl_pulse):        
+        print(f'Running RSPTE1D simulation ({pulse_idx+1}/'+
+              f'{len(ctrl_pulse)}) '+ 
+              f'with control pulse: {curr_pulse.name}.')
     
         # Calculate the runtime
         start_individual = timeit.default_timer()
@@ -241,8 +243,9 @@ def RSP_time_evolution_1D(pot_interp, ctrl_pulse, dt=5E-16,
 
         stop_individual = timeit.default_timer()
         if len(ctrl_pulse) != 1:
-            print('Current simulation complete. Elapsed time is {:.3E} seconds.'
-                  .format(stop_individual - start_individual))
+            individual_time = stop_individual - start_individual
+            print('Current simulation complete. Elapsed time is '+
+                  f'{individual_time:.3E} seconds.')
         
         if show_animation:
             plt.close(fig)
@@ -257,7 +260,8 @@ def RSP_time_evolution_1D(pot_interp, ctrl_pulse, dt=5E-16,
     
     # Print the total runtime
     stop_overall = timeit.default_timer()
-    print('\nAll simulations complete! Elapsed time is {:.3E} seconds.'
-          .format(stop_overall - start_overall))
+    overall_time = stop_overall - start_overall
+    print('\nAll simulations complete! Elapsed time is '+
+          f'{overall_time:.3E} seconds.')
         
         
