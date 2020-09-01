@@ -4,6 +4,7 @@ Real space pulse evolution module
 @author: Kewei
 """
 
+from tqdm import tqdm
 import qudipy as qd
 import numpy as np
 import qudipy.potential as pot
@@ -125,12 +126,9 @@ def RSP_time_evolution_1D(pot_interp, ctrl_pulse, dt=5E-16,
     with open('data.csv', mode='a') as file:
         writer = csv.writer(file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
 
-        # Initialize progress bar
-        bar = qd.utils.TerminalProgressBar(
-            'Running RSPTE1D simulation of length {:.2E} secs'.format(p_length))
-
+        print('Running RSPTE1D simulation of length {:.2E} secs.'.format(p_length))
         # Loop through each time step
-        for t_idx in range(len(t_pts)):
+        for t_idx in tqdm(range(len(t_pts))):
             potential = potential_L[t_idx]
 
             # diagonal matrix of potential energy in position space
@@ -138,10 +136,6 @@ def RSP_time_evolution_1D(pot_interp, ctrl_pulse, dt=5E-16,
 
             # Start the split operator method
             psi_x = ifft(ifftshift(psi_p))
-            
-            # Update progress bar periodically
-            if t_idx % 1000 == 0:
-                bar.update(t_idx/len(t_pts))
             
             # Show animation periodically
             if show_animation and t_idx % update_ani_frames == 0:
@@ -189,13 +183,10 @@ def RSP_time_evolution_1D(pot_interp, ctrl_pulse, dt=5E-16,
             else:
                 psi_p = np.multiply(exp_K,psi_p)
                 psi_x = ifft(ifftshift(psi_p))
-
-        # Final update for progress bar
-        bar.update(1)
         
         # Print the runtime
         stop = timeit.default_timer()
-        print('Simulation complete. Elapsed time is {.3E} seconds.'
+        print('Simulation complete. Elapsed time is {:.3E} seconds.'
               .format(stop - start))
         
         

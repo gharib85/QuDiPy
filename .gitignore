@@ -7,3 +7,4 @@ tutorials/test.py
 tutorials/QuDiPy tutorial data
 *.pyc
 __pycache__/
+*.csv
