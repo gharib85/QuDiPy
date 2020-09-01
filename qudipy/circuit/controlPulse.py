@@ -7,6 +7,7 @@ Class for a control pulse
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
+from copy import copy as copy_orig
 
 class ControlPulse:
     
@@ -89,6 +90,18 @@ class ControlPulse:
             interp_pulse[:,ctrl_idx] = self.ctrl_interps[ctrl](time_pts)
 
         return interp_pulse    
+    
+    def copy(self):
+        '''
+        This method will do a shallow copy of the current class object.
+
+        Returns
+        -------
+        ControlPulse
+            Shallow copy of current ControlPulse object.
+
+        '''
+        return copy_orig(self)
     
     def plot(self, plot_ctrls='all', time_int='full', n=250):
         '''
