@@ -125,6 +125,10 @@ def RSP_time_evolution_1D(pot_interp, ctrl_pulse, dt=5E-16,
     with open('data.csv', mode='a') as file:
         writer = csv.writer(file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
 
+        # Initialize progress bar
+        bar = qd.utils.TerminalProgressBar(
+            'Running RSPTE1D simulation of length {:.2E} secs'.format(p_length))
+
         # Loop through each time step
         for t_idx in range(len(t_pts)):
             potential = potential_L[t_idx]
@@ -134,7 +138,13 @@ def RSP_time_evolution_1D(pot_interp, ctrl_pulse, dt=5E-16,
 
             # Start the split operator method
             psi_x = ifft(ifftshift(psi_p))
-            if show_animation and t_idx % update_ani_frames  == 0:
+            
+            # Update progress bar periodically
+            if t_idx % 1000 == 0:
+                bar.update(t_idx/len(t_pts))
+            
+            # Show animation periodically
+            if show_animation and t_idx % update_ani_frames == 0:
                 # Get wavefunction probability
                 prob = np.multiply(psi_x.conj(), psi_x)
                 
@@ -142,18 +152,19 @@ def RSP_time_evolution_1D(pot_interp, ctrl_pulse, dt=5E-16,
                 line1.set_data(X, potential)
                 line2.set_data(X, prob)
 
-                # ax1.set_xlabel("x(m)")
-                # ax1.set_ylabel("Potential")
-                # ax1.set_xlim(min(X), max(X))
-                # ax1.set_ylim(potmin,potmax)
+                ax1.set_xlabel("x(m)")
+                ax1.set_ylabel("Potential")
+                ax1.set_xlim(min(X), max(X))
+                ax1.set_ylim(potmin,potmax)
 
-                # ax2.set_xlabel("x(m)")
-                # ax2.set_ylabel("Probability")
-                # ax2.set_ylim(-5e6, ymax)
+                ax2.set_xlabel("x(m)")
+                ax2.set_ylabel("Probability")
+                ax2.set_ylim(-5e6, ymax)
 
                 plt.draw()
                 plt.pause(1e-15)
                 
+            # Save data periodically
             if save_data and t_idx%checkpoint_counter == 0:
                 # Find the current ground state of the potential
                 __, e_vecs = qt.solvers.solve_schrodinger_eq(consts, gparams,
@@ -179,8 +190,12 @@ def RSP_time_evolution_1D(pot_interp, ctrl_pulse, dt=5E-16,
                 psi_p = np.multiply(exp_K,psi_p)
                 psi_x = ifft(ifftshift(psi_p))
 
+        # Final update for progress bar
+        bar.update(1)
+        
         # Print the runtime
         stop = timeit.default_timer()
-        print('Simulation complete. Elapsed time is ', stop - start) 
+        print('Simulation complete. Elapsed time is {.3E} seconds.'
+              .format(stop - start))
         
         
