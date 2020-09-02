@@ -4,10 +4,10 @@ File used to generate and plot charge stability diagrams.
 import math
 import sys
 import numpy as np
-from numpy.core.numeric import identity
 import pandas as pd
 import seaborn as sb
 import matplotlib.pyplot as plt
+from scipy import linalg
 from scipy.ndimage import gaussian_filter
 
 e = 1.602176634 * 10**-19  # TODO figure out relative imports for common constants
@@ -215,12 +215,13 @@ class HubbardCSD:
     Based on section III in https://doi.org/10.1103/PhysRevB.83.235314.
     This class is intended for use with NextNano potentials to simulate charge stability diagrams of various designs, but can also be used with analytic potentials.
     '''
-    def __init__(self, h_mu=False, h_t=False, h_u=False):
+    def __init__(self, n_sites, n_e, h_mu=False, h_t=False, h_u=False):
         '''
 
         Parameters
         ----------
-        None
+        n_sites: Number of sites that a hamilt
+        n_e: Number of electrons in the system. Must be less than or equal to 2*n_sites
 
         Keyword Arguments
         -----------------
@@ -233,63 +234,50 @@ class HubbardCSD:
         None
         '''
 
+        if self.h_mu is False:
+            raise Exception("Hamiltonian will be independent of gate volatges so no charge stability diagram can be generated")
+
         # Save which parts of Hamiltonian to be used for later
         self.h_mu = h_mu
         self.h_t = h_t
         self.h_u = h_u
 
-        # Define basic matrices that will be used to make matrix components
-        self.identity = np.array([[1,0],[0,1]])
-        self.creation = np.array([[0,0],[1,0]])
-        self.annihilation = np.array([[0,1],[0,0]])
-        self.number = np.array([[0,0],[0,1]])
+        # Check that number of electrons doesn't exceed twice the amount of sites
+        if n_e >= 2 * n_sites:
+            raise Exception(f"Number of electrons ({n_e}) exceeds twice the amount of sites ({n_sites}) allowed")
+        else:
+            self.n_e = n_e
+            self.n_sites = n_sites
 
-        # Define matrices that will construct the Hamiltonian
-        self.n_1_up = np.kron(np.kron(self.number, self.identity), np.kron(self.identity, self.identity))
-        self.n_1_down = np.kron(np.kron(self.identity, self.number), np.kron(self.identity, self.identity))
-        self.n_2_up = np.kron(np.kron(self.identity, self.identity), np.kron(self.number, self.identity))
-        self.n_2_down = np.kron(np.kron(self.identity, self.identity), np.kron(self.identity, self.number))
+        # Generates the basis to be used
+        self.basis = self._generate_basis()
 
-        self.c_1_up_creation = np.kron(np.kron(self.creation, self.identity), np.kron(self.identity, self.identity))
-        self.c_1_up_annihilation = np.kron(np.kron(self.annihilation, self.identity), np.kron(self.identity, self.identity))
-        self.c_1_down_creation = np.kron(np.kron(self.identity, self.creation), np.kron(self.identity, self.identity))
-        self.c_1_down_annihilation = np.kron(np.kron(self.identity, self.annihilation), np.kron(self.identity, self.identity))
+        # These next steps generate the fixed portion of the Hamiltonian, which is created on initialization
 
-        self.c_2_up_creation = np.kron(np.kron(self.identity, self.identity), np.kron(self.creation, self.identity))
-        self.c_2_up_annihilation = np.kron(np.kron(self.identity, self.identity), np.kron(self.annihilation, self.identity))
-        self.c_2_down_creation = self.n_1_down = np.kron(np.kron(self.identity, self.identity), np.kron(self.identity, self.creation))
-        self.c_2_down_annihilation = self.n_1_down = np.kron(np.kron(self.identity, self.identity), np.kron(self.identity, self.annihilation))
+        # First, generate the matrix of the correct size
+        self.fixed_hamiltonian = np.zeros((len(self.basis),len(self.basis)))
 
-        self.hamiltonian = np.zeros((16,16))
+        # Then add the component to the fixed portion of the Hamiltonian that you want to consider
+        if h_t is True:
+            self.fixed_hamiltonian += self._generate_h_t()
 
-        def generate_csd_directly(self, U_1, U_2, U_12, t=0):
+        if h_u is True:
+            self.fixed_hamiltonian += self._generate_h_u()
 
-            self.alpha_1 = abs(e) * ((U_2 - U_12) * U_1)/(U_1 * U_2 - U_12**2)
-            self.alpha_2 = abs(e) * ((U_1 - U_12) * U_2)/(U_1 * U_2 - U_12**2)
+    def _generate_basis(self):
+        pass
 
-            if self.h_mu is False:
-                raise Exception("Hamiltonian will be independent of gate volatges")
-            
-            if self.h_t is True:
-                tunnel_coupling_h = -t * (
-                                                self.c_1_down_creation @ self.c_2_down_annihilation + self.c_2_down_creation @ self.c_1_down_annihilation +
-                                                self.c_1_up_creation @ self.c_2_up_annihilation + self.c_2_up_creation @ self.c_1_up_annihilation
-                                            )
-                self.hamiltonian = self.hamiltonian + tunnel_coupling_h
+    def _generate_h_t(self):
+        pass
 
-            if self.h_u is True:
-                coulomb_interaction = (
-                    U_1 * n_1_up @ n_1_down + U_2 * n_2_up @ n_2_down +
-                    U_12 * (
-                            n_1_up @ n_2_down + n_1_down @ n_2_up +
-                            n_1_up @ n_2_up + n_1_down @ n_2_down # ignoring exchange 
-                )
-                )
-                self.hamiltonian = self.hamiltonian + coulomb_interaction
+    def _generate_h_u(self):
+        pass
 
 
-        def load_potential(self, file_path):
+    def _lowest_energy(self, v_g1, v_g2):
+        pass
+
+    def load_potential(self, file_path):
         # TODO
             pass
 
-    
