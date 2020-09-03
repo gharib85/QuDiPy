@@ -17,7 +17,7 @@ from tqdm import tqdm
 
 def RSP_time_evolution_1D(pot_interp, ctrl_pulse, dt=5E-16, 
                    show_animation=True, save_data=False, 
-                   update_ani_frames=2000, save_points=100,
+                   update_ani_frames=2000, save_points=500,
                    save_dir=None, save_name=None):
     '''
     Perform a time evolution of a 1D real space Hamiltonian (i.e. one that has
