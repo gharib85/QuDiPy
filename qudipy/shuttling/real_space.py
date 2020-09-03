@@ -4,23 +4,21 @@ Real space pulse evolution module
 @author: Kewei
 """
 
-from tqdm import tqdm
-import time
 import qudipy as qd
 import numpy as np
+import pandas as pd
 import qudipy.potential as pot
 import qudipy.qutils as qt
 from numpy.fft import fft, ifft, fftshift, ifftshift
 import matplotlib.pyplot as plt
-import timeit
-import csv
-import pandas
-
+import timeit, datetime, time
+import os
+from tqdm import tqdm
 
 def RSP_time_evolution_1D(pot_interp, ctrl_pulse, dt=5E-16, 
                    show_animation=True, save_data=False, 
-                   update_ani_frames=2000, save_data_points=500,
-                   save_dir='', save_name=None):
+                   update_ani_frames=2000, save_points=100,
+                   save_dir=None, save_name=None):
     '''
     Perform a time evolution of a 1D real space Hamiltonian (i.e. one that has
     the form H = K + V(x)) according to an arbitrary control pulse. Simulation
@@ -47,7 +45,7 @@ def RSP_time_evolution_1D(pot_interp, ctrl_pulse, dt=5E-16,
     update_ani_frames : int, optional
         How many simulated times steps between new animation frames. The 
         default is 2000.
-    save_data_points : int, optional
+    save_points : int, optional
         How many total data points are saved during the simulation. The 
         default is 500.
     save_dir : string, optional
@@ -90,6 +88,17 @@ def RSP_time_evolution_1D(pot_interp, ctrl_pulse, dt=5E-16,
         
     # Calculate the runtime of overall simulation
     start_overall = timeit.default_timer()    
+    
+    # Initialize big arrays for storing all the simulation data
+    # I know this could be done by preinitializing the full size of the array,
+    # but the logic is easier if I just append the arrays one at a time. I 
+    # doubt the arrays will ever get large enough where this slows things down
+    if save_data:
+        # Initialize arrays for saving data
+        all_save_t = np.array([])
+        all_save_fid0 = np.array([])
+        all_save_pulse_len = np.array([])
+        
         
     #*********OUTER PULSE LOOP**********#
     # Iterate over all the control pulses
@@ -147,16 +156,20 @@ def RSP_time_evolution_1D(pot_interp, ctrl_pulse, dt=5E-16,
     
             line_wf, = ax_wf.plot(X, prob, color=color)
 
-    # # Initialize the arrays where data is store if save_data is true
-    # if save_data:
-    #     t_selected = np.zeros(save_data_points)
-    #     adiabaticity = np.zeros(save_data_points)
-    #     # Calculate how often we save the data
-    #     checkpoint_counter = len(t_pts)//save_data_points
-        
-    # with open('data.csv', mode='a') as file:
-    #     writer = csv.writer(file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-                
+        # Initialize the arrays where data is store if save_data is true
+        if save_data:
+            # Initialize temp arrays for saving data
+            save_t = np.zeros(save_points)
+            save_fid0 = np.zeros(save_points)
+            save_pulse_len = np.ones(save_points)*p_length
+            
+            # Find time indicies to save data at
+            save_t_idx = np.round(np.linspace(0, len(t_pts)-1, 
+                                                      save_points))
+            
+            # Initialize index for saving data
+            save_idx = 0
+                        
         #********INNER PULSE LOOP********#
         # Iterate over all the time points
         #********************************$
@@ -210,7 +223,7 @@ def RSP_time_evolution_1D(pot_interp, ctrl_pulse, dt=5E-16,
                                    t_idx == len(t_pts)-1):
                 # Get wavefunction probability
                 prob = np.real(np.multiply(psi_x.conj(), psi_x))
-                
+                                
                 # Update figure data
                 line_pot.set_data(X, curr_potential)
                 line_wf.set_data(X, prob)
@@ -220,39 +233,51 @@ def RSP_time_evolution_1D(pot_interp, ctrl_pulse, dt=5E-16,
                 plt.draw()
                 plt.pause(1E-15)
             
-        # # Save data periodically
-        # if save_data and t_idx%checkpoint_counter == 0:
-        #     # Find the current ground state of the potential
-        #     __, e_vecs = qt.solvers.solve_schrodinger_eq(consts, gparams,
-        #                                                  n_sols=1)
-        #     ground_psi = e_vecs[:,0]
-            
-        #     # Calculate fidelity of simulated wavefunction w.r.t. ground 
-        #     # state
-        #     inner = abs(qd.qutils.math.inner_prod(gparams, psi_x,
-        #                                           ground_psi))**2
-
-        #     # Save fidelity data to csv file
-        #     writer.writerow([p_length, t_pts[t_idx], inner])
-        #     t_selected[t_idx//checkpoint_counter] = t_pts[t_idx]
-        #     adiabaticity[t_idx//checkpoint_counter] = inner
+            # Save data periodically
+            if save_data and (t_idx in save_t_idx):
+                # Find the current ground state of the potential
+                gparams.update_potential(curr_potential)
+                __, e_vecs = qt.solvers.solve_schrodinger_eq(consts, gparams,
+                                                             n_sols=1)
+                ground_psi = e_vecs[:,0]
+                
+                # Save current time index
+                save_t[save_idx] = t_pts[t_idx]
+                
+                # Calculate fidelity of simulated wavefunction w.r.t. ground 
+                # state
+                inner = abs(qd.qutils.math.inner_prod(gparams, ground_psi,
+                                                      psi_x))**2
         
-        # Print the runtime here, but only if there are multiple control 
-        # pulses to sweep over.
+                # Save fidelity w.r.t. ground state
+                save_fid0[save_idx] = inner
+                
+                # Update save index
+                save_idx += 1
+                        
+        #********INNER PULSE LOOP********#
+        # Iterate over all the time points
+        #********************************$
+        
         time.sleep(0.5) # Needed for tqdm to work properly
 
+        # Add data from current simulation into large save data array
+        if save_data:
+            all_save_pulse_len = np.append(all_save_pulse_len, save_pulse_len)
+            all_save_t = np.append(all_save_t, save_t)
+            all_save_fid0 = np.append(all_save_fid0, save_fid0)
+
+        # Print the runtime here, but only if there are multiple control 
+        # pulses to sweep over.
         stop_individual = timeit.default_timer()
         if len(ctrl_pulse) != 1:
             individual_time = stop_individual - start_individual
             print('Current simulation complete. Elapsed time is '+
                   f'{individual_time:.3E} seconds.')
         
+        # Close figure animation if necessary
         if show_animation:
             plt.close(fig)
-        
-        #********INNER PULSE LOOP********#
-        # Iterate over all the time points
-        #********************************$
                 
     #*********OUTER PULSE LOOP**********#
     # Iterate over all the control pulses
@@ -263,5 +288,28 @@ def RSP_time_evolution_1D(pot_interp, ctrl_pulse, dt=5E-16,
     overall_time = stop_overall - start_overall
     print('\nAll simulations complete! Elapsed time is '+
           f'{overall_time:.3E} seconds.')
+    
+    # Write the data to .csv file if desired
+    if save_data:
+        df = pd.DataFrame({
+            'Pulse length': all_save_pulse_len,
+            'Time': all_save_t,
+            'Fidelity-0': all_save_fid0
+        })
+        
+        # If name not specified, use default
+        if save_name is None:
+            now = datetime.datetime.now()
+            save_name = now.strftime("%Y-%m-%d_%H-%M-%S")
+        # Add csv extension
+        if save_name[-4:] != '.csv':
+            save_name += '.csv'
+            
+        # If save directory not specified, use default
+        if save_dir is None:
+            save_dir = os.getcwd()
+            
+        f_path = save_dir + '/' + save_name
+        df.to_csv(f_path, index=False)
         
         
