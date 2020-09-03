@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 import seaborn as sb
 import matplotlib.pyplot as plt
+import itertools
 from scipy import linalg
 from scipy.ndimage import gaussian_filter
 
@@ -221,7 +222,7 @@ class HubbardCSD:
         Parameters
         ----------
         n_sites: Number of sites that a hamilt
-        n_e: Number of electrons in the system. Must be less than or equal to 2*n_sites
+        n_e: Maximum number of electrons in the system. Must be less than or equal to 2*n_sites
 
         Keyword Arguments
         -----------------
@@ -234,13 +235,13 @@ class HubbardCSD:
         None
         '''
 
-        if self.h_mu is False:
-            raise Exception("Hamiltonian will be independent of gate volatges so no charge stability diagram can be generated")
-
         # Save which parts of Hamiltonian to be used for later
         self.h_mu = h_mu
         self.h_t = h_t
         self.h_u = h_u
+
+        if self.h_mu is False:
+            raise Exception("Hamiltonian will be independent of gate volatges so no charge stability diagram can be generated")
 
         # Check that number of electrons doesn't exceed twice the amount of sites
         if n_e >= 2 * n_sites:
@@ -250,7 +251,7 @@ class HubbardCSD:
             self.n_sites = n_sites
 
         # Generates the basis to be used
-        self.basis = self._generate_basis()
+        self.basis, self.basis_labels = self._generate_basis()
 
         # These next steps generate the fixed portion of the Hamiltonian, which is created on initialization
 
@@ -265,7 +266,23 @@ class HubbardCSD:
             self.fixed_hamiltonian += self._generate_h_u()
 
     def _generate_basis(self):
-        pass
+
+        # Compute all possible occupations with the cartesian product, and then 
+        # remove all states that exceed the number of 
+        all_combos = list(itertools.product(*[[0,1] for i in range(self.n_sites * 2)])) # * 2 is for spin degeneracy (could add anouth *2 for valleys)
+
+        basis = []
+        for combo in all_combos:
+            if sum(combo) <= self.n_e:
+                basis.append(combo)
+
+        # Labels each index in the basis state with site number and spin direction (could add valley states)
+        site = [f'site_{n+1}' for n in range(self.n_sites)]
+        spin = ['spin_up', 'spin_down']
+        basis_labels = list(itertools.product(site, spin))
+
+        return basis, basis_labels
+
 
     def _generate_h_t(self):
         pass
