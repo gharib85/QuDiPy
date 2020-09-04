@@ -7,7 +7,7 @@ Class for a control pulse
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
-from copy import deepcopy as copy_orig
+from copy import deepcopy
 
 class ControlPulse:
     
@@ -101,7 +101,7 @@ class ControlPulse:
             Deep copy of current ControlPulse object.
 
         '''
-        return copy_orig(self)
+        return deepcopy(self)
     
     def plot(self, plot_ctrls='all', time_int='full', n=250):
         '''
