@@ -18,7 +18,7 @@ from tqdm import tqdm
 def RSP_time_evolution_1D(pot_interp, ctrl_pulse, dt=5E-16, 
                    show_animation=True, save_data=False, 
                    update_ani_frames=2000, save_points=500,
-                   save_dir=None, save_name=None):
+                   save_dir=None, save_name=None, save_overwrite=False):
     '''
     Perform a time evolution of a 1D real space Hamiltonian (i.e. one that has
     the form H = K + V(x)) according to an arbitrary control pulse. Simulation
@@ -55,6 +55,11 @@ def RSP_time_evolution_1D(pot_interp, ctrl_pulse, dt=5E-16,
         Filename for the saved data (if applicable). If name is already used,
         the data in the original file will be overwritten. The default is the
         current time in YYYY-MM-DD_HH-MM-SS.csv.
+    save_overwrite : bool, optional
+        If True and a file of the same name exists in the save directory, 
+        overwrite it. If False, then the file to be overwritten will be moved
+        to save_name+'_ow' and the current simulation will be written to 
+        save_name. The default is False.
         
     Returns
     -------
@@ -83,21 +88,20 @@ def RSP_time_evolution_1D(pot_interp, ctrl_pulse, dt=5E-16,
     # only one was given, then wrap it in a list.
     try:
         iter(ctrl_pulse)
-    except Exception:
+    except TypeError:
         ctrl_pulse = [ctrl_pulse]
         
     # Calculate the runtime of overall simulation
     start_overall = timeit.default_timer()    
     
-    # Initialize big arrays for storing all the simulation data
-    # I know this could be done by preinitializing the full size of the array,
-    # but the logic is easier if I just append the arrays one at a time. I 
-    # doubt the arrays will ever get large enough where this slows things down
+    # Initialize numpy arrays for saving data
     if save_data:
-        # Initialize arrays for saving data
-        all_save_t = np.array([])
-        all_save_fid0 = np.array([])
-        all_save_pulse_len = np.array([])
+        save_t = np.zeros(len(ctrl_pulse)*save_points)
+        save_fid0 = np.zeros(len(ctrl_pulse)*save_points)
+        save_pulse_len = np.zeros(len(ctrl_pulse)*save_points)
+        
+        # Intialize index for saving data
+        save_idx = 0
         
         
     #*********OUTER PULSE LOOP**********#
@@ -156,19 +160,16 @@ def RSP_time_evolution_1D(pot_interp, ctrl_pulse, dt=5E-16,
     
             line_wf, = ax_wf.plot(X, prob, color=color)
 
-        # Initialize the arrays where data is store if save_data is true
+        # Inner loop save data initial stuff
         if save_data:
-            # Initialize temp arrays for saving data
-            save_t = np.zeros(save_points)
-            save_fid0 = np.zeros(save_points)
-            save_pulse_len = np.ones(save_points)*p_length
+            # Add pulse length data to save data array
+            start_ind = 0 + save_points*pulse_idx
+            end_ind = start_ind + save_points
+            save_pulse_len[start_ind:end_ind] = np.ones(save_points)*p_length
             
             # Find time indicies to save data at
             save_t_idx = np.round(np.linspace(0, len(t_pts)-1, 
                                                       save_points))
-            
-            # Initialize index for saving data
-            save_idx = 0
                         
         #********INNER PULSE LOOP********#
         # Iterate over all the time points
@@ -255,17 +256,11 @@ def RSP_time_evolution_1D(pot_interp, ctrl_pulse, dt=5E-16,
                 # Update save index
                 save_idx += 1
                         
-        #********INNER PULSE LOOP********#
+        #******END INNER PULSE LOOP******#
         # Iterate over all the time points
-        #********************************$
+        #********************************#
         
         time.sleep(0.5) # Needed for tqdm to work properly
-
-        # Add data from current simulation into large save data array
-        if save_data:
-            all_save_pulse_len = np.append(all_save_pulse_len, save_pulse_len)
-            all_save_t = np.append(all_save_t, save_t)
-            all_save_fid0 = np.append(all_save_fid0, save_fid0)
 
         # Print the runtime here, but only if there are multiple control 
         # pulses to sweep over.
@@ -279,7 +274,7 @@ def RSP_time_evolution_1D(pot_interp, ctrl_pulse, dt=5E-16,
         if show_animation:
             plt.close(fig)
                 
-    #*********OUTER PULSE LOOP**********#
+    #*******END OUTER PULSE LOOP********#
     # Iterate over all the control pulses
     #***********************************#
     
@@ -289,19 +284,19 @@ def RSP_time_evolution_1D(pot_interp, ctrl_pulse, dt=5E-16,
     print('\nAll simulations complete! Elapsed time is '+
           f'{overall_time:.3E} seconds.')
     
-    # Write the data to .csv file if desired
+    # Write the data to .csv file if specified
     if save_data:
         df = pd.DataFrame({
-            'Pulse length': all_save_pulse_len,
-            'Time': all_save_t,
-            'Fidelity-0': all_save_fid0
+            'Pulse length': save_pulse_len,
+            'Time': save_t,
+            'Fidelity-0': save_fid0
         })
         
         # If name not specified, use default
         if save_name is None:
             now = datetime.datetime.now()
             save_name = now.strftime("%Y-%m-%d_%H-%M-%S")
-        # Add csv extension
+        # Add csv extension if not there
         if save_name[-4:] != '.csv':
             save_name += '.csv'
             
@@ -310,6 +305,16 @@ def RSP_time_evolution_1D(pot_interp, ctrl_pulse, dt=5E-16,
             save_dir = os.getcwd()
             
         f_path = save_dir + '/' + save_name
+        # If a file of the same name exists and we don't want to overwrite it,
+        # then copy the old file to a new place before overwriting it. Before
+        # writing overwrite file though we check for previous overwrite files
+        # and avoid overwriting those too.
+        if os.path.exists(f_path) and not save_overwrite:
+            ow_idx = 0
+            while os.path.exists(f_path[:-4] + f'_ow{ow_idx}.csv'):
+                ow_idx += 1
+            os.rename(f_path, f_path[:-4] + f'_ow{ow_idx}.csv')
+            
         df.to_csv(f_path, index=False)
         
         
