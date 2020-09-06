@@ -1,9 +1,12 @@
 """
-General helper utilities for the codebase
+General helper utilities
+
+@author: simba
 """
 
 import numpy as np
-
+import math
+        
 def find_nearest(array, value):
     '''
     Function to find the closest value to a number in a given array.

@@ -1,6 +1,8 @@
-'''
-Class containing simulation parameters
-'''
+"""
+SimulationParameters class
+
+@author: simba
+"""
 
 class SimulationParameters:
     

@@ -1,5 +1,8 @@
-__all__ = [
-    'inner_prod','partial_trace']
+"""
+Quantum utility math functions
+
+@author: simba
+"""
 
 import numpy as np
 

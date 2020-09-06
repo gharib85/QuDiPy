@@ -1,7 +1,5 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
-Created on Fri May 29 16:08:07 2020
+GridParameters class
 
 @author: simba
 """
@@ -22,6 +20,9 @@ class GridParameters:
         ----------
         x : array
             Grid coordinates along x with uniform spacing.
+            
+        Keyword Arguments
+        -----------------
         y : array
             Grid coordinates along y with uniform spacing.
         potential : array, optional
@@ -132,11 +133,6 @@ class GridParameters:
         '''
         
         self.potential = new_pot
-        
-        
-    def slice_potential(self, slice_coordinate, slice_axis):
-        
-        pass
         
         
         
