@@ -53,8 +53,9 @@ def RSP_time_evolution_1D(pot_interp, ctrl_pulse, dt=5E-16,
         the current working directory.
     save_name : string, optional
         Filename for the saved data (if applicable). If name is already used,
-        the data in the original file will be overwritten. The default is the
-        current time in YYYY-MM-DD_HH-MM-SS.csv.
+        saving will follow behavior as specified in save_overwrite keyword
+        argument description. The default is the current time in
+        YYYY-MM-DD_HH-MM-SS.csv.
     save_overwrite : bool, optional
         If True and a file of the same name exists in the save directory, 
         overwrite it. If False, then the file to be overwritten will be moved
