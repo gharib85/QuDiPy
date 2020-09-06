@@ -37,7 +37,7 @@ class PotentialInterpolator:
             List of all control indices which only have a singleton dimension.
 
         Keyword Arguments
-        ----------
+        -----------------
         constants : Constants object, optional
             Constants object containing material parameter details.
             The default is a Constants object assuming vacuum as the material
@@ -47,12 +47,12 @@ class PotentialInterpolator:
             slice along the y-axis at which to take the 1D potential when 
             constructing the interpolator. Units should be specified in [m]. 
             The default is None.
-
+ 
         Returns
         -------
         None.
-
         '''
+
         # Build interpolator object (spline is not supported...)
         self.interp_obj = RegularGridInterpolator(tuple(ctrl_vals),
                                                   interp_data)
@@ -98,13 +98,12 @@ class PotentialInterpolator:
             Array of control variable value vectors at which we wish to find 
             the interpolated 2D potential. Each row corresponds to a new 
             control variable vector.
-
+            
         Returns
         -------
         result : 2D float array
             Interpolated 2D potential at the supplied control variable value
             vectors.
-
         '''
         
         # Make a list where each element in the list contains the grid points
@@ -196,7 +195,8 @@ class PotentialInterpolator:
             1D or 2D potential.
             
         Keyword Arguments
-        ----------
+        -----------------
+
         plot_type : string, optional
             Type of plot to show of the potential. Accepted arguments are:
             - '2D': show a 2D plot of the potential landscape. 
@@ -228,7 +228,6 @@ class PotentialInterpolator:
         Returns
         -------
         None.
-
         '''
 
         # If the potentialInterpolator only supports 1D potentials, then
@@ -259,7 +258,8 @@ class PotentialInterpolator:
                 meshgrid.
                 
             Keyword Arguments
-            ----------
+            -----------------
+
             wf_n : int, optional
                 Will plot the nth energy wavefunction. Indexing starts at 0
                 which indicates the ground state wavefunction.
@@ -452,7 +452,8 @@ class PotentialInterpolator:
             to sweep.
         
         Keyword Arguments
-        ----------
+        -----------------
+
         bnds : float array, optional
             An array specifying the min and max bounds of the swept control
             variable. The default is the full min and max bounds of the
@@ -739,7 +740,7 @@ class PotentialInterpolator:
         # Round value to the order of magnitude given by the tolerance.
         res_ctrl = np.round(res_ctrl,int(np.ceil(abs(np.log10(volt_tolerance)))))
         res_ctrl = float(res_ctrl)        
-        
+
         return res_ctrl
     
     

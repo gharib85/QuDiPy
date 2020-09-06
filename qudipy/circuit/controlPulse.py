@@ -7,6 +7,7 @@ Class for a control pulse
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
+from copy import deepcopy
 
 class ControlPulse:
     
@@ -23,7 +24,7 @@ class ControlPulse:
             "effective" control variables.
             
         Keyword Arguments
-        ----------
+        -----------------
         pulse_length : int, optional
             Total length of pulse in [s]. The default is -1.
             This is an optional keyword because 
@@ -89,6 +90,18 @@ class ControlPulse:
             interp_pulse[:,ctrl_idx] = self.ctrl_interps[ctrl](time_pts)
 
         return interp_pulse    
+
+    def copy(self):
+        '''
+        This method will do a deep copy of the current class object.
+
+        Returns
+        -------
+        ControlPulse
+            Deep copy of current ControlPulse object.
+
+        '''
+        return deepcopy(self)
     
     def plot(self, plot_ctrls='all', time_int='full', n=250):
         '''
@@ -96,7 +109,7 @@ class ControlPulse:
         and within some time interval.
 
         Keyword Arguments
-        ----------
+        -----------------
         plot_ctrls : list of strings, optional
             Specify the name of each control variable pulse you wish to plot
             or plot 'all'. The default is 'all'.

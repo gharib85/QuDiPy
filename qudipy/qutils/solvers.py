@@ -1,10 +1,13 @@
-__all__ = [
-    'build_1DSE_hamiltonian','build_2DSE_hamiltonian','solve_schrodinger_eq']
+"""
+Quantum utility solver functions
+
+@author: simba
+"""
 
 import numpy as np
 from scipy import sparse
 from scipy.sparse.linalg import eigs
-from qudipy.qutils.qmath import inner_prod
+from qudipy.qutils.math import inner_prod
 
 def build_1DSE_hamiltonian(consts, gparams):
     ''' 
@@ -113,7 +116,10 @@ def solve_schrodinger_eq(consts, gparams, n_sols=1):
     consts : Constants class
         Contains constants value for material system.
     gparams : GridParameters class
-        Contains grid and potential information.    
+        Contains grid and potential information.   
+        
+    Keyword Arguments
+    -----------------
     n_sols: int, optional
         Number of eigenvectors and eigenenergies to return. The default is 1.
 
