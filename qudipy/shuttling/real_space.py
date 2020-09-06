@@ -82,8 +82,8 @@ def RSP_time_evolution_1D(pot_interp, ctrl_pulse, dt=5E-16,
                     for i in I])
 
     # Calculate kinetic energy operators used in split-operator method
-    exp_K = np.exp(-1j*dt/2*np.multiply(P,P)/(2*consts.me*consts.hbar))
-    exp_KK = np.multiply(exp_K,exp_K)
+    exp_K = np.exp(-1j*dt/2*P**2/(2*consts.me*consts.hbar))
+    exp_KK = exp_K**2
 
     # Check if control pulse is iterable (i.e. multiple were supplied). If
     # only one was given, then wrap it in a list.
@@ -133,12 +133,12 @@ def RSP_time_evolution_1D(pot_interp, ctrl_pulse, dt=5E-16,
 
         # Convert the initial state to momentum space and evolve
         psi_p = fftshift(fft(psi_x))
-        psi_p = np.multiply(exp_K,psi_p)
+        psi_p = exp_K*psi_p
 
         # Initialize the plot if show animation is true
         if show_animation:
             # Find wavefunction probability
-            prob = np.real(np.multiply(psi_x.conj(), psi_x))
+            prob = np.real(psi_x.conj()*psi_x)
     
             # Set up figure for plotting evolution
             fig, ax_pot = plt.subplots()
@@ -212,19 +212,19 @@ def RSP_time_evolution_1D(pot_interp, ctrl_pulse, dt=5E-16,
 
             # Update wavefunction using split-operator method
             psi_x = ifft(ifftshift(psi_p))
-            psi_x = np.multiply(exp_P,psi_x)
+            psi_x = exp_P*psi_x
             psi_p = fftshift(fft(psi_x))     
             if t_idx != len(t_pts)-1:
-                psi_p = np.multiply(exp_KK,psi_p)
+                psi_p = exp_KK*psi_p
             else:
-                psi_p = np.multiply(exp_K,psi_p)
+                psi_p = exp_K*psi_p
                 psi_x = ifft(ifftshift(psi_p))
             
             # Show animation periodically
             if show_animation and (t_idx % update_ani_frames == 0 or
                                    t_idx == len(t_pts)-1):
                 # Get wavefunction probability
-                prob = np.real(np.multiply(psi_x.conj(), psi_x))
+                prob = np.real(psi_x.conj()*psi_x)
                                 
                 # Update figure data
                 line_pot.set_data(X, curr_potential)

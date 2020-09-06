@@ -29,10 +29,10 @@ def inner_prod(gparams, wf1, wf2):
     '''
     
     if gparams.grid_type == '1D':
-        inn_prod = np.trapz(np.multiply(wf1.conj(),wf2), x=gparams.x)
+        inn_prod = np.trapz(wf1.conj()*wf2, x=gparams.x)
     elif gparams.grid_type == '2D':
-        inn_prod = np.trapz(np.trapz(np.multiply(wf1.conj(),wf2), 
-                                     x=gparams.x, axis=1),gparams.y)
+        inn_prod = np.trapz(np.trapz(wf1.conj()*wf2, x=gparams.x, axis=1),
+                            gparams.y)
             
     return inn_prod
 
