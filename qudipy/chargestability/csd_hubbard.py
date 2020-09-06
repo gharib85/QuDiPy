@@ -5,6 +5,7 @@ For more information about the method, see the references https://doi.org/10.110
 
 import math
 import sys
+import copy
 import numpy as np
 import pandas as pd
 import seaborn as sb
@@ -77,7 +78,7 @@ class HubbardCSD:
         basis = []
         for combo in all_combos:
             if sum(combo) <= self.n_e:
-                basis.append(combo)
+                basis.append(list(combo))
 
         # Labels each index in the basis state with site number and spin direction (could add valley states)
         site = [f'site_{n+1}' for n in range(self.n_sites)]
@@ -88,11 +89,63 @@ class HubbardCSD:
 
 
     def _generate_h_t(self):
-        pass
+        h_t = np.zeros(self.fixed_hamiltonian.shape)
+        for i in range(self.fixed_hamiltonian.shape[0]):
+            for j in range(self.fixed_hamiltonian.shape[1]):
+                state_1 = self.basis[i]
+                state_2 = self.basis[j]
+
+                if sum(state_1) != sum(state_2):
+                    continue # No tunnel coupling between states with different charge occupation
+                
+                if sum(state_1[::2]) != sum(state_2[::2]):
+                    continue # No tunnel coupling between states with different nunber of spin states
+
+                result = 0
+                term_1 = 0
+                term_2 = 0
+                for k in range(len(self.basis_labels)):
+                    for l in range(k):
+                        term_1 += self._inner_product(state_1, self._create(self._annihilate(state_2, k), l))
+                        term_2 += self._inner_product(state_1, self._create(self._annihilate(state_2, l), k))
+
+                result += term_1 + term_2
+                h_t[i][j] = -result
+        return h_t
 
     def _generate_h_u(self):
         pass
 
+    def _inner_product(self, state_1, state_2):
+        '''
+        docstring
+        '''
+        if state_1==None or state_2==None: # Deals with cases where eigenvalue of number is 0, so the inner product is multiplied by 0
+            return 0
+        elif state_1 == state_2:
+            return 1
+        else:
+            return 0
+
+    def _create(self, state, position):
+        state = copy.copy(state)
+        if state == None:
+            pass # keep state as None
+        elif state[position] == 0:
+            state[position] = 1
+        else:
+            state = None
+        return state
+
+    def _annihilate(self, state, position):
+        state = copy.copy(state)
+        if state == None:
+            pass
+        elif state[position] == 1:
+            state[position] = 0
+        else:
+            state = None
+        return state
 
     def _lowest_energy(self, v_g1, v_g2):
         pass

@@ -162,7 +162,7 @@ class CSD:
         # Goes through all the v_1 and v_2 values and generate the csd data
 
         # Checks if a version after 3.8 is running in order to use the more efficient Walrus operator 
-        if sys.sys.version_info >= (3, 8): # check that 
+        if sys.sys.version_info >= (3, 8):
             data = [
                     [v_1, v_2, (p:= self._lowest_energy(v_1, v_2))[0] * dot_1_multiplier + p[1] * dot_2_multiplier
                     ] for v_1 in self.v_1_values for v_2 in self.v_2_values
