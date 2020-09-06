@@ -51,10 +51,6 @@ class QuantumCircuit:
        Reset the current gate index for the circuit sequence back to the 
        begining of the circuit.
 
-       Raises
-       ------
-       None.
-
        Returns
        -------
        None.

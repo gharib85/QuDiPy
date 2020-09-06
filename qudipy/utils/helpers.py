@@ -5,7 +5,8 @@ General helper utilities
 """
 
 import numpy as np
-
+import math
+        
 def find_nearest(array, value):
     '''
     Function to find the closest value to a number in a given array.

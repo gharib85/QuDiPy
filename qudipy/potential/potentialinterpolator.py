@@ -23,7 +23,7 @@ class PotentialInterpolator:
         '''
         Initialize the class which, at its core, is basically a wrapper for 
         the scipy RegularGridInterpolator class.
-
+        
         Parameters
         ----------
         ctrl_vals : 2D list
@@ -37,7 +37,7 @@ class PotentialInterpolator:
             List of all control indices which only have a singleton dimension.
 
         Keyword Arguments
-        ----------
+        -----------------
         constants : Constants object, optional
             Constants object containing material parameter details.
             The default is a Constants object assuming vacuum as the material
@@ -47,11 +47,10 @@ class PotentialInterpolator:
             slice along the y-axis at which to take the 1D potential when 
             constructing the interpolator. Units should be specified in [m]. 
             The default is None.
-
+            
         Returns
         -------
         None.
-
         '''
         # Build interpolator object (spline is not supported...)
         self.interp_obj = RegularGridInterpolator(tuple(ctrl_vals),
@@ -91,20 +90,19 @@ class PotentialInterpolator:
     def __call__(self, volt_vec_input):
         '''
         Call method for class
-
+        
         Parameters
         ----------
         volt_vec_input : 2D float array
             Array of control variable value vectors at which we wish to find 
             the interpolated 2D potential. Each row corresponds to a new 
             control variable vector.
-
+            
         Returns
         -------
         result : 2D float array
             Interpolated 2D potential at the supplied control variable value
             vectors.
-
         '''
         
         # Make a list where each element in the list contains the grid points
@@ -188,7 +186,7 @@ class PotentialInterpolator:
         '''
         Method for plotting the potential landscape at an arbitrary voltage 
         configuration.
-
+        
         Parameters
         ----------
         volt_vec : 1D float array
@@ -196,7 +194,7 @@ class PotentialInterpolator:
             1D or 2D potential.
             
         Keyword Arguments
-        ----------
+        -----------------
         plot_type : string, optional
             Type of plot to show of the potential. Accepted arguments are:
             - '2D': show a 2D plot of the potential landscape. 
@@ -224,11 +222,9 @@ class PotentialInterpolator:
             Will plot the nth energy wavefunction. Indexing starts at 0
             which indicates the ground state wavefunction.
             The default is 0.
-
         Returns
         -------
         None.
-
         '''
 
         # If the potentialInterpolator only supports 1D potentials, then
@@ -242,7 +238,7 @@ class PotentialInterpolator:
             '''
             Adds the wavefunction probability to an already created axes 
             object plot of the potential.
-
+            
             Parameters
             ----------
             ax : axis object
@@ -259,7 +255,7 @@ class PotentialInterpolator:
                 meshgrid.
                 
             Keyword Arguments
-            ----------
+            -----------------
             wf_n : int, optional
                 Will plot the nth energy wavefunction. Indexing starts at 0
                 which indicates the ground state wavefunction.
@@ -268,7 +264,6 @@ class PotentialInterpolator:
             Returns
             -------
             None.
-
             '''
              
             # Update color for old axis
@@ -439,7 +434,7 @@ class PotentialInterpolator:
         '''
         Find the resonant tunnel coupling point for a individual control
         variable in a given control vector.
-
+        
         Parameters
         ----------
         volt_vec : float array
@@ -452,7 +447,7 @@ class PotentialInterpolator:
             to sweep.
         
         Keyword Arguments
-        ----------
+        -----------------
         bnds : float array, optional
             An array specifying the min and max bounds of the swept control
             variable. The default is the full min and max bounds of the
@@ -468,13 +463,12 @@ class PotentialInterpolator:
             Specify the location along the slice_axis at which to find the 
             wavefunction peaks along. Units must be in [m]. 
             The default is 0 [m].
-
+            
         Returns
         -------
         res_ctrl : float
             The value of the control variable which gives the resonant tunnel
             coupling point.
-
         '''
 
         # If swept_ctrl is an integer, then no need to find the corresponding
@@ -539,19 +533,18 @@ class PotentialInterpolator:
         def _find_peaks(curr_val):
             '''
             Find the wavefunction peaks for a potential landscape.
-
+            
             Parameters
             ----------
             curr_val : float
                 The current search value of the swept control index.
-
+                
             Returns
             -------
             curr_peaks : 1D float array
                 Indicies of the found peaks.
             curr_props : dictionary
                 Diciontary of properties related to the found peaks.
-
             '''
             curr_volt_vec = volt_vec.copy()
             curr_volt_vec[swept_ctrl] = curr_val
@@ -704,17 +697,16 @@ class PotentialInterpolator:
         def find_peak_difference(curr_val):
             '''
             Find the difference in peak height between two wavefunction peaks.
-
+            
             Parameters
             ----------
             curr_val : float
                 The current search value of the swept control index.
-
+                
             Returns
             -------
             pk_diff : float
                 Difference in height between the two peaks.
-
             '''
             
             # Find wavefunction peak at curr_val
@@ -739,7 +731,6 @@ class PotentialInterpolator:
         # Round value to the order of magnitude given by the tolerance.
         res_ctrl = np.round(res_ctrl,int(np.ceil(abs(np.log10(volt_tolerance)))))
         res_ctrl = float(res_ctrl)        
-        
+
         return res_ctrl
-    
     

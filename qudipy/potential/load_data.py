@@ -18,7 +18,6 @@ def build_interpolator(load_data_dict, constants=qd.Constants(),
     '''
     This function constructs an interpolator object for either a group of 
     potential or electric field files.
-
     Parameters
     ----------
     all_data_sep : dict
@@ -42,7 +41,6 @@ def build_interpolator(load_data_dict, constants=qd.Constants(),
     -------
     interp_obj : Mod_RegularGridInterpolator class
         Interpolant object for the data inputted into the function.
-
     '''
     
     # Get first set of x and y coordinates
@@ -115,7 +113,7 @@ def load_potentials(ctrl_vals, ctrl_names, f_type='pot', f_dir=None,
     'TYPE_C1NAME_C1VAL_C2NAME_C2VAL_..._CNNAME_CNVAL.txt'
     where TYPE = 'Uxy' or 'Ez'. 
     Refer to tutorial for a more explicit example.
-
+    
     Parameters
     ----------
     ctrl_vals : list of list of floats
@@ -127,7 +125,7 @@ def load_potentials(ctrl_vals, ctrl_names, f_type='pot', f_dir=None,
         first dimension.
         
     Keyword Arguments
-    ----------
+    -----------------
     f_type : string, optional
         Type of file to load (either potential or electric field). Acceptable 
         arguments include ['pot','potential','Uxy','electric','field','Ez'].
@@ -159,7 +157,6 @@ def load_potentials(ctrl_vals, ctrl_names, f_type='pot', f_dir=None,
         the potential data for each loaded file, and the corresponding votlage
         vector for each file.
         Fields = ['coords', 'potentials', 'ctrl_vals']
-
     '''
 
     # Check inputs
@@ -203,7 +200,7 @@ def load_potentials(ctrl_vals, ctrl_names, f_type='pot', f_dir=None,
         # Convert units if needed
         if f_pot_units == 'eV':
             # Just need to get electron charge
-            constants = qd.Constants('air')
+            constants = qd.Constants('vacuum')
             pot *= constants.e
             
         if f_dis_units == 'nm':
@@ -250,6 +247,3 @@ def load_potentials(ctrl_vals, ctrl_names, f_type='pot', f_dir=None,
     
     
     return all_files
-    
-    
-    
