@@ -91,7 +91,7 @@ class HubbardCSD:
     def _generate_h_t(self):
         h_t = np.zeros(self.fixed_hamiltonian.shape)
         for i in range(self.fixed_hamiltonian.shape[0]):
-            for j in range(self.fixed_hamiltonian.shape[1]):
+            for j in range(i):
                 state_1 = self.basis[i]
                 state_2 = self.basis[j]
 
@@ -111,6 +111,7 @@ class HubbardCSD:
 
                 result += term_1 + term_2
                 h_t[i][j] = -result
+                h_t[j][i] = -result #Since matrix is symmetric
         return h_t
 
     def _generate_h_u(self):
