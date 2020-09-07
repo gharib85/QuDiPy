@@ -7,7 +7,6 @@ import math
 import sys
 import copy
 import numpy as np
-from numpy.lib.function_base import diff
 import pandas as pd
 import seaborn as sb
 import matplotlib.pyplot as plt
@@ -72,9 +71,10 @@ class HubbardCSD:
 
     def _generate_basis(self):
 
-        # Compute all possible occupations with the cartesian product, and then 
-        # remove all states that exceed the number of 
-        all_combos = list(itertools.product(*[[0,1] for i in range(self.n_sites * 2)])) # * 2 is for spin degeneracy (could add anouth *2 for valleys)
+        # Compute all possible occupations with the cartesian product, and then
+        # remove all states that exceed the number of electron specified
+        # TODO make this more efficient so we only generate the states we want
+        all_combos = list(itertools.product(*[[0,1] for i in range(self.n_sites * 2)])) # * 2 is for spin degeneracy (could add another *2 for valleys)
 
         basis = []
         for combo in all_combos:
@@ -122,12 +122,13 @@ class HubbardCSD:
                 result = 0
                 for k in range(len(self.basis_labels)):
                     for l in range(k):
-                        result += self._inner_product(state_1, self._number(self._number(state_1, k), l))
+                        if self.basis_labels[k][0] == self.basis_labels[l][0]: # check if electrons are on same site
+                            result += 2 * self._inner_product(state_1, self._number(self._number(state_1, k), l))
+                        else:
+                            result += self._inner_product(state_1, self._number(self._number(state_1, k), l))
 
                 h_u[i][i] = result
         return h_u
-
-        
 
     def _inner_product(self, state_1, state_2):
         '''
