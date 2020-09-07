@@ -7,6 +7,7 @@ import math
 import sys
 import copy
 import numpy as np
+from numpy.lib.function_base import diff
 import pandas as pd
 import seaborn as sb
 import matplotlib.pyplot as plt
@@ -87,7 +88,6 @@ class HubbardCSD:
 
         return basis, basis_labels
 
-
     def _generate_h_t(self):
         h_t = np.zeros(self.fixed_hamiltonian.shape)
         for i in range(self.fixed_hamiltonian.shape[0]):
@@ -99,7 +99,7 @@ class HubbardCSD:
                     continue # No tunnel coupling between states with different charge occupation
                 
                 if sum(state_1[::2]) != sum(state_2[::2]):
-                    continue # No tunnel coupling between states with different nunber of spin states
+                    continue # No tunnel coupling between states with different number of spins in each orientation
 
                 result = 0
                 term_1 = 0
@@ -115,7 +115,19 @@ class HubbardCSD:
         return h_t
 
     def _generate_h_u(self):
-        pass
+        h_u = np.zeros(self.fixed_hamiltonian.shape)
+        for i in range(self.fixed_hamiltonian.shape[0]):
+                state_1 = self.basis[i]
+
+                result = 0
+                for k in range(len(self.basis_labels)):
+                    for l in range(k):
+                        result += self._inner_product(state_1, self._number(self._number(state_1, k), l))
+
+                h_u[i][i] = result
+        return h_u
+
+        
 
     def _inner_product(self, state_1, state_2):
         '''
@@ -129,6 +141,9 @@ class HubbardCSD:
             return 0
 
     def _create(self, state, position):
+        '''
+        docstring
+        '''
         state = copy.copy(state)
         if state == None:
             pass # keep state as None
@@ -139,6 +154,9 @@ class HubbardCSD:
         return state
 
     def _annihilate(self, state, position):
+        '''
+        docstring
+        '''
         state = copy.copy(state)
         if state == None:
             pass
@@ -147,6 +165,13 @@ class HubbardCSD:
         else:
             state = None
         return state
+
+    def _number(self, state, position):
+        '''
+        docstring
+        '''
+        return self._create(self._annihilate(state, position), position)
+
 
     def _lowest_energy(self, v_g1, v_g2):
         pass
