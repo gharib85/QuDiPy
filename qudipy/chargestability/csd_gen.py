@@ -8,8 +8,10 @@ import pandas as pd
 import seaborn as sb
 import matplotlib.pyplot as plt
 from scipy.ndimage import gaussian_filter
+from ..utils.constants import Constants
 
-e = 1.602176634 * 10**-19  # TODO figure out relative imports for common constants
+const = Constants()
+e = const.e
 
 
 class CSD:

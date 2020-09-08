@@ -14,6 +14,7 @@ import matplotlib.pyplot as plt
 import itertools
 from scipy import linalg as la
 from scipy.ndimage import gaussian_filter
+from ..utils.constants import Constants
 
 class HubbardCSD:
     '''
@@ -21,7 +22,7 @@ class HubbardCSD:
     Based on section III in https://doi.org/10.1103/PhysRevB.83.235314.
     This class is intended for use with NextNano potentials to simulate charge stability diagrams of various designs, but can also be used with analytic potentials.
     '''
-    def __init__(self, n_sites, n_e, h_mu=False, h_t=False, h_u=False):
+    def __init__(self, n_sites, n_e, h_mu=False, h_t=False, h_u=False, **kwargs):
         '''
 
         Parameters
@@ -40,10 +41,16 @@ class HubbardCSD:
         None
         '''
 
+
+        const = Constants()
+        self.e = const.e
         # Save which parts of Hamiltonian to be used for later
         self.h_mu = h_mu
         self.h_t = h_t
         self.h_u = h_u
+
+        for key, item in kwargs.items():
+            self.__setattr__(key, item)
 
         if self.h_mu is False:
             raise Exception("Hamiltonian will be independent of gate volatges so no charge stability diagram can be generated")
@@ -84,6 +91,7 @@ class HubbardCSD:
         data = []
         for v_1 in self.v_1_values:
             for v_2 in self.v_2_values:
+                mu_1, mu_2 = self._volt_to_chem_pot(v_1, v_2)
                 h_mu = np.zeros(self.fixed_hamiltonian.shape)
 
                 for i in range(self.fixed_hamiltonian.shape[0]):
@@ -92,9 +100,9 @@ class HubbardCSD:
                     result = 0
                     for k in range(len(self.basis_labels)):
                         if k == 0 or k == 1:
-                            result += - v_1 * self._inner_product(state_1, self._number(state_1, k))
+                            result += - mu_1 * self._inner_product(state_1, self._number(state_1, k))
                         if k == 2 or k == 3:
-                            result += - v_2 * self._inner_product(state_1, self._number(state_1, k))
+                            result += - mu_2 * self._inner_product(state_1, self._number(state_1, k))
 
                     h_mu[i][i] = result
 
@@ -191,6 +199,13 @@ class HubbardCSD:
 
                 h_u[i][i] = result
         return h_u
+
+    def _volt_to_chem_pot(self, v_1, v_2):
+        alpha_1 = ((self.U_2 - self.U_12) * self.U_1) / (self.U_1 * self.U_2 - self.U_12**2)
+        alpha_2 = ((self.U_1 - self.U_12) * self.U_2) / (self.U_1 * self.U_2 - self.U_12**2)
+        mu_1 = self.e * (alpha_1 * v_1 + (1 - alpha_1) * v_2)
+        mu_2 = self.e * ((1 - alpha_2) * v_1 + alpha_2 * v_2)
+        return mu_1, mu_2
 
     def _inner_product(self, state_1, state_2):
         '''
