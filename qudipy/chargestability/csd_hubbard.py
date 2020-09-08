@@ -7,11 +7,12 @@ import math
 import sys
 import copy
 import numpy as np
+from numpy.linalg.linalg import eigvals
 import pandas as pd
 import seaborn as sb
 import matplotlib.pyplot as plt
 import itertools
-from scipy import linalg
+from scipy import linalg as la
 from scipy.ndimage import gaussian_filter
 
 class HubbardCSD:
@@ -69,6 +70,67 @@ class HubbardCSD:
         if h_u is True:
             self.fixed_hamiltonian += self._generate_h_u()
 
+    def generate_csd(self, v_g1_max, v_g2_max, v_g1_min=0, v_g2_min=0, c_cs_1=None, c_cs_2=None, num=100, plotting=False, blur=False, blur_sigma=0):
+
+        self.num = num
+        self.v_g1_min = v_g1_min
+        self.v_g1_max = v_g1_max
+        self.v_g2_min = v_g2_min
+        self.v_g2_max = v_g2_max
+
+        self.v_1_values = [round(self.v_g1_min + i/num * (v_g1_max - self.v_g1_min), 4) for i in range(num)]
+        self.v_2_values = [round(self.v_g2_min + j/num * (v_g2_max - self.v_g2_min), 4) for j in range(num)]
+
+        data = []
+        for v_1 in self.v_1_values:
+            for v_2 in self.v_2_values:
+                h_mu = np.zeros(self.fixed_hamiltonian.shape)
+
+                for i in range(self.fixed_hamiltonian.shape[0]):
+                    state_1 = self.basis[i]
+
+                    result = 0
+                    for k in range(len(self.basis_labels)):
+                        if k == 0 or k == 1:
+                            result += - v_1 * self._inner_product(state_1, self._number(state_1, k))
+                        if k == 2 or k == 3:
+                            result += - v_2 * self._inner_product(state_1, self._number(state_1, k))
+
+                    h_mu[i][i] = result
+
+                eigenvals, eigenvects = la.eig(self.fixed_hamiltonian + h_mu)
+                eigenvals = np.round(eigenvals, 4) # To avoid numerical imprecision
+                eigenvects = np.round(eigenvects, 4)
+                lowest_eigenvect = eigenvects[np.where(eigenvals == eigenvals.min())]
+                occupation = (lowest_eigenvect * np.array([sum(x) for x in self.basis])).sum(1).mean()
+                data.append([v_1, v_2, occupation])
+
+        data = np.real(data)
+        df = pd.DataFrame(data, columns=['V_g1', 'V_g2', 'Current'])
+        self.csd = df.pivot_table(index='V_g1', columns='V_g2', values='Current')
+
+        # Show plots if flag is set to True
+        if plotting is True:
+
+            # Toggles colorbar if charge sensor information is given
+            cbar_flag = False
+            if (c_cs_1 is not None) and (c_cs_2 is not None):
+                cbar_flag = True
+
+            # Plot the chagre stability diagram
+            p1 = sb.heatmap(self.csd, cbar=cbar_flag, xticklabels=int(
+                num/5), yticklabels=int(num/5), cbar_kws={'label': 'Current (arb.)'})
+            p1.axes.invert_yaxis()
+            p1.set(xlabel=r'V$_1$', ylabel=r'V$_2$')
+            plt.show()
+
+            # # Plot the "derivative" of the charge stability diagram
+            # p2 = sb.heatmap(df_der, cbar=cbar_flag, xticklabels=int(
+            # num/5), yticklabels=int(num/5))
+            # p2.axes.invert_yaxis()
+            # p2.set(xlabel=r'V$_1$', ylabel=r'V$_2$')
+            # plt.show()
+
     def _generate_basis(self):
 
         # Compute all possible occupations with the cartesian product, and then
@@ -106,8 +168,8 @@ class HubbardCSD:
                 term_2 = 0
                 for k in range(len(self.basis_labels)):
                     for l in range(k):
-                        term_1 += self._inner_product(state_1, self._create(self._annihilate(state_2, k), l))
-                        term_2 += self._inner_product(state_1, self._create(self._annihilate(state_2, l), k))
+                        term_1 += 0.1 * self._inner_product(state_1, self._create(self._annihilate(state_2, k), l))
+                        term_2 += 0.1 * self._inner_product(state_1, self._create(self._annihilate(state_2, l), k))
 
                 result += term_1 + term_2
                 h_t[i][j] = -result
@@ -123,9 +185,9 @@ class HubbardCSD:
                 for k in range(len(self.basis_labels)):
                     for l in range(k):
                         if self.basis_labels[k][0] == self.basis_labels[l][0]: # check if electrons are on same site
-                            result += 2 * self._inner_product(state_1, self._number(self._number(state_1, k), l))
+                            result += 0.5 * self._inner_product(state_1, self._number(self._number(state_1, k), l))
                         else:
-                            result += self._inner_product(state_1, self._number(self._number(state_1, k), l))
+                            result += 0.25 * self._inner_product(state_1, self._number(self._number(state_1, k), l))
 
                 h_u[i][i] = result
         return h_u
@@ -173,10 +235,6 @@ class HubbardCSD:
         '''
         return self._create(self._annihilate(state, position), position)
 
-
-    def _lowest_energy(self, v_g1, v_g2):
-        pass
-
     def load_potential(self, file_path):
         # TODO
-            pass
+        pass

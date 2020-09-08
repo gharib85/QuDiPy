@@ -157,8 +157,8 @@ class CSD:
             dot_2_multiplier = max_occupation[0] + 1
 
         # Generates all the voltages to be swept
-        self.v_1_values = [round(self.v_g1_min + i/num * (self.v_g1_max - self.v_g1_min), 4) for i in range(num)]
-        self.v_2_values = [round(self.v_g2_min + j/num * (self.v_g2_max - self.v_g2_min), 4) for j in range(num)]
+        self.v_1_values = [round(self.v_g1_min + i/num * (self.v_g1_max - self.v_g1_min), 4) for i in range(self.num)]
+        self.v_2_values = [round(self.v_g2_min + j/num * (self.v_g2_max - self.v_g2_min), 4) for j in range(self.num)]
         # Goes through all the v_1 and v_2 values and generate the csd data
 
         # Checks if a version after 3.8 is running in order to use the more efficient Walrus operator 
