@@ -110,8 +110,10 @@ class HubbardCSD:
                 eigenvals = np.round(eigenvals, 4) # To avoid numerical imprecision
                 eigenvects = np.round(eigenvects, 4)
                 lowest_eigenvect = eigenvects[np.where(eigenvals == eigenvals.min())]
-                occupation = (lowest_eigenvect * np.array([sum(x) for x in self.basis])).sum(1).mean()
-                data.append([v_1, v_2, occupation])
+                occupation_1 = (lowest_eigenvect * np.array([sum(x[:2]) for x in self.basis])).sum(1).mean()
+                occupation_2 = (lowest_eigenvect * np.array([sum(x[2:4]) for x in self.basis])).sum(1).mean()
+                current = occupation_1 * c_cs_1 + occupation_2 * c_cs_2
+                data.append([v_1, v_2, current])
 
         data = np.real(data)
         df = pd.DataFrame(data, columns=['V_g1', 'V_g2', 'Current'])
@@ -152,9 +154,9 @@ class HubbardCSD:
                 basis.append(list(combo))
 
         # Labels each index in the basis state with site number and spin direction (could add valley states)
-        site = [f'site_{n+1}' for n in range(self.n_sites)]
-        spin = ['spin_up', 'spin_down']
-        basis_labels = list(itertools.product(site, spin))
+        self.sites = [f'site_{n+1}' for n in range(self.n_sites)]
+        self.spins = ['spin_up', 'spin_down']
+        basis_labels = list(itertools.product(self.sites, self.spins))
 
         return basis, basis_labels
 
@@ -176,8 +178,8 @@ class HubbardCSD:
                 term_2 = 0
                 for k in range(len(self.basis_labels)):
                     for l in range(k):
-                        term_1 += 0.1 * self._inner_product(state_1, self._create(self._annihilate(state_2, k), l))
-                        term_2 += 0.1 * self._inner_product(state_1, self._create(self._annihilate(state_2, l), k))
+                        term_1 += self.t * self._inner_product(state_1, self._create(self._annihilate(state_2, k), l))
+                        term_2 += self.t * self._inner_product(state_1, self._create(self._annihilate(state_2, l), k))
 
                 result += term_1 + term_2
                 h_t[i][j] = -result
@@ -203,8 +205,8 @@ class HubbardCSD:
     def _volt_to_chem_pot(self, v_1, v_2):
         alpha_1 = ((self.U_2 - self.U_12) * self.U_1) / (self.U_1 * self.U_2 - self.U_12**2)
         alpha_2 = ((self.U_1 - self.U_12) * self.U_2) / (self.U_1 * self.U_2 - self.U_12**2)
-        mu_1 = self.e * (alpha_1 * v_1 + (1 - alpha_1) * v_2)
-        mu_2 = self.e * ((1 - alpha_2) * v_1 + alpha_2 * v_2)
+        mu_1 = (alpha_1 * v_1 + (1 - alpha_1) * v_2)
+        mu_2 = ((1 - alpha_2) * v_1 + alpha_2 * v_2)
         return mu_1, mu_2
 
     def _inner_product(self, state_1, state_2):
