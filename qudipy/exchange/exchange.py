@@ -8,11 +8,72 @@ import numpy as np
 import math
 import qudipy as qd
 
-def build_HO_basis(gparams, omega, nx, ny=0, consts=qd.Constants('vacuum'),
-                   ecc=1.0):
+def optimize_HO_omega(gparams, nx, ny=0, omega_guess=1, n_orbs_compared=2,
+                   optimality_tol=1E-6, consts=qd.Constants("vacuum")):
+    
+    
+    # First thing to do is find the first few single electron orbitals from
+    # the potential landscape.
+    __, se_orbitals = qd.qutils.solvers.solve_schrodinger_eq(consts, gparams, 
+                                                             n_sols=n_orbs_compared)
+
+    def find_HO_wf_difference(curr_log_w):
+        
+        # Undo omega log
+        curr_w = 10**curr_log_w
+        
+        # Find current basis of HOs
+        curr_HOs = build_HO_basis(gparams, curr_w, nx, ny, ecc=1.0,
+                                  consts=consts)
+
     '''
-    Build of basis of 1D or 2D harmonic orbitals. The origin coordinates for
-    this basis can be moved.
+    % Anonymous function so we can pass s(g)params and the itin WFs into
+    % the optimizer
+    fun = @(w)findWFDifference(w, sparams, gparams_opt, wfsToCompare);
+
+    % Perform the optimization
+    % If a parpool is running, take advantage of it
+    if ~isempty(gcp('nocreate'))
+        options = optimoptions(@fminunc,...%'Display','iter',...
+            'Algorithm','quasi-newton','OptimalityTolerance', tols,...
+            'UseParallel',true);
+    else
+        options = optimoptions(@fminunc,...%'Display','iter',...
+            'Algorithm','quasi-newton','OptimalityTolerance', tols);
+    end
+    logOmegaGuess = log10(omegaGuess);
+    optOmega = 10^fminunc(fun,logOmegaGuess,options);
+end
+
+function diffWF = findWFDifference(logOmegaGuess, sparams, gparams_opt, wfsToCompare)
+    % For the current omega guess, construct the basis of harmonic orbitals
+    % centered at the origin
+    omegaGuess = 10^logOmegaGuess;
+    
+    basisNewOmega = createOriginHOs(sparams, gparams_opt, omegaGuess, 0);
+    
+    % Now calculate the inner product of this basis and the itinerant basis
+    normFlag = 0;
+    Tmatrix = findTMatrixViaInnerProd(gparams_opt, basisNewOmega, wfsToCompare, normFlag);
+    
+    % Tmatrix contains all <itin_i|origin_j> inner products.  If we have
+    % chosen a good omega, then SUM(|<itin_i|origin_J>|^2) will be close to
+    % 1.  We want to maximize this value as it means the basis of origin
+    % harmonic orbitals approximates the itin orbitals well.
+    minCondition = abs(1-diag(Tmatrix*Tmatrix'));
+    % Now average this difference for all of the itin wavefunctions we are
+    % considering.
+    [~,nWFs] = size(wfsToCompare);
+    diffWF = sum(minCondition)/nWFs;
+end
+
+    '''
+
+def build_HO_basis(gparams, omega, nx, ny=0, ecc=1.0,
+                   consts=qd.Constants('vacuum')):
+    '''
+    Build of basis of 1D or 2D harmonic orbitals centered at the origin of the
+    coordinate system.
 
     Parameters
     ----------
@@ -28,12 +89,12 @@ def build_HO_basis(gparams, omega, nx, ny=0, consts=qd.Constants('vacuum'),
     ny : int, optional
         Number of modes along the y direction to include in the basis set. 
         Only applicable is gparams is for a '2D' system. The default is 0.
-    consts : Constants object, optional
-        Specify the material system constants when building the harmonic
-        orbitals. The default assumes 'vacuum' as the material system.
     ecc : float, optional
         Specify the eccentricity of the harmonic orbitals defined as 
         ecc = omega_y/omega_x. The default is 1.0 (omega_y = omega_x).
+    consts : Constants object, optional
+        Specify the material system constants when building the harmonic
+        orbitals. The default assumes 'vacuum' as the material system.
 
     Returns
     -------

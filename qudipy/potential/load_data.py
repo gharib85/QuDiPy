@@ -188,7 +188,7 @@ def load_potentials(ctrl_vals, ctrl_names, f_type='pot', f_dir=None,
         
         # After file name is constructed, load the data from file into a larger
         # list containing information about all the loaded files.
-
+        
         # Load file
         data = pd.read_csv(f_dir+f_name, header=None).to_numpy()
         

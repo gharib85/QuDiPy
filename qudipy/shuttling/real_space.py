@@ -125,7 +125,7 @@ def RSP_time_evolution_1D(pot_interp, ctrl_pulse, dt=5E-16,
 
         # Find the initial ground state wavefunction
         __, e_vecs = qt.solvers.solve_schrodinger_eq(consts, gparams, n_sols=1)
-        psi_x = e_vecs[:,0]
+        psi_x = e_vecs[0]
 
         # Get array of time points to sweep over
         p_length = curr_pulse.length
@@ -241,14 +241,14 @@ def RSP_time_evolution_1D(pot_interp, ctrl_pulse, dt=5E-16,
                 gparams.update_potential(curr_potential)
                 __, e_vecs = qt.solvers.solve_schrodinger_eq(consts, gparams,
                                                              n_sols=1)
-                ground_psi = e_vecs[:,0]
+                ground_psi = e_vecs[0]
                 
                 # Save current time index
                 save_t[save_idx] = t_pts[t_idx]
                 
                 # Calculate fidelity of simulated wavefunction w.r.t. ground 
                 # state
-                inner = abs(qd.qutils.math.inner_prod(gparams, ground_psi,
+                inner = abs(qd.qutils.qmath.inner_prod(gparams, ground_psi,
                                                       psi_x))**2
         
                 # Save fidelity w.r.t. ground state

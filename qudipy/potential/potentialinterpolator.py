@@ -13,7 +13,7 @@ from scipy.optimize import fminbound
 import qudipy as qd
 import qudipy.utils as utils
 from qudipy.qutils.solvers import solve_schrodinger_eq
-from qudipy.qutils.math import inner_prod
+from qudipy.qutils.qmath import inner_prod
 from qudipy.potential import GridParameters
 
 class PotentialInterpolator:
@@ -294,12 +294,12 @@ class PotentialInterpolator:
             if slice_axis == 'y':
                 gparams_1D = GridParameters(self.x_coords)
                 if self.grid_type == '2D':
-                    state = np.squeeze(state[slice_idx,:,wf_n])
+                    state = np.squeeze(state[wf_n,slice_idx,:])
                 elif self.grid_type == '1D':
-                    state = np.squeeze(state[:,wf_n])
+                    state = np.squeeze(state[wf_n,:])
             elif slice_axis == 'x':
                 gparams_1D = GridParameters(self.y_coords)
-                state = np.squeeze(state[:,slice_idx,wf_n])
+                state = np.squeeze(state[wf_n,:,slice_idx])
                 
             # Renormalize wf and find probability
             state = state/np.sqrt(inner_prod(gparams_1D, state, state))
@@ -409,7 +409,7 @@ class PotentialInterpolator:
                                              potential=int_pot)
                 _, state = solve_schrodinger_eq(self.constants, gparams,
                                                 n_sols=(wf_n+1))
-                state = np.squeeze(state[:,:,wf_n])
+                state = np.squeeze(state[wf_n,:,:])
                 
                 state_prob = np.real(np.multiply(state, state.conj()))
                        
@@ -553,13 +553,13 @@ class PotentialInterpolator:
             gparams.update_potential(curr_pot)
         
             # Find wavefunction and probability distribution
-            _, state = solve_schrodinger_eq(self.constants, gparams)
+            _, state = solve_schrodinger_eq(self.constants, gparams, n_sols=1)
             # Get 1D wavefunction and renormalize
             if self.grid_type == '2D':
                 if slice_axis=='y':
-                    state = np.squeeze(state[slice_idx,:])
+                    state = np.squeeze(state[0,slice_idx,:])
                 elif slice_axis=='x':
-                    state = np.squeeze(state[:,slice_idx])
+                    state = np.squeeze(state[0,:,slice_idx])
             elif self.grid_type == '1D':
                 state = np.squeeze(state)
                 

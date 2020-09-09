@@ -7,7 +7,7 @@ Quantum utility solver functions
 import numpy as np
 from scipy import sparse
 from scipy.sparse.linalg import eigs
-from qudipy.qutils.math import inner_prod
+from qudipy.qutils.qmath import inner_prod
 
 def build_1DSE_hamiltonian(consts, gparams):
     ''' 
@@ -128,8 +128,9 @@ def solve_schrodinger_eq(consts, gparams, n_sols=1):
     eig_ens : complex 1D array
         Lowest eigenenergies sorted in ascending order.
     eig_vecs : complex 2D array
-        Corresponding eigenvectors in natural order format. eig_vecs[:,i] is 
-        the eigenvector for eigenvalue eig_ens[i].
+        Corresponding eigenvectors in either natural order (1D) or meshgrid 
+        (2D) format. eig_vecs[i] is the ith eigenvector with corresponding
+        eigenvalue eig_ens[i].
         
 
     '''
@@ -147,20 +148,23 @@ def solve_schrodinger_eq(consts, gparams, n_sols=1):
     # Sort the eigenvalues in ascending order (if not already)
     idx = eig_ens.argsort()   
     eig_ens = eig_ens[idx]
-    eig_vecs = eig_vecs[:,idx]
+    # Transpose so first index corresponds to the ith e-vector
+    eig_vecs = eig_vecs.T
+    # Sort eigenvectors to match eigenvalues
+    eig_vecs = eig_vecs[idx,:]
     
     # Normalize the wavefunctions and convert to meshgrid format if it's a 2D
     # grid system
     if gparams.grid_type == '2D':
-        eig_vecs_mesh = np.zeros((gparams.ny, gparams.nx, n_sols),
+        eig_vecs_mesh = np.zeros((n_sols, gparams.ny, gparams.nx),
                                  dtype=complex)
     for idx in range(n_sols):
-        curr_wf = eig_vecs[:,idx]
+        curr_wf = eig_vecs[idx,:]
         
         if gparams.grid_type == '1D':
             norm_val = inner_prod(gparams, curr_wf, curr_wf)
         
-            eig_vecs[:,idx] = curr_wf/np.sqrt(norm_val)
+            eig_vecs[idx,:] = curr_wf/np.sqrt(norm_val)
         
         if gparams.grid_type == '2D':
             norm_val = inner_prod(gparams, gparams.convert_NO_to_MG(
@@ -168,7 +172,7 @@ def solve_schrodinger_eq(consts, gparams, n_sols=1):
         
             curr_wf = curr_wf/np.sqrt(norm_val)
             
-            eig_vecs_mesh[:,:,idx] = gparams.convert_NO_to_MG(curr_wf)
+            eig_vecs_mesh[idx,:,:] = gparams.convert_NO_to_MG(curr_wf)
             
     if gparams.grid_type == "2D":
         eig_vecs = eig_vecs_mesh
