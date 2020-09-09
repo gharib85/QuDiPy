@@ -6,55 +6,52 @@ Quantum utility math functions
 
 import numpy as np
 
-def find_basis_T_inner_prod(gparams, basis1):
-    pass
+def find_overlap_matrix(gparams, basis_1_wfs, basis_2_wfs):
     '''
-    function Tmatrix = findTMatrixViaInnerProd( gparams, basis1, basis2, normFlag )
-%FINDTMATRIXVIAINNERPROD Finds a transformation matrix to change between
-%   a given basis and another basis by calculating the explicit inner
-%   products to form the transformations.
-%   T: basis1 -> basis2
+    Calculates the overlap matrix S between two sets of basis vectors. The
+    size of S is NxM where N = size(basis 1) and M = size(basis 2).
 
-    if nargin < 4
-        normFlag = 1;
-    end
+    Parameters
+    ----------
+    gparams : GridParameters object
+        Contains grid information.
+    basis_1_wfs : array
+        Set of basis states where the first index in the array corresponds to 
+        the ith state. The state must be a meshgrid if a 2D grid is used.
+    basis_2_wfs : array
+        Set of basis states where the first index in the array corresponds to 
+        the ith state. The state must be a meshgrid if a 2D grid is used.
 
-    XX = gparams.XX;
-    YY = gparams.YY;
+    Returns
+    -------
+    S_matrix : array
+        Overlap matrix between basis 1 and basis 2.
 
-    [~,size1] = size(basis1);
-    [~,size2] = size(basis2);
-
-    Tmatrix = zeros(size2,size1);
+    '''
     
-    for jj = 1:size1
-        state1 = basis1(jj).wavefunctionMG;
-        for ii = 1:size2
-            state2 = basis2(ii).wavefunctionMG;
+    num_basis_1 = basis_1_wfs.shape[0]
+    num_basis_2 = basis_2_wfs.shape[0]
+    
+    S_matrix = np.zeros((num_basis_2, num_basis_1), dtype=complex)
+    
+    for j_idx in range(num_basis_1):
+        wf_1 = basis_1_wfs[j_idx]
+        
+        for i_idx in range(num_basis_2):
+            wf_2 = basis_2_wfs[i_idx]
             
-            % T matrix with T_ij = <alpha_j|r_i>
-            Tmatrix(ii,jj) = getInnerProduct2D(state1,state2,XX,YY);
-        end
-        if flag == 1
-            break;
-        end
-    end
-    
-    if normFlag
-        % Normalize each row 
-        for ii = 1:size2
-            Tmatrix(ii,:) = Tmatrix(ii,:)/norm(Tmatrix(ii,:));
-        end
-    end
-end
-'''
+            # S_ij = <b2_i|b1_j>
+            S_matrix[i_idx,j_idx] = inner_prod(gparams, wf_2, wf_1)
+
+    return S_matrix
+
 def inner_prod(gparams, wf1, wf2):
     '''
     Evaluates the inner product between two complex wavefunctions.
 
     Parameters
     ----------
-    gparams : GridParameters class
+    gparams : GridParameters object
         Contains grid and potential information.
     wf1 : complex array
         'Bra' wavefunction for the inner product. If grid is 2D, then the 

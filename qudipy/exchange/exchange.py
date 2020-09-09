@@ -7,15 +7,67 @@ Functions for calculating the exchange interaction.
 import numpy as np
 import math
 import qudipy as qd
+from scipy.optimize import minimize
 
-def optimize_HO_omega(gparams, nx, ny=0, omega_guess=1, n_orbs_compared=2,
-                   optimality_tol=1E-6, consts=qd.Constants("vacuum")):
+def optimize_HO_omega(gparams, nx, ny=None, omega_guess=1E15, n_SE_orbs=2,
+                   opt_tol=1E-7, consts=qd.Constants("vacuum")):
+    '''
+    Find an optimal choice of omega used when building a basis of harmonic 
+    orbitals centered at the origin which are used to approximate the single 
+    electron orbitals of a potential. Minimization is done using the BFGS 
+    algorithm. If the algorithm fails, this function will return None.
+
+    Parameters
+    ----------
+    gparams : GridParamters object
+        Contains the grid and potential information.
+    nx : int
+        Number of modes along the x direction to include in the harmonic 
+        orbital basis set.
+        
+    Keyword Arguments
+    -----------------
+    ny : int, optional
+        Number of modes along the y direction to include in the harmonic 
+        orbital basis set. The default is nx.
+    omega_guess : float, optional
+        Initial guess for omega in the optimization. If the grid was infinitely
+        large and dense, then choice of omega_guess is not important. For finite
+        grid sizes, a poor choice of omega can cause the harmonic orbitals 
+        themselves to be larger than than the grid itself. This causes
+        obvious orthogonality issues. Therefore, it is heavily suggested that
+        omega_guess is supplied with a decent guess. The default is 1E15 which
+        should be smaller than most reasonable grid spacings in SI units.
+    n_SE_orbs : int, optional
+        Number of single electron orbitals to compare to when checking how well
+        the harmonic orbitals approximate the single electron orbitals for a 
+        given choice of omega. The default is 2.
+    opt_tol : float, optional
     
+        Optimality tolerance for the BFGS algorithm. The default is 1E-7.
+    consts : Constants object, optional
+        Specify the material system constants. The default is 
+        qd.Constants("vacuum").
+
+    Returns
+    -------
+    opt_omega : float
+        The optimal omega found. If the optimization could not be completed, 
+        then None is returned.
+
+    '''
+    
+    # Set default behavior of ny=nx
+    if ny is None and gparams.grid_type == '2D':
+        ny = nx
+    
+    print('Optimizing choice of omega in approximating the single electron ' +
+          'orbitals...\n')
     
     # First thing to do is find the first few single electron orbitals from
     # the potential landscape.
     __, se_orbitals = qd.qutils.solvers.solve_schrodinger_eq(consts, gparams, 
-                                                             n_sols=n_orbs_compared)
+                                                             n_sols=n_SE_orbs)
 
     def find_HO_wf_difference(curr_log_w):
         
@@ -25,49 +77,39 @@ def optimize_HO_omega(gparams, nx, ny=0, omega_guess=1, n_orbs_compared=2,
         # Find current basis of HOs
         curr_HOs = build_HO_basis(gparams, curr_w, nx, ny, ecc=1.0,
                                   consts=consts)
-
-    '''
-    % Anonymous function so we can pass s(g)params and the itin WFs into
-    % the optimizer
-    fun = @(w)findWFDifference(w, sparams, gparams_opt, wfsToCompare);
-
-    % Perform the optimization
-    % If a parpool is running, take advantage of it
-    if ~isempty(gcp('nocreate'))
-        options = optimoptions(@fminunc,...%'Display','iter',...
-            'Algorithm','quasi-newton','OptimalityTolerance', tols,...
-            'UseParallel',true);
-    else
-        options = optimoptions(@fminunc,...%'Display','iter',...
-            'Algorithm','quasi-newton','OptimalityTolerance', tols);
-    end
-    logOmegaGuess = log10(omegaGuess);
-    optOmega = 10^fminunc(fun,logOmegaGuess,options);
-end
-
-function diffWF = findWFDifference(logOmegaGuess, sparams, gparams_opt, wfsToCompare)
-    % For the current omega guess, construct the basis of harmonic orbitals
-    % centered at the origin
-    omegaGuess = 10^logOmegaGuess;
-    
-    basisNewOmega = createOriginHOs(sparams, gparams_opt, omegaGuess, 0);
-    
-    % Now calculate the inner product of this basis and the itinerant basis
-    normFlag = 0;
-    Tmatrix = findTMatrixViaInnerProd(gparams_opt, basisNewOmega, wfsToCompare, normFlag);
-    
-    % Tmatrix contains all <itin_i|origin_j> inner products.  If we have
-    % chosen a good omega, then SUM(|<itin_i|origin_J>|^2) will be close to
-    % 1.  We want to maximize this value as it means the basis of origin
-    % harmonic orbitals approximates the itin orbitals well.
-    minCondition = abs(1-diag(Tmatrix*Tmatrix'));
-    % Now average this difference for all of the itin wavefunctions we are
-    % considering.
-    [~,nWFs] = size(wfsToCompare);
-    diffWF = sum(minCondition)/nWFs;
-end
-
-    '''
+        
+        # Get current overlap matrix between HOs and SE orbitals
+        S_matrix = qd.qutils.qmath.find_overlap_matrix(gparams, se_orbitals, 
+                                                       curr_HOs)
+        
+        # S contains all <SE_i|HO_j> inner products. If we have chosen a good 
+        # omega, then SUM(|<SE_i|HO_j>|^2) will be close to 1. Therefore, we
+        # want to maximize this value.
+        min_condition = np.sum(np.abs(1-np.diag(S_matrix.conj().T @ S_matrix)))
+        # Average the min condition with respect to the number of SE orbitals
+        # so the ideal min condition = 1
+        min_condition /= n_SE_orbs
+        
+        return min_condition
+        
+    # Do a search over the log of omega to improve minimization robustness. In
+    # particular when changing between different material systems and dot
+    # geometries and sizes.
+    opt_result = minimize(fun=find_HO_wf_difference,
+                             x0=np.log10(omega_guess), method='BFGS',
+                             options={'gtol': opt_tol})
+            
+    # If optimzation was successful, return optimal omega
+    if 'success' in opt_result.message:
+        print(opt_result.message)
+        opt_omega = 10**opt_result.x
+        
+        return opt_omega
+    # If optimization failed, return None
+    else:
+        print(opt_result.message)
+        
+        return None
 
 def build_HO_basis(gparams, omega, nx, ny=0, ecc=1.0,
                    consts=qd.Constants('vacuum')):
@@ -112,12 +154,12 @@ def build_HO_basis(gparams, omega, nx, ny=0, ecc=1.0,
     # Used for shorter expressions when building harmonic orbitals
     alpha_x = np.sqrt(consts.me*omega_x/consts.hbar)
     if gparams.grid_type == '1D':
-        HOs = np.zeros(nx, gparams.nx)
+        HOs = np.zeros((nx, gparams.nx), dtype=complex)
     elif gparams.grid_type == '2D':
         omega_y = omega_x*ecc
          # Used for shorter expressions when building harmonic orbitals
         alpha_y = np.sqrt(consts.me*omega_y/consts.hbar)
-        HOs = np.zeros(nx*ny, gparams.ny, gparams.nx)
+        HOs = np.zeros((nx*ny, gparams.ny, gparams.nx), dtype=complex)
     
 
     # Construct all of the hermite polynomials we will use to build up the
@@ -160,7 +202,7 @@ def build_HO_basis(gparams, omega, nx, ny=0, ecc=1.0,
     # Construct all the hermite polynomials which we will use to build up the
     # full set of HOs.   
     # x first
-    x_hermites = np.zeros(nx, gparams.nx)    
+    x_hermites = np.zeros((nx, gparams.nx), dtype=complex)    
     for idx in range(nx):
         if idx == 0:
             x_hermites[idx,:] = _get_hermite_n(idx, [], [], alpha_x*gparams.x)
@@ -172,8 +214,8 @@ def build_HO_basis(gparams, omega, nx, ny=0, ecc=1.0,
                                               alpha_x*gparams.x)
     # y now (if applicable)
     if gparams.grid_type == '2D':
-        y_hermites = np.zeros(ny, gparams.ny)  
-        for idx in range(nx):
+        y_hermites = np.zeros((ny, gparams.ny), dtype=complex)  
+        for idx in range(ny):
             if idx == 0:
                 y_hermites[idx,:] = _get_hermite_n(idx, [], [], alpha_y*gparams.y)
             elif idx == 1:
@@ -186,7 +228,7 @@ def build_HO_basis(gparams, omega, nx, ny=0, ecc=1.0,
     # Now that the hermite polynomials are built, construct the 1D harmonic
     # orbitals
     # x first
-    x_HOs = np.zeros(nx, gparams.nx)
+    x_HOs = np.zeros((nx, gparams.nx), dtype=complex)
     for idx in range(nx):
         # Build harmonic orbital
         coeff = 1/np.sqrt(2**idx*math.factorial(idx))*(alpha_x**2/math.pi)**(1/4)
@@ -194,7 +236,7 @@ def build_HO_basis(gparams, omega, nx, ny=0, ecc=1.0,
         
     # y now (if applicable)
     if gparams.grid_type == '2D':
-        y_HOs = np.zeros(ny, gparams.ny)
+        y_HOs = np.zeros((ny, gparams.ny), dtype=complex)
         for idx in range(ny):
             # Build harmonic orbital
             coeff = 1/np.sqrt(2**idx*math.factorial(idx))*(alpha_y**2/math.pi)**(1/4)
@@ -208,11 +250,11 @@ def build_HO_basis(gparams, omega, nx, ny=0, ecc=1.0,
         for x_idx in range(nx):
             # Get current x harmonic orbital and convert to meshgrid format
             curr_x_HO = x_HOs[x_idx,:]
-            curr_x_HO = np.meshgrid(curr_x_HO,np.ones(gparams.ny))
+            curr_x_HO, _ = np.meshgrid(curr_x_HO,np.ones(gparams.ny))
             for y_idx in range(ny):
                 # Get current y harmonic orbital and convert to meshgrid format
                 curr_y_HO = y_HOs[y_idx,:]
-                curr_y_HO = np.meshgrid(np.ones(gparams.nx),curr_y_HO)
+                _, curr_y_HO = np.meshgrid(np.ones(gparams.nx),curr_y_HO)
                 
                 # Make 2D harmonic orbital
                 HOs[idx_cnt,:,:] = curr_x_HO*curr_y_HO                
