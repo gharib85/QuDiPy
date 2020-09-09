@@ -112,7 +112,7 @@ def z_sum_omega(N, B_0, f_rf):
     Returns
     -------
     numpy array
-        Sum of Z_k-matrices for all k\in[1,N] weighted by i(omega-omega_tilde)
+        Sum of Z_k-matrices for all k\in[1,N] weighted by i(omega-omega_rf)/2
 
     """
     return (1*(cst.muB*B_0/cst.hbar-pi*f_rf)
@@ -167,7 +167,8 @@ def const_dict(N_0, T, B_0, f_rf, T_1):
         - "Zs" - list of Z_k
         - "sigma_pluses" - array of matr.sigma_plus_k_l
         - "sigma_minuses" - list of matr.sigma_minus_k
-        - "J_sigma_products" - (symmetric) matrix of (i/4\cst.hbar \vec{sigma_k1} \cdot \vec{sigma_k2} )
+        - "J_sigma_products" - (symmetric) matrix of 
+            (i/4\cst.hbar \vec{sigma_k1} \cdot \vec{sigma_k2} )
         - "x_sum" (multiplied by cst.muB/cst.hbar)
         - "y_sum" (multiplied by cst.muB/cst.hbar)
         - "z_sum_omega"
@@ -184,9 +185,15 @@ def const_dict(N_0, T, B_0, f_rf, T_1):
         sigma_pluses=[matr.sigma_plus(N,k) for k in range(1,N+1)]
         sigma_minuses=[matr.sigma_minus(N,k) for k in range(1,N+1)]
         
-        J_sigma_products=[[J_sigma_product(N,k1,k2) for k2   in range(1,N+1)] for k1 in range(1,N+1)] 
+        J_sigma_products=[[J_sigma_product(N,k1,k2) for k2 in range(1,N+1)] 
+                          for k1 in range(1,N+1)] 
                        
-        temp.append({"Xs":Xs, "Ys":Ys, "Zs":Zs,  "sigma_pluses":sigma_pluses, "sigma_minuses":sigma_minuses, "J_sigma_products":J_sigma_products, "x_sum":x_sum(N), "y_sum":y_sum(N), "z_sum_omega":z_sum_omega(N, B_0, f_rf), "z_sum_p":z_sum_p(N,B_0,T,T_1)})
+        temp.append({"Xs":Xs, "Ys":Ys, "Zs":Zs,  "sigma_pluses":sigma_pluses, 
+                     "sigma_minuses":sigma_minuses, 
+                     "J_sigma_products":J_sigma_products,
+                     "x_sum":x_sum(N), "y_sum":y_sum(N), 
+                     "z_sum_omega":z_sum_omega(N, B_0, f_rf), 
+                     "z_sum_p":z_sum_p(N,B_0,T,T_1)})
     
     return temp
 
@@ -321,7 +328,8 @@ class SpinSys:
             
             if delta_g != [0]*N:
                 for k in range(N):
-                    ham += cst.muB/(2*cst.hbar)*self.B_0*delta_g[k] * const_dict_N["Zs"][k]
+                    ham += (cst.muB/(2*cst.hbar)*self.B_0*delta_g[k] *
+                            const_dict_N["Zs"][k])
                 
             if J != [0]*(N-1) and J != 0:
                 for k in range(N):
@@ -358,10 +366,16 @@ class SpinSys:
         if pulse_params is not None:
             ham = ham + self.hamiltonian(const_dict_N, pulse_params)
         
-        lin = ( 1j *( rho_mod.dot(ham) - ham.dot(rho_mod) ) + const_dict_N["z_sum_p"] - (2/self.T_1 + 1/(2*self.T_2)) * N * rho_mod )
+        lin = ( 1j *( rho_mod @ ham - ham @ rho_mod) + const_dict_N["z_sum_p"] 
+               - (2/self.T_1 + 1/(2*self.T_2)) * N * rho_mod )
         
         for k in range(N):
-            lin += (  p(self.B_0, self.T) / self.T_1 * np.dot(const_dict_N["sigma_pluses"][k] , rho_mod.dot(const_dict_N["sigma_minuses"][k])) +  (1 - p(self.B_0, self.T)) / self.T_1 * np.dot(const_dict_N["sigma_minuses"][k], rho_mod.dot(const_dict_N["sigma_pluses"][k])))
+            lin += (  p(self.B_0, self.T) / self.T_1 * 
+                    const_dict_N["sigma_pluses"][k] @ 
+                    rho_mod.dot(const_dict_N["sigma_minuses"][k]) +  
+                    (1 - p(self.B_0, self.T)) / self.T_1 * 
+                    const_dict_N["sigma_minuses"][k] @
+                    rho_mod.dot(const_dict_N["sigma_pluses"][k]))
  
         return lin
         
@@ -596,19 +610,17 @@ class SpinSys:
         
         N = int(log2(self.rho.shape[0]))  
         Nset = set(range(1,N+1))
-        trqub = {}
+        trqub = set()
         
         if isinstance(track_qubits, int):
             trqub = {track_qubits}
-        elif isinstance(track_qubits, tuple):
-            trqub = track_qubits
-        elif isinstance(track_qubits, (list, set)):
-            trqub = track_qubits.copy()
+        elif isinstance(track_qubits, (tuple,list, set)):
+            trqub = set(track_qubits)
         else:
             print("error")
             
         for qub in trqub:
-            submatrix = mth.partial_trace(self.rho, (Nset-set(trqub)))
+            submatrix = mth.partial_trace(self.rho, (Nset-{qub}))
             subm = "submatrix_{}".format(qub)
             ret_dict[subm] = submatrix
             if are_Bloch_vectors:
