@@ -7,7 +7,6 @@ import math
 import sys
 import copy
 import numpy as np
-from numpy.linalg.linalg import eigvals
 import pandas as pd
 import seaborn as sb
 import matplotlib.pyplot as plt
@@ -56,7 +55,7 @@ class HubbardCSD:
             raise Exception("Hamiltonian will be independent of gate volatges so no charge stability diagram can be generated")
 
         # Check that number of electrons doesn't exceed twice the amount of sites
-        if n_e >= 2 * n_sites:
+        if n_e > 2 * n_sites:
             raise Exception(f"Number of electrons ({n_e}) exceeds twice the amount of sites ({n_sites}) allowed")
         else:
             self.n_e = n_e
@@ -194,10 +193,12 @@ class HubbardCSD:
                 result = 0
                 for k in range(len(self.basis_labels)):
                     for l in range(k):
-                        if self.basis_labels[k][0] == self.basis_labels[l][0]: # check if electrons are on same site
-                            result += 0.5 * self._inner_product(state_1, self._number(self._number(state_1, k), l))
+                        if self.basis_labels[k][0] == 'site_1' and self.basis_labels[l][0] == 'site_1': # check if electrons are on same site
+                            result += self.U_1 * self._inner_product(state_1, self._number(self._number(state_1, k), l))
+                        elif self.basis_labels[k][0] == 'site_2' and self.basis_labels[l][0] == 'site_2': # check if electrons are on same site
+                            result += self.U_2 * self._inner_product(state_1, self._number(self._number(state_1, k), l))
                         else:
-                            result += 0.25 * self._inner_product(state_1, self._number(self._number(state_1, k), l))
+                            result += self.U_12 * self._inner_product(state_1, self._number(self._number(state_1, k), l))
 
                 h_u[i][i] = result
         return h_u
