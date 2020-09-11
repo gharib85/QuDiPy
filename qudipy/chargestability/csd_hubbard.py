@@ -105,16 +105,20 @@ class HubbardCSD:
 
                     h_mu[i][i] = result
 
-                eigenvals, eigenvects = la.eig(self.fixed_hamiltonian + h_mu)
-                eigenvals = np.round(eigenvals, 4) # To avoid numerical imprecision
-                eigenvects = np.round(eigenvects, 4)
-                lowest_eigenvect = eigenvects[np.where(eigenvals == eigenvals.min())]
-                occupation_1 = (lowest_eigenvect * np.array([sum(x[:2]) for x in self.basis])).sum(1).mean()
-                occupation_2 = (lowest_eigenvect * np.array([sum(x[2:4]) for x in self.basis])).sum(1).mean()
+                current_hamiltonian = self.fixed_hamiltonian + h_mu
+                eigenvals, eigenvects = la.eig(current_hamiltonian)
+                eigenvals = np.real(eigenvals) # Needs to be cast to real (even though Hamiltonian is Hermitian so eigenvalues are real)
+                lowest_eigenvect = np.squeeze(eigenvects[np.argmin(eigenvals)])
+                lowest_eigenvect = lowest_eigenvect/la.norm(lowest_eigenvect)
+                lowest_eigenvect_prob = lowest_eigenvect * np.conj(lowest_eigenvect)
+                # e_vals = []
+                # for i in range
+                occupation_1 = (lowest_eigenvect_prob * self.basis_occupation_1).sum()
+                occupation_2 = (lowest_eigenvect_prob * self.basis_occupation_2).sum()
                 current = occupation_1 * c_cs_1 + occupation_2 * c_cs_2
                 data.append([v_1, v_2, current])
 
-        data = np.real(data)
+        data = np.real(data) # Needs to be cast to real to avoid problems plotting
         df = pd.DataFrame(data, columns=['V_g1', 'V_g2', 'Current'])
         self.csd = df.pivot_table(index='V_g1', columns='V_g2', values='Current')
 
@@ -130,7 +134,7 @@ class HubbardCSD:
             p1 = sb.heatmap(self.csd, cbar=cbar_flag, xticklabels=int(
                 num/5), yticklabels=int(num/5), cbar_kws={'label': 'Current (arb.)'})
             p1.axes.invert_yaxis()
-            p1.set(xlabel=r'V$_1$', ylabel=r'V$_2$')
+            p1.set(xlabel=r'V$_2$', ylabel=r'V$_1$')
             plt.show()
 
             # # Plot the "derivative" of the charge stability diagram
@@ -155,6 +159,8 @@ class HubbardCSD:
         # Labels each index in the basis state with site number and spin direction (could add valley states)
         self.sites = [f'site_{n+1}' for n in range(self.n_sites)]
         self.spins = ['spin_up', 'spin_down']
+        self.basis_occupation_1 = np.array([sum(x[:2]) for x in basis])
+        self.basis_occupation_2 = np.array([sum(x[2:4]) for x in basis])
         basis_labels = list(itertools.product(self.sites, self.spins))
 
         return basis, basis_labels
