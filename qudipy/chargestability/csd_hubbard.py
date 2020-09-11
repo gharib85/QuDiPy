@@ -107,12 +107,11 @@ class HubbardCSD:
 
                 current_hamiltonian = self.fixed_hamiltonian + h_mu
                 eigenvals, eigenvects = la.eig(current_hamiltonian)
+                eigenvects = np.transpose(eigenvects)
                 eigenvals = np.real(eigenvals) # Needs to be cast to real (even though Hamiltonian is Hermitian so eigenvalues are real)
                 lowest_eigenvect = np.squeeze(eigenvects[np.argmin(eigenvals)])
                 lowest_eigenvect = lowest_eigenvect/la.norm(lowest_eigenvect)
                 lowest_eigenvect_prob = lowest_eigenvect * np.conj(lowest_eigenvect)
-                # e_vals = []
-                # for i in range
                 occupation_1 = (lowest_eigenvect_prob * self.basis_occupation_1).sum()
                 occupation_2 = (lowest_eigenvect_prob * self.basis_occupation_2).sum()
                 current = occupation_1 * c_cs_1 + occupation_2 * c_cs_2
