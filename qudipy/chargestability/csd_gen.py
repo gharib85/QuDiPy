@@ -3,7 +3,6 @@ File used to generate and plot charge stability diagrams using the constant inte
 '''
 import math
 import sys
-import numpy as np
 import pandas as pd
 import seaborn as sb
 import matplotlib.pyplot as plt

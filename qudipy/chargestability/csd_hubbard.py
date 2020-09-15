@@ -3,8 +3,6 @@ File used to generate and plot charge stability diagrams from provided potential
 For more information about the method, see the references https://doi.org/10.1103/PhysRevB.83.235314 and https://doi.org/10.1103/PhysRevB.83.161301
 '''
 
-import math
-import sys
 import copy
 import numpy as np
 import pandas as pd
@@ -12,7 +10,6 @@ import seaborn as sb
 import matplotlib.pyplot as plt
 import itertools
 from scipy import linalg as la
-from scipy.ndimage import gaussian_filter
 from ..utils.constants import Constants
 
 class HubbardCSD:
@@ -62,9 +59,9 @@ class HubbardCSD:
             self.n_sites = n_sites
 
         # Generates the basis to be used
-        self.basis, self.basis_labels = self._generate_basis()
+        self._generate_basis()
 
-        # These next steps generate the fixed portion of the Hamiltonian, which is created on initialization
+        # These next steps generate the fixed portion of the Hamiltonian, which is created on initialization since it is independent of voltage
 
         # First, generate the matrix of the correct size
         self.fixed_hamiltonian = np.zeros((len(self.basis),len(self.basis)))
@@ -76,17 +73,40 @@ class HubbardCSD:
         if h_u is True:
             self.fixed_hamiltonian += self._generate_h_u()
 
-    def generate_csd(self, v_g1_max, v_g2_max, v_g1_min=0, v_g2_min=0, c_cs_1=None, c_cs_2=None, num=100, plotting=False, blur=False, blur_sigma=0):
+    def generate_csd(self, v_g1_max, v_g2_max, v_g1_min=0, v_g2_min=0, c_cs_1=None, c_cs_2=None, num=100, plotting=False):
+        '''Generates the charge stability diagram between v_g1(2)_min and v_g1(2)_max with num by num data points in 2D
 
+        Parameters
+        ----------
+        v_g1_max: maximum voltage on plunger gate 1
+        v_g2_max: maximum voltage on plunger gate 2
+
+        Keyword Arguments
+        -----------------
+        v_g1_max: minimum voltage on plunger gate 1 (default 0)
+        v_g2_max: minimum voltage on plunger gate 2 (default 0)
+        c_cs_1: coupling between charge sensor and dot 1 (default to None)
+        c_cs_2: coupling between charge sensor and dot 2 (default to None)
+        num: number of voltage point in 1d, which leads to a num^2 charge stability diagram (default 100)
+        plotting: flag indicating whether charge stability diagram should be plotted after completion (default False)
+
+        Returns
+        -------
+        None
+        '''
+
+        # Stores parameters for late
         self.num = num
         self.v_g1_min = v_g1_min
         self.v_g1_max = v_g1_max
         self.v_g2_min = v_g2_min
         self.v_g2_max = v_g2_max
 
+        # Generate voltage points to sweep over
         self.v_1_values = [round(self.v_g1_min + i/num * (v_g1_max - self.v_g1_min), 4) for i in range(num)]
         self.v_2_values = [round(self.v_g2_min + j/num * (v_g2_max - self.v_g2_min), 4) for j in range(num)]
 
+        # Loop over all voltage point combinations
         data = []
         for v_1 in self.v_1_values:
             for v_2 in self.v_2_values:
@@ -107,7 +127,7 @@ class HubbardCSD:
 
                 current_hamiltonian = self.fixed_hamiltonian + h_mu
                 eigenvals, eigenvects = la.eig(current_hamiltonian)
-                eigenvects = np.transpose(eigenvects)
+                eigenvects = np.transpose(eigenvects) # To get column eigenvectors not column entries
                 eigenvals = np.real(eigenvals) # Needs to be cast to real (even though Hamiltonian is Hermitian so eigenvalues are real)
                 lowest_eigenvect = np.squeeze(eigenvects[np.argmin(eigenvals)])
                 lowest_eigenvect = lowest_eigenvect/la.norm(lowest_eigenvect)
@@ -144,6 +164,20 @@ class HubbardCSD:
             # plt.show()
 
     def _generate_basis(self):
+        '''Creates the 
+
+        Parameters
+        ----------
+        None
+
+        Keyword Arguments
+        -----------------
+        None
+
+        Returns
+        -------
+        None
+        '''
 
         # Compute all possible occupations with the cartesian product, and then
         # remove all states that exceed the number of electron specified
@@ -162,7 +196,10 @@ class HubbardCSD:
         self.basis_occupation_2 = np.array([sum(x[2:4]) for x in basis])
         basis_labels = list(itertools.product(self.sites, self.spins))
 
-        return basis, basis_labels
+        self.basis = basis
+        self.basis_labels = basis_labels
+
+        return
 
     def _generate_h_t(self):
         h_t = np.zeros(self.fixed_hamiltonian.shape)
@@ -209,6 +246,23 @@ class HubbardCSD:
         return h_u
 
     def _volt_to_chem_pot(self, v_1, v_2):
+        '''
+        Converts from supplied voltages to chemical potential for 2 coupled dots, assuming the capacitance model is valid.
+        Requires self charging and coulomb repulsion energy terms to be loaded already
+
+        Parameters
+        ----------
+        v_1: voltage on plunger gate 1
+        v_2: voltage on plunger gate 2
+
+        Keyword Arguments
+        -----------------
+        None
+
+        Returns
+        -------
+        Chemical potentials mu_1 and m_2 on site 1 and site 2 respectively
+        '''
         alpha_1 = ((self.U_2 - self.U_12) * self.U_1) / (self.U_1 * self.U_2 - self.U_12**2)
         alpha_2 = ((self.U_1 - self.U_12) * self.U_2) / (self.U_1 * self.U_2 - self.U_12**2)
         mu_1 = (alpha_1 * v_1 + (1 - alpha_1) * v_2)
@@ -217,9 +271,9 @@ class HubbardCSD:
 
     def _inner_product(self, state_1, state_2):
         '''
-        docstring
+        Computes the inner product
         '''
-        if state_1==None or state_2==None: # Deals with cases where eigenvalue of number is 0, so the inner product is multiplied by 0
+        if state_1==None or state_2==None: # Deals with cases where the coefficient of state is 0, so the inner product is multiplied by 0
             return 0
         elif state_1 == state_2:
             return 1
