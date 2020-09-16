@@ -364,7 +364,7 @@ class CSDAnalysis:
             m_list.append(-np.cos(theta)/np.sin(theta))
             b_list.append(rho/np.sin(theta))
 
-        # Sort m, then use the same sorting index so each (m,b) pair is kept
+        # Sort m, then use the same sorting index so each (m,b) pair is kept and store for later
         m_array = np.array(m_list)
         b_array = np.array(b_list)
         m_sort = m_array.argsort()
@@ -372,6 +372,7 @@ class CSDAnalysis:
         self.b_array = b_array[m_sort[::]]
         self.line_params = np.column_stack((self.m_array, self.b_array))
 
+        # Reorder the line parameters if the values don't match up with number scheme
         if self.line_params[0,1] > self.line_params[1,1]:
             self.line_params[[0,1]] = self.line_params[[1,0]]
         if self.line_params[2,1] > self.line_params[3,1]:
