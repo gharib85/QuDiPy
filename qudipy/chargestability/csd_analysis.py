@@ -4,10 +4,12 @@ For a good review of the Hough transform, check https://alyssaq.github.io/2014/u
 Hough transfrom code based off of https://github.com/alyssaq/hough_transform.
 '''
 
+import copy
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sb
+from scipy.ndimage import gaussian_filter
 from sklearn import cluster
 from sklearn.neighbors import NearestCentroid
 
@@ -16,7 +18,7 @@ class CSDAnalysis:
     Initialize the charge stability diagram analysis class which analyzes charge stability diagrams to extract parameters. 
 
     '''
-    def __init__(self, csd):
+    def __init__(self, csd, blur=True, blur_sigma=1):
         '''
          
         Parameters
@@ -28,7 +30,16 @@ class CSDAnalysis:
         None
 
         '''
-        self.csd = csd
+        self.csd = copy.copy(csd) # to avoid overwriting origianl csd object
+
+        if blur is True:
+            self.csd.csd = pd.DataFrame(gaussian_filter(self.csd.csd, blur_sigma), columns=self.csd.v_1_values, index=self.csd.v_2_values) 
+
+        # Create derivative of charge stability diagram
+        df_der_row = self.csd.csd.diff(axis=0) # to be sensitive to cahnges in both the x and y direction
+        df_der_col = self.csd.csd.diff(axis=1)
+        df_der = pd.concat([df_der_row, df_der_col]).max(level=0)
+        self.csd.csd_der = df_der
 
     def generate_bitmap(self, threshold, threshold_type='percentile', plotting=False):
         '''
@@ -67,6 +78,22 @@ class CSDAnalysis:
         self.csd_bitmap = self.csd.csd_der.mask(abs(self.csd.csd_der) > threshold, other=1).mask(abs(self.csd.csd_der) <= threshold, other=0)
         if plotting is True:
             self.plot_heatmap(self.csd_bitmap, self.csd.v_1_values, self.csd.v_2_values, r'V$_1$', r'V$_2$')
+
+    def plot_csd(self, cbar_flag=False):
+
+        # Plot the chagre stability diagram
+        p1 = sb.heatmap(self.csd.csd, cbar=cbar_flag, xticklabels=int(
+            self.csd.num/5), yticklabels=int(self.csd.num/5), cbar_kws={'label': 'Current (arb.)'})
+        p1.axes.invert_yaxis()
+        p1.set(xlabel=r'V$_1$', ylabel=r'V$_2$')
+        plt.show()
+
+        # Plot the "derivative" of the charge stability diagram
+        p2 = sb.heatmap(self.csd.csd_der, cbar=cbar_flag, xticklabels=int(
+            self.csd.num/5), yticklabels=int(self.csd.num/5))
+        p2.axes.invert_yaxis()
+        p2.set(xlabel=r'V$_1$', ylabel=r'V$_2$')
+        plt.show()
 
 
     def hough_transform(self, num_thetas=180, theta_min=-90, theta_max=90, plotting=False):
@@ -298,12 +325,12 @@ class CSDAnalysis:
         ax2 = ax.twinx().twiny()
 
         # For each centroid, convert from polar coordiantes to slope/intercept for and plot on second axis
+        x = np.linspace(self.csd.v_g1_min, self.csd.v_g1_max)
         for centroid in self.centroids:
             theta = centroid[0]
             rho = centroid[1]
             m = -np.cos(theta)/np.sin(theta)
             b = rho/np.sin(theta)
-            x = np.linspace(self.csd.v_g1_min, self.csd.v_g1_max)
             y = m * x + b
             sb.lineplot(x=x, y=y, ax=ax2)
 
@@ -438,3 +465,5 @@ class CSDAnalysis:
         ax2.get_xaxis().set_ticks([])
         ax.set(xlabel=r'V$_1$', ylabel=r'V$_2$')
         plt.show()
+
+        pass

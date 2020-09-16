@@ -4,9 +4,6 @@ File used to generate and plot charge stability diagrams using the constant inte
 import math
 import sys
 import pandas as pd
-import seaborn as sb
-import matplotlib.pyplot as plt
-from scipy.ndimage import gaussian_filter
 from ..utils.constants import Constants
 
 const = Constants()
@@ -118,7 +115,7 @@ class CSD:
         else:
             return [state[0], 0]
 
-    def generate_csd(self, v_g1_max, v_g2_max, v_g1_min=0, v_g2_min=0, c_cs_1=None, c_cs_2=None, num=100, plotting=False, blur=False, blur_sigma=0):
+    def generate_csd(self, v_g1_max, v_g2_max, v_g1_min=0, v_g2_min=0, c_cs_1=None, c_cs_2=None, num=100):
         ''' Generates the charge stability diagram between v_g1(2)_min and v_g1(2)_max with num by num data points in 2D
 
         Parameters
@@ -163,7 +160,7 @@ class CSD:
         # Goes through all the v_1 and v_2 values and generate the csd data
 
         # Checks if a version after 3.8 is running in order to use the more efficient Walrus operator 
-        if sys.sys.version_info >= (3, 8):
+        if (sys.version_info[0]==3 and sys.version_info[1]>=8) or sys.version_info[0]>=3:
             data = [
                     [v_1, v_2, (p:= self._lowest_energy(v_1, v_2))[0] * dot_1_multiplier + p[1] * dot_2_multiplier
                     ] for v_1 in self.v_1_values for v_2 in self.v_2_values
@@ -177,34 +174,3 @@ class CSD:
         # Create DataFrame from data and pivot into num by num array
         df = pd.DataFrame(data, columns=['V_g1', 'V_g2', 'Current'])
         self.csd = df.pivot_table(index='V_g1', columns='V_g2', values='Current')
-
-        if blur is True:
-            self.csd = pd.DataFrame(gaussian_filter(self.csd, blur_sigma), columns=self.v_1_values, index=self.v_2_values) 
-
-        # Create Dataframe that looks for differences between adjacent pixels, creating a "derivative" of the charge stability diagram
-        df_der_row = self.csd.diff(axis=0)
-        df_der_col = self.csd.diff(axis=1)
-        df_der = pd.concat([df_der_row, df_der_col]).max(level=0)
-        self.csd_der = df_der
-
-        # Show plots if flag is set to True
-        if plotting is True:
-
-            # Toggles colorbar if charge sensor information is given
-            cbar_flag = False
-            if (c_cs_1 is not None) and (c_cs_2 is not None):
-                cbar_flag = True
-
-            # Plot the chagre stability diagram
-            p1 = sb.heatmap(self.csd, cbar=cbar_flag, xticklabels=int(
-                num/5), yticklabels=int(num/5), cbar_kws={'label': 'Current (arb.)'})
-            p1.axes.invert_yaxis()
-            p1.set(xlabel=r'V$_1$', ylabel=r'V$_2$')
-            plt.show()
-
-            # Plot the "derivative" of the charge stability diagram
-            p2 = sb.heatmap(df_der, cbar=cbar_flag, xticklabels=int(
-            num/5), yticklabels=int(num/5))
-            p2.axes.invert_yaxis()
-            p2.set(xlabel=r'V$_1$', ylabel=r'V$_2$')
-            plt.show()
