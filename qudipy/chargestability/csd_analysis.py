@@ -368,18 +368,25 @@ class CSDAnalysis:
         m_array = np.array(m_list)
         b_array = np.array(b_list)
         m_sort = m_array.argsort()
-        m_array = m_array[m_sort[::]]
-        b_array = b_array[m_sort[::]]
+        self.m_array = m_array[m_sort[::]]
+        self.b_array = b_array[m_sort[::]]
+        self.line_params = np.column_stack((self.m_array, self.b_array))
+
+        if self.line_params[0,1] > self.line_params[1,1]:
+            self.line_params[[0,1]] = self.line_params[[1,0]]
+        if self.line_params[2,1] > self.line_params[3,1]:
+            self.line_params[[2,3]] = self.line_params[[3,2]]
+
 
         candidate_points = []
-        for i in range(len(m_array)):
+        for i in range(len(self.m_array)):
             # Make sure you aren't looping over the same pair twice
             for j in range(i):
                 # Extract values and compute expected intersection point
-                m1_temp = m_array[i]
-                m2_temp = m_array[j]
-                b1_temp = b_array[i]
-                b2_temp = b_array[j]
+                m1_temp = self.m_array[i]
+                m2_temp = self.m_array[j]
+                b1_temp = self.b_array[i]
+                b2_temp = self.b_array[j]
                 x_temp = (b2_temp-b1_temp)/(m1_temp-m2_temp)
                 y_temp = m1_temp * x_temp + b1_temp
                 # Discard if expected interection point lies outside the CSD
@@ -432,26 +439,19 @@ class CSDAnalysis:
 
         # Create the x ranges for the various lines to plot on
         x_1 = [x_electron, self.csd.v_g1_max]
-        x_2 = [self.csd.v_g1_min, x_electron]
-        x_3 = [self.csd.v_g1_min, x_hole]
+        x_2 = [self.csd.v_g1_min, x_hole]
+        x_3 = [self.csd.v_g1_min, x_electron]
         x_4 = [x_hole, self.csd.v_g1_max]
         x_5 = [x_electron, x_hole]
         x_ranges = np.array([x_1, x_2, x_3, x_4, x_5])
-
-        line_params = []
-        for centroid in self.centroids:
-            line_params.append([-np.cos(centroid[0])/np.sin(centroid[0]), centroid[1]/np.sin(centroid[0])])
-
-        line_params = np.array(line_params)
-        line_params = np.sort(line_params, axis = 1)
         
         # Add the last line for the transition betweent the two points
         m_5 = (y_hole - y_electron)/(x_hole - x_electron)
         b_5 = y_electron - m_5 * x_electron
         line_5 = np.array([m_5, b_5])
-        line_params = np.vstack((line_params, line_5))
+        self.line_params = np.vstack((self.line_params, line_5))
 
-        for x_range, line in zip(x_ranges, line_params):
+        for x_range, line in zip(x_ranges, self.line_params):
             y = line[0] * x_range + line[1]
             sb.lineplot(x=x_range, y=y, ax=ax2)
 
@@ -465,5 +465,3 @@ class CSDAnalysis:
         ax2.get_xaxis().set_ticks([])
         ax.set(xlabel=r'V$_1$', ylabel=r'V$_2$')
         plt.show()
-
-        pass
