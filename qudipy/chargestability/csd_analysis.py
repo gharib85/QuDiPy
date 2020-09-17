@@ -96,7 +96,7 @@ class CSDAnalysis:
         plt.show()
 
 
-    def hough_transform(self, num_thetas=180, theta_min=-90, theta_max=90, plotting=False):
+    def hough_transform(self, num_thetas=180, theta_min=0, theta_max=90, plotting=False):
         '''
         Performs the Hough transform on the charge stability diagram bitmap stored in the object
 
@@ -141,13 +141,17 @@ class CSDAnalysis:
 
         # Vote in the hough accumulator
         for i in range(len(x_idxs)):
-            x = x_idxs[i]
-            y = y_idxs[i]
+            x_index = x_idxs[i]
+            y_index = y_idxs[i]
+
+            x = img.columns[x_index]
+            y = img.index[y_index]
 
             for t_idx in range(num_thetas):
                 # Calculate rho. diag_len is added for a positive index
-                rho = int(round(x * cos_t[t_idx] + y * sin_t[t_idx]) + index_diag_len)
-                accumulator[rho, t_idx] += 1
+                rho = x * cos_t[t_idx] + y * sin_t[t_idx]
+                rho_index = (np.abs(rhos - rho)).argmin()
+                accumulator[rho_index, t_idx] += 1
 
         # Store values in object for later use
         self.accumulator = accumulator

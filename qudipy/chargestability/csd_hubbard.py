@@ -103,8 +103,8 @@ class HubbardCSD:
         self.v_g2_max = v_g2_max
 
         # Generate voltage points to sweep over
-        self.v_1_values = [round(self.v_g1_min + i/num * (v_g1_max - self.v_g1_min), 4) for i in range(num)]
-        self.v_2_values = [round(self.v_g2_min + j/num * (v_g2_max - self.v_g2_min), 4) for j in range(num)]
+        self.v_1_values = [self.v_g1_min + i/num * (v_g1_max - self.v_g1_min) for i in range(num)]
+        self.v_2_values = [self.v_g2_min + j/num * (v_g2_max - self.v_g2_min) for j in range(num)]
 
         # Loop over all voltage point combinations
         data = []
@@ -155,13 +155,6 @@ class HubbardCSD:
             p1.axes.invert_yaxis()
             p1.set(xlabel=r'V$_1$', ylabel=r'V$_2$')
             plt.show()
-
-            # # Plot the "derivative" of the charge stability diagram
-            # p2 = sb.heatmap(df_der, cbar=cbar_flag, xticklabels=int(
-            # num/5), yticklabels=int(num/5))
-            # p2.axes.invert_yaxis()
-            # p2.set(xlabel=r'V$_1$', ylabel=r'V$_2$')
-            # plt.show()
 
     def _generate_basis(self):
         '''Creates the 
