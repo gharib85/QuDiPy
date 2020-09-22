@@ -12,7 +12,6 @@ import seaborn as sb
 from scipy.ndimage import gaussian_filter
 from sklearn import cluster
 from sklearn.neighbors import NearestCentroid
-from sklearn.utils import _print_elapsed_time
 
 class CSDAnalysis:
     '''

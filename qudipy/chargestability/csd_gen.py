@@ -56,6 +56,42 @@ class CSD:
         # Electrostatic coupling energy
         self.e_cm = e**2 * self.c_m / (self.c_1 * self.c_2 - self.c_m**2)
 
+    def generate_csd(self, v_g1_max, v_g2_max, v_g1_min=0, v_g2_min=0, num=100):
+        ''' Generates the charge stability diagram between v_g1(2)_min and v_g1(2)_max with num by num data points in 2D
+
+        Parameters
+        ----------
+        v_g1_max: maximum voltage on plunger gate 1
+        v_g2_max: maximum voltage on plunger gate 2
+
+        Keyword Arguments
+        -----------------
+        v_g1_max: minimum voltage on plunger gate 1 (default 0)
+        v_g2_max: minimum voltage on plunger gate 2 (default 0)
+        c_cs_1: coupling between charge sensor and dot 1 (default to None)
+        c_cs_2: coupling between charge sensor and dot 2 (default to None)
+        num: number of voltage point in 1d, which leads to a num^2 charge stability diagram (default 100)
+
+        Returns
+        -------
+        None
+        '''
+        # Save for later
+        self.num = num
+        self.v_g1_min = v_g1_min
+        self.v_g1_max = v_g1_max
+        self.v_g2_min = v_g2_min
+        self.v_g2_max = v_g2_max
+
+        # Generates all the voltages to be swept
+        self.v_1_values = [self.v_g1_min + i/num * (self.v_g1_max - self.v_g1_min) for i in range(self.num)]
+        self.v_2_values = [self.v_g2_min + j/num * (self.v_g2_max - self.v_g2_min) for j in range(self.num)]
+        # Goes through all the v_1 and v_2 values and generate the csd data
+        occupation = [[[self._lowest_energy(v_1, v_2)] for v_1 in self.v_1_values] for v_2 in self.v_2_values]
+
+        # Create a num by num DataFrame from occupation data information as entries
+        self.occupation = pd.DataFrame(occupation, index=self.v_1_values, columns=self.v_2_values)
+
     def calculate_energy(self, n_1, n_2, v_g1, v_g2):
         '''Returns energy of dot with occupation n_1, n_2 with applied voltages v_g1, v_g2.
         Dependent on c_l, c_r, c_m, c_g1 and c_g2 defined when object is initialized.
@@ -114,42 +150,3 @@ class CSD:
             return (0, state[1])
         else:
             return (state[0], 0)
-
-    def generate_csd(self, v_g1_max, v_g2_max, v_g1_min=0, v_g2_min=0, num=100):
-        ''' Generates the charge stability diagram between v_g1(2)_min and v_g1(2)_max with num by num data points in 2D
-
-        Parameters
-        ----------
-        v_g1_max: maximum voltage on plunger gate 1
-        v_g2_max: maximum voltage on plunger gate 2
-
-        Keyword Arguments
-        -----------------
-        v_g1_max: minimum voltage on plunger gate 1 (default 0)
-        v_g2_max: minimum voltage on plunger gate 2 (default 0)
-        c_cs_1: coupling between charge sensor and dot 1 (default to None)
-        c_cs_2: coupling between charge sensor and dot 2 (default to None)
-        num: number of voltage point in 1d, which leads to a num^2 charge stability diagram (default 100)
-        plotting: flag indicating whether charge stability diagram should be plotted after completion (default False)
-        blur: Flag which dictates whether to do a Gaussian blur on the data (default False)
-        blur_sigma: If blur is set to True, use this number as the stanaderd devation in the Gaussian blur (default 0)
-
-        Returns
-        -------
-        None
-        '''
-        # Save for later
-        self.num = num
-        self.v_g1_min = v_g1_min
-        self.v_g1_max = v_g1_max
-        self.v_g2_min = v_g2_min
-        self.v_g2_max = v_g2_max
-
-        # Generates all the voltages to be swept
-        self.v_1_values = [self.v_g1_min + i/num * (self.v_g1_max - self.v_g1_min) for i in range(self.num)]
-        self.v_2_values = [self.v_g2_min + j/num * (self.v_g2_max - self.v_g2_min) for j in range(self.num)]
-        # Goes through all the v_1 and v_2 values and generate the csd data
-        occupation = [[[self._lowest_energy(v_1, v_2)] for v_1 in self.v_1_values] for v_2 in self.v_2_values]
-
-        # Create a num by num DataFrame from occupation data information as entries
-        self.occupation = pd.DataFrame(occupation, index=self.v_1_values, columns=self.v_2_values)
