@@ -12,13 +12,14 @@ import seaborn as sb
 from scipy.ndimage import gaussian_filter
 from sklearn import cluster
 from sklearn.neighbors import NearestCentroid
+from sklearn.utils import _print_elapsed_time
 
 class CSDAnalysis:
     '''
     Initialize the charge stability diagram analysis class which analyzes charge stability diagrams to extract parameters. 
 
     '''
-    def __init__(self, csd, blur=True, blur_sigma=1):
+    def __init__(self, csd, capacitances=None, blur=False, blur_sigma=1):
         '''
          
         Parameters
@@ -30,10 +31,19 @@ class CSDAnalysis:
         None
 
         '''
+        self.capaciatnces = None
         self.csd = copy.copy(csd) # to avoid overwriting origianl csd object
+        if capacitances is None:
+            self.csd.csd = pd.DataFrame(0, index=self.csd.v_1_values, columns=self.csd.v_2_values)
+            for i in self.csd.v_2_values:
+                for j in self.csd.v_1_values:
+                    self.csd.csd[i][j] = hash(self.csd.occupation[i][j][0])
 
         if blur is True:
-            self.csd.csd = pd.DataFrame(gaussian_filter(self.csd.csd, blur_sigma), columns=self.csd.v_1_values, index=self.csd.v_2_values) 
+            if capacitances is None:
+                raise Warning("Blurring of data cannot occur when no capaciatnce are provided. Data will not be changed")
+            else:    
+                self.csd.csd = pd.DataFrame(gaussian_filter(self.csd.csd, blur_sigma), columns=self.csd.v_1_values, index=self.csd.v_2_values) 
 
         # Create derivative of charge stability diagram
         df_der_row = self.csd.csd.diff(axis=0) # to be sensitive to cahnges in both the x and y direction
@@ -77,7 +87,7 @@ class CSDAnalysis:
 
         self.csd_bitmap = self.csd.csd_der.mask(abs(self.csd.csd_der) > threshold, other=1).mask(abs(self.csd.csd_der) <= threshold, other=0)
         if plotting is True:
-            self.plot_heatmap(self.csd_bitmap, self.csd.v_1_values, self.csd.v_2_values, r'V$_1$', r'V$_2$')
+            self._plot_heatmap(self.csd_bitmap, self.csd.v_1_values, self.csd.v_2_values, r'V$_1$', r'V$_2$')
 
     def plot_csd(self, cbar_flag=False):
 
@@ -163,7 +173,7 @@ class CSDAnalysis:
             rhos = np.round(self.rhos, 3)
             thetas = np.round(self.thetas, 3)
             # Call heatmap plotting function
-            self.plot_heatmap(self.accumulator, thetas, rhos, r'$\theta$ (rad)', r'$\rho$ (V)')
+            self._plot_heatmap(self.accumulator, thetas, rhos, r'$\theta$ (rad)', r'$\rho$ (V)')
 
         return accumulator, thetas, rhos
 
@@ -213,7 +223,7 @@ class CSDAnalysis:
             rhos = np.round(self.rhos, 3)
             thetas = np.round(self.thetas, 3)
             # Call heatmap plotting function
-            self.plot_heatmap(accumulator_threshold, thetas, rhos, r'$\theta$ (rad)', r'$\rho$ (V)')
+            self._plot_heatmap(accumulator_threshold, thetas, rhos, r'$\theta$ (rad)', r'$\rho$ (V)')
 
         return accumulator_threshold
 
@@ -297,7 +307,7 @@ class CSDAnalysis:
 
         return valid_centroids
 
-    def plot_heatmap(self, data, x_values, y_values, x_label, y_label):
+    def _plot_heatmap(self, data, x_values, y_values, x_label, y_label):
         df1 = pd.DataFrame(data, index=y_values, columns=x_values)
         s = sb.heatmap(df1, cbar=True, xticklabels=int(self.csd.num/5), yticklabels=int(self.csd.num/5))
         s.axes.invert_yaxis()

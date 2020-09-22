@@ -6,8 +6,6 @@ For more information about the method, see the references https://doi.org/10.110
 import copy
 import numpy as np
 import pandas as pd
-import seaborn as sb
-import matplotlib.pyplot as plt
 import itertools
 from scipy import linalg as la
 from ..utils.constants import Constants
@@ -73,7 +71,7 @@ class HubbardCSD:
         if h_u is True:
             self.fixed_hamiltonian += self._generate_h_u()
 
-    def generate_csd(self, v_g1_max, v_g2_max, v_g1_min=0, v_g2_min=0, c_cs_1=None, c_cs_2=None, num=100, plotting=False):
+    def generate_csd(self, v_g1_max, v_g2_max, v_g1_min=0, v_g2_min=0, num=100):
         '''Generates the charge stability diagram between v_g1(2)_min and v_g1(2)_max with num by num data points in 2D
 
         Parameters
@@ -106,55 +104,38 @@ class HubbardCSD:
         self.v_1_values = [self.v_g1_min + i/num * (v_g1_max - self.v_g1_min) for i in range(num)]
         self.v_2_values = [self.v_g2_min + j/num * (v_g2_max - self.v_g2_min) for j in range(num)]
 
-        # Loop over all voltage point combinations
-        data = []
-        for v_1 in self.v_1_values:
-            for v_2 in self.v_2_values:
-                mu_1, mu_2 = self._volt_to_chem_pot(v_1, v_2)
-                h_mu = np.zeros(self.fixed_hamiltonian.shape)
+        # Loop over all voltage point combinations in list comprehension
+        occupation = [[[self._lowest_energy(v_1, v_2)] for v_1 in self.v_1_values] for v_2 in self.v_2_values]
 
-                for i in range(self.fixed_hamiltonian.shape[0]):
-                    state_1 = self.basis[i]
+        # Create a num by num DataFrame from occupation data information as entries
+        self.occupation = pd.DataFrame(occupation, index=self.v_1_values, columns=self.v_2_values)
 
-                    result = 0
-                    for k in range(len(self.basis_labels)):
-                        if k == 0 or k == 1:
-                            result += - mu_1 * self._inner_product(state_1, self._number(state_1, k))
-                        if k == 2 or k == 3:
-                            result += - mu_2 * self._inner_product(state_1, self._number(state_1, k))
+    def _lowest_energy(self, v_1, v_2):
+        mu_1, mu_2 = self._volt_to_chem_pot(v_1, v_2)
+        h_mu = np.zeros(self.fixed_hamiltonian.shape)
 
-                    h_mu[i][i] = result
+        for i in range(self.fixed_hamiltonian.shape[0]):
+            state_1 = self.basis[i]
 
-                current_hamiltonian = self.fixed_hamiltonian + h_mu
-                eigenvals, eigenvects = la.eig(current_hamiltonian)
-                eigenvects = np.transpose(eigenvects) # To get column eigenvectors not column entries
-                eigenvals = np.real(eigenvals) # Needs to be cast to real (even though Hamiltonian is Hermitian so eigenvalues are real)
-                lowest_eigenvect = np.squeeze(eigenvects[np.argmin(eigenvals)])
-                lowest_eigenvect = lowest_eigenvect/la.norm(lowest_eigenvect)
-                lowest_eigenvect_prob = lowest_eigenvect * np.conj(lowest_eigenvect)
-                occupation_1 = (lowest_eigenvect_prob * self.basis_occupation_1).sum()
-                occupation_2 = (lowest_eigenvect_prob * self.basis_occupation_2).sum()
-                current = occupation_1 * c_cs_1 + occupation_2 * c_cs_2
-                data.append([v_1, v_2, current])
+            result = 0
+            for k in range(len(self.basis_labels)):
+                if k == 0 or k == 1:
+                    result += - mu_1 * self._inner_product(state_1, self._number(state_1, k))
+                if k == 2 or k == 3:
+                    result += - mu_2 * self._inner_product(state_1, self._number(state_1, k))
 
-        data = np.real(data) # Needs to be cast to real to avoid problems plotting
-        df = pd.DataFrame(data, columns=['V_g1', 'V_g2', 'Current'])
-        self.csd = df.pivot_table(index='V_g1', columns='V_g2', values='Current')
+            h_mu[i][i] = result
 
-        # Show plots if flag is set to True
-        if plotting is True:
-
-            # Toggles colorbar if charge sensor information is given
-            cbar_flag = False
-            if (c_cs_1 is not None) and (c_cs_2 is not None):
-                cbar_flag = True
-
-            # Plot the chagre stability diagram
-            p1 = sb.heatmap(self.csd, cbar=cbar_flag, xticklabels=int(
-                num/5), yticklabels=int(num/5), cbar_kws={'label': 'Current (arb.)'})
-            p1.axes.invert_yaxis()
-            p1.set(xlabel=r'V$_1$', ylabel=r'V$_2$')
-            plt.show()
+        current_hamiltonian = self.fixed_hamiltonian + h_mu
+        eigenvals, eigenvects = la.eig(current_hamiltonian)
+        eigenvects = np.transpose(eigenvects) # To get column eigenvectors not column entries
+        eigenvals = np.real(eigenvals) # Needs to be cast to real (even though Hamiltonian is Hermitian so eigenvalues are real)
+        lowest_eigenvect = np.squeeze(eigenvects[np.argmin(eigenvals)])
+        lowest_eigenvect = lowest_eigenvect/la.norm(lowest_eigenvect)
+        lowest_eigenvect_prob = np.real(lowest_eigenvect * np.conj(lowest_eigenvect))
+        occupation_1 = (lowest_eigenvect_prob * self.basis_occupation_1).sum()
+        occupation_2 = (lowest_eigenvect_prob * self.basis_occupation_2).sum()
+        return (occupation_1, occupation_2)
 
     def _generate_basis(self):
         '''Creates the 

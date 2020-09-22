@@ -1,9 +1,9 @@
 '''
 File used to generate and plot charge stability diagrams using the constant interaction model.
 '''
-import math
 import sys
 import pandas as pd
+from math import floor
 from ..utils.constants import Constants
 
 const = Constants()
@@ -101,21 +101,21 @@ class CSD:
             abs(e) * (self.c_g1 * v_g1 * self.e_cm/self.e_c2 + self.c_g2 * v_g2)
 
         # goes over 4 closest integer lattice points to find integer solution with lowest energy
-        n_trials = [(math.floor(n_1), math.floor(n_2)), (math.floor(n_1) + 1, math.floor(n_2)),
-                    (math.floor(n_1), math.floor(n_2) + 1), (math.floor(n_1) + 1, math.floor(n_2) + 1)]
+        n_trials = [(floor(n_1), floor(n_2)), (floor(n_1) + 1, floor(n_2)),
+                    (floor(n_1), floor(n_2) + 1), (floor(n_1) + 1, floor(n_2) + 1)]
         n_energies = [self.calculate_energy(
             *occupation, v_g1, v_g2) for occupation in n_trials]
         state = n_trials[n_energies.index(min(n_energies))]
         if state[0] >= 0 and state[1] >= 0:
-            return state
+            return tuple(state)
         if state[0] < 0 and state[1] < 0:
-            return [0, 0]
+            return (0, 0)
         elif state[0] < 0:
-            return [0, state[1]]
+            return (0, state[1])
         else:
-            return [state[0], 0]
+            return (state[0], 0)
 
-    def generate_csd(self, v_g1_max, v_g2_max, v_g1_min=0, v_g2_min=0, c_cs_1=None, c_cs_2=None, num=100):
+    def generate_csd(self, v_g1_max, v_g2_max, v_g1_min=0, v_g2_min=0, num=100):
         ''' Generates the charge stability diagram between v_g1(2)_min and v_g1(2)_max with num by num data points in 2D
 
         Parameters
@@ -138,39 +138,18 @@ class CSD:
         -------
         None
         '''
+        # Save for later
         self.num = num
         self.v_g1_min = v_g1_min
         self.v_g1_max = v_g1_max
         self.v_g2_min = v_g2_min
         self.v_g2_max = v_g2_max
-        # Determines how to make the colorbar for the charge stability diagram
-        # If capacitances are given, use those as multipliers
-        if (c_cs_1 is not None) and (c_cs_2 is not None):
-            dot_1_multiplier = c_cs_1
-            dot_2_multiplier = c_cs_2
-        # Otherwise, create a colormap that gives a uniques color combo to each (n,m) pair
-        else:
-            max_occupation = self._lowest_energy(v_g1_max, v_g2_max)
-            dot_1_multiplier = 1
-            dot_2_multiplier = max_occupation[0] + 1
 
         # Generates all the voltages to be swept
-        self.v_1_values = [round(self.v_g1_min + i/num * (self.v_g1_max - self.v_g1_min), 4) for i in range(self.num)]
-        self.v_2_values = [round(self.v_g2_min + j/num * (self.v_g2_max - self.v_g2_min), 4) for j in range(self.num)]
+        self.v_1_values = [self.v_g1_min + i/num * (self.v_g1_max - self.v_g1_min) for i in range(self.num)]
+        self.v_2_values = [self.v_g2_min + j/num * (self.v_g2_max - self.v_g2_min) for j in range(self.num)]
         # Goes through all the v_1 and v_2 values and generate the csd data
+        occupation = [[[self._lowest_energy(v_1, v_2)] for v_1 in self.v_1_values] for v_2 in self.v_2_values]
 
-        # Checks if a version after 3.8 is running in order to use the more efficient Walrus operator 
-        if (sys.version_info[0]==3 and sys.version_info[1]>=8) or sys.version_info[0]>=3:
-            data = [
-                    [v_1, v_2, (p:= self._lowest_energy(v_1, v_2))[0] * dot_1_multiplier + p[1] * dot_2_multiplier
-                    ] for v_1 in self.v_1_values for v_2 in self.v_2_values
-                ]
-        else: # run less efficient version of the code
-            data = [
-                    [v_1, v_2, self._lowest_energy(v_1, v_2)[0] * dot_1_multiplier + self._lowest_energy(v_1, v_2)[1] * dot_2_multiplier
-                    ] for v_1 in self.v_1_values for v_2 in self.v_2_values
-               ]
-
-        # Create DataFrame from data and pivot into num by num array
-        df = pd.DataFrame(data, columns=['V_g1', 'V_g2', 'Current'])
-        self.csd = df.pivot_table(index='V_g1', columns='V_g2', values='Current')
+        # Create a num by num DataFrame from occupation data information as entries
+        self.occupation = pd.DataFrame(occupation, index=self.v_1_values, columns=self.v_2_values)
