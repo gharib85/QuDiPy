@@ -30,19 +30,30 @@ class CSDAnalysis:
         None
 
         '''
-        self.capaciatnces = None
+        self.capacitances = capacitances
         self.csd = copy.copy(csd) # to avoid overwriting origianl csd object
-        if capacitances is None:
-            self.csd.csd = pd.DataFrame(0, index=self.csd.v_1_values, columns=self.csd.v_2_values)
+        self.csd.csd = pd.DataFrame(0, index=self.csd.v_1_values, columns=self.csd.v_2_values, dtype=np.float32)
+        if self.capacitances is None:
+            single_occupations = [np.zeros(self.csd.n_sites) for i in range(self.csd.n_sites)]
+            for i in range(self.csd.n_sites):
+                single_occupations[i][i] = 1
+            hashes = np.array([hash(tuple(single_occupations[i])) for i in range(self.csd.n_sites)])
             for i in self.csd.v_2_values:
                 for j in self.csd.v_1_values:
-                    self.csd.csd[i][j] = hash(self.csd.occupation[i][j][0])
+                    self.csd.csd[i][j] = np.sum(hashes * self.csd.occupation[i][j][0])
+        else:
+            if len(self.capacitances) != self.csd.n_sites:
+                raise Warning("Number of dot to charge sensor capacitances does not match the number of dots")
+            self.capacitances = np.array(self.capacitances)
+            for i in self.csd.v_2_values:
+                for j in self.csd.v_1_values:
+                    self.csd.csd[i][j] = np.sum(self.capacitances * self.csd.occupation[i][j][0])
 
         if blur is True:
-            if capacitances is None:
+            if self.capacitances is None:
                 raise Warning("Blurring of data cannot occur when no capaciatnce are provided. Data will not be changed")
-            else:    
-                self.csd.csd = pd.DataFrame(gaussian_filter(self.csd.csd, blur_sigma), columns=self.csd.v_1_values, index=self.csd.v_2_values) 
+            else:
+                self.csd.csd = pd.DataFrame(gaussian_filter(self.csd.csd, blur_sigma), columns=self.csd.v_1_values, index=self.csd.v_2_values)
 
         # Create derivative of charge stability diagram
         df_der_row = self.csd.csd.diff(axis=0) # to be sensitive to cahnges in both the x and y direction
@@ -97,12 +108,13 @@ class CSDAnalysis:
         p1.set(xlabel=r'V$_1$', ylabel=r'V$_2$')
         plt.show()
 
-        # Plot the "derivative" of the charge stability diagram
-        p2 = sb.heatmap(self.csd.csd_der, cbar=cbar_flag, xticklabels=int(
-            self.csd.num/5), yticklabels=int(self.csd.num/5))
-        p2.axes.invert_yaxis()
-        p2.set(xlabel=r'V$_1$', ylabel=r'V$_2$')
-        plt.show()
+        # Plot the "derivative" of the charge stability diagram, if capatitances are provided
+        if self.capacitances is not None:
+            p2 = sb.heatmap(self.csd.csd_der, cbar=cbar_flag, xticklabels=int(
+                self.csd.num/5), yticklabels=int(self.csd.num/5))
+            p2.axes.invert_yaxis()
+            p2.set(xlabel=r'V$_1$', ylabel=r'V$_2$')
+            plt.show()
 
 
     def hough_transform(self, num_thetas=180, theta_min=0, theta_max=90, plotting=False):

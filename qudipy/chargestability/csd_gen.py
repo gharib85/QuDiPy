@@ -1,7 +1,6 @@
 '''
 File used to generate and plot charge stability diagrams using the constant interaction model.
 '''
-import sys
 import pandas as pd
 from math import floor
 from ..utils.constants import Constants
