@@ -1,4 +1,3 @@
 '''
 Charge stability module
 '''
-#hi 
