@@ -133,19 +133,16 @@ class HubbardCSD:
         lowest_eigenvect = np.squeeze(eigenvects[np.argmin(eigenvals)])
         lowest_eigenvect = lowest_eigenvect/la.norm(lowest_eigenvect)
         lowest_eigenvect_prob = np.real(lowest_eigenvect * np.conj(lowest_eigenvect))
-        occupation_1 = (lowest_eigenvect_prob * self.basis_occupation_1).sum()
-        occupation_2 = (lowest_eigenvect_prob * self.basis_occupation_2).sum()
-        return (occupation_1, occupation_2)
+        occupation_list = []
+        for i in range(self.n_sites):
+            occupation_list.append((lowest_eigenvect_prob * getattr(self, 'basis_occupation_' + str(i))).sum())
+        return tuple(occupation_list)
 
     def _generate_basis(self):
-        '''Creates the 
+        '''Creates the basis of all possible states given the constraints on the number of sites and number of electrons
 
         Parameters
         ----------
-        None
-
-        Keyword Arguments
-        -----------------
         None
 
         Returns
@@ -166,8 +163,9 @@ class HubbardCSD:
         # Labels each index in the basis state with site number and spin direction (could add valley states)
         self.sites = [f'site_{n+1}' for n in range(self.n_sites)]
         self.spins = ['spin_up', 'spin_down']
-        self.basis_occupation_1 = np.array([sum(x[:2]) for x in basis])
-        self.basis_occupation_2 = np.array([sum(x[2:4]) for x in basis])
+        for i in range(self.n_sites):
+            j = 2*i
+            setattr(self, 'basis_occupation_' + str(i), np.array([sum(x[j:j+2]) for x in basis]))
         basis_labels = list(itertools.product(self.sites, self.spins))
 
         self.basis = basis
@@ -209,12 +207,19 @@ class HubbardCSD:
                 result = 0
                 for k in range(len(self.basis_labels)):
                     for l in range(k):
-                        if self.basis_labels[k][0] == 'site_1' and self.basis_labels[l][0] == 'site_1': # check if electrons are on same site
-                            result += self.U_1 * self._inner_product(state_1, self._number(self._number(state_1, k), l))
-                        elif self.basis_labels[k][0] == 'site_2' and self.basis_labels[l][0] == 'site_2': # check if electrons are on same site
-                            result += self.U_2 * self._inner_product(state_1, self._number(self._number(state_1, k), l))
+                        for j in range(self.n_sites):
+                            if self.basis_labels[k][0] == 'site_' + str(j+1) and self.basis_labels[l][0] == 'site_' + str(j+1): # check if electrons are on same site
+                                result += getattr(self, 'U_' + str(j+1) + str(j+1)) * self._inner_product(state_1, self._number(self._number(state_1, k), l))
+                                break
                         else:
-                            result += self.U_12 * self._inner_product(state_1, self._number(self._number(state_1, k), l))
+                            for j in range(self.n_sites):
+                                for m in range(j):
+                                    result += getattr(self, 'U_' + str(m+1) + str(j+1)) * self._inner_product(state_1, self._number(self._number(state_1, k), l))
+                                    break
+                                else:
+                                    continue
+                                break
+
 
                 h_u[i][i] = result
         return h_u
@@ -237,8 +242,8 @@ class HubbardCSD:
         -------
         Chemical potentials mu_1 and m_2 on site 1 and site 2 respectively
         '''
-        alpha_1 = ((self.U_2 - self.U_12) * self.U_1) / (self.U_1 * self.U_2 - self.U_12**2)
-        alpha_2 = ((self.U_1 - self.U_12) * self.U_2) / (self.U_1 * self.U_2 - self.U_12**2)
+        alpha_1 = ((self.U_22 - self.U_12) * self.U_11) / (self.U_11 * self.U_22 - self.U_12**2)
+        alpha_2 = ((self.U_11 - self.U_12) * self.U_22) / (self.U_11 * self.U_22 - self.U_12**2)
         mu_1 = (alpha_1 * v_1 + (1 - alpha_1) * v_2)
         mu_2 = ((1 - alpha_2) * v_1 + alpha_2 * v_2)
         return mu_1, mu_2
