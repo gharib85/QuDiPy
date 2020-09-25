@@ -101,8 +101,8 @@ class HubbardCSD:
         self.v_g2_max = v_g2_max
 
         # Generate voltage points to sweep over
-        self.v_1_values = [self.v_g1_min + i/num * (v_g1_max - self.v_g1_min) for i in range(num)]
-        self.v_2_values = [self.v_g2_min + j/num * (v_g2_max - self.v_g2_min) for j in range(num)]
+        self.v_1_values = [round(self.v_g1_min + i/num * (v_g1_max - self.v_g1_min), 6) for i in range(num)]
+        self.v_2_values = [round(self.v_g2_min + j/num * (v_g2_max - self.v_g2_min), 6) for j in range(num)]
 
         # Loop over all voltage point combinations in list comprehension
         occupation = [[[self._lowest_energy(v_1, v_2)] for v_1 in self.v_1_values] for v_2 in self.v_2_values]

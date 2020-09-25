@@ -83,8 +83,8 @@ class CSD:
         self.v_g2_max = v_g2_max
 
         # Generates all the voltages to be swept
-        self.v_1_values = [self.v_g1_min + i/num * (self.v_g1_max - self.v_g1_min) for i in range(self.num)]
-        self.v_2_values = [self.v_g2_min + j/num * (self.v_g2_max - self.v_g2_min) for j in range(self.num)]
+        self.v_1_values = [round(self.v_g1_min + i/num * (self.v_g1_max - self.v_g1_min), 6) for i in range(self.num)]
+        self.v_2_values = [round(self.v_g2_min + j/num * (self.v_g2_max - self.v_g2_min), 6) for j in range(self.num)]
         # Goes through all the v_1 and v_2 values and generate the csd data
         occupation = [[[self._lowest_energy(v_1, v_2)] for v_1 in self.v_1_values] for v_2 in self.v_2_values]
 
