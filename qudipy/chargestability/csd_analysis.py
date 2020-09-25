@@ -16,7 +16,6 @@ from sklearn.neighbors import NearestCentroid
 class CSDAnalysis:
     '''
     Initialize the charge stability diagram analysis class which analyzes charge stability diagrams to extract parameters. 
-
     '''
     def __init__(self, csd, capacitances=None, blur=False, blur_sigma=1):
         '''
@@ -25,6 +24,13 @@ class CSDAnalysis:
         ----------
         csd : CSD object from csd_gen
 
+        Keyword Arguments
+        -----------------
+        capacitances: List used to convert from occupation to current for analysis. If no capactiacnes are supplied, a colormap will be
+                      created but this colormap will be physically meaningless and not suitbale for further analysis (default None)
+        blur: Whehter or not to do a gaussian blur on the data to simulate thermal broadening of transition lines (default False)
+        blur_sigma: Standard deviation of gaussian kernal. Larger number means more smeared out (default 1)
+
         Returns
         -------
         None
@@ -32,7 +38,11 @@ class CSDAnalysis:
         '''
         self.capacitances = capacitances
         self.csd = copy.copy(csd) # to avoid overwriting origianl csd object
+
+        # Create new empty DataFrame where we will put numbers instead of tuples correspondng to occupations
         self.csd.csd = pd.DataFrame(0, index=self.csd.v_1_values, columns=self.csd.v_2_values, dtype=np.float32)
+
+        # If no capacitances are provided, create a color map using the hash of the occupation
         if self.capacitances is None:
             single_occupations = [np.zeros(self.csd.n_sites) for i in range(self.csd.n_sites)]
             for i in range(self.csd.n_sites):
@@ -44,7 +54,9 @@ class CSDAnalysis:
         else:
             if len(self.capacitances) != self.csd.n_sites:
                 raise Warning("Number of dot to charge sensor capacitances does not match the number of dots")
+            # cast capacitances to numpy array to use numpy functions
             self.capacitances = np.array(self.capacitances)
+            # going over v_2 in outer loop due to how numpy indexes 2d arrays
             for i in self.csd.v_2_values:
                 for j in self.csd.v_1_values:
                     self.csd.csd[i][j] = np.sum(self.capacitances * self.csd.occupation[i][j][0])
@@ -94,28 +106,38 @@ class CSDAnalysis:
 
         else:
             raise ValueError('Unrecognized threshold type: ' + str(threshold_type))
-
+        
+        # Make bitmap
         self.csd_bitmap = self.csd.csd_der.mask(abs(self.csd.csd_der) > threshold, other=1).mask(abs(self.csd.csd_der) <= threshold, other=0)
         if plotting is True:
             self._plot_heatmap(self.csd_bitmap, self.csd.v_1_values, self.csd.v_2_values, r'V$_1$', r'V$_2$')
 
-    def plot_csd(self, cbar_flag=False):
+    def plot_csd(self):
+        '''
+        Wrapper which plots the charge stability diagram, and the derivative of the charge stability diagram if it meaningful
 
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        None
+
+        '''
+        # Plot colobar and indicate "current" if results are physically meaningful
+        if self.capacitances is not None:
+            cbar_flag = True
+            cbar_kws={'label': 'Current (arb.)'}
+        else:
+            cbar_flag = False
+            cbar_kws = dict()
         # Plot the chagre stability diagram
-        p1 = sb.heatmap(self.csd.csd, cbar=cbar_flag, xticklabels=int(
-            self.csd.num/5), yticklabels=int(self.csd.num/5), cbar_kws={'label': 'Current (arb.)'})
-        p1.axes.invert_yaxis()
-        p1.set(xlabel=r'V$_1$', ylabel=r'V$_2$')
-        plt.show()
+        self._plot_heatmap(self.csd.csd, None, None, r'V$_1$', r'V$_2$', cbar=cbar_flag, cbar_kws=cbar_kws)
 
         # Plot the "derivative" of the charge stability diagram, if capatitances are provided
         if self.capacitances is not None:
-            p2 = sb.heatmap(self.csd.csd_der, cbar=cbar_flag, xticklabels=int(
-                self.csd.num/5), yticklabels=int(self.csd.num/5))
-            p2.axes.invert_yaxis()
-            p2.set(xlabel=r'V$_1$', ylabel=r'V$_2$')
-            plt.show()
-
+            self._plot_heatmap(self.csd.csd_der, None, None, r'V$_1$', r'V$_2$', cbar=cbar_flag, cbar_kws=cbar_kws)
 
     def hough_transform(self, num_thetas=180, theta_min=0, theta_max=90, plotting=False):
         '''
@@ -146,7 +168,7 @@ class CSDAnalysis:
         thetas = np.deg2rad(np.linspace(theta_min, theta_max, num=num_thetas))
         width = img.columns[-1]
         height = img.index[-1]
-        diag_len = np.sqrt(width ** 2 + height ** 2)   # max_dist
+        diag_len = np.sqrt(width ** 2 + height ** 2)
 
         index_height, index_width = img.shape
         index_diag_len = int(round(np.sqrt(index_width ** 2 + index_height ** 2)))
@@ -158,7 +180,7 @@ class CSDAnalysis:
 
         # Hough accumulator array of theta vs rho
         accumulator = np.zeros((2 * index_diag_len, num_thetas), dtype=np.uint64)
-        y_idxs, x_idxs = np.nonzero(img.to_numpy())  # (row, col) indexes to edges
+        y_idxs, x_idxs = np.nonzero(img.to_numpy())
 
         # Vote in the hough accumulator
         for i in range(len(x_idxs)):
@@ -169,8 +191,8 @@ class CSDAnalysis:
             y = img.index[y_index]
 
             for t_idx in range(num_thetas):
-                # Calculate rho. diag_len is added for a positive index
                 rho = x * cos_t[t_idx] + y * sin_t[t_idx]
+                # Find index of the nearest value in rhos to rho, and add vote there
                 rho_index = (np.abs(rhos - rho)).argmin()
                 accumulator[rho_index, t_idx] += 1
 
@@ -181,8 +203,8 @@ class CSDAnalysis:
 
         if plotting is True:
             # Round data to avoid ridiculously long tick markers
-            rhos = np.round(self.rhos, 3)
-            thetas = np.round(self.thetas, 3)
+            rhos = np.round(self.rhos, 6)
+            thetas = np.round(self.thetas, 6)
             # Call heatmap plotting function
             self._plot_heatmap(self.accumulator, thetas, rhos, r'$\theta$ (rad)', r'$\rho$ (V)')
 
@@ -231,8 +253,8 @@ class CSDAnalysis:
 
         if plotting is True:
             # Round data to avoid ridiculously long tick markers
-            rhos = np.round(self.rhos, 3)
-            thetas = np.round(self.thetas, 3)
+            rhos = np.round(self.rhos, 6)
+            thetas = np.round(self.thetas, 6)
             # Call heatmap plotting function
             self._plot_heatmap(accumulator_threshold, thetas, rhos, r'$\theta$ (rad)', r'$\rho$ (V)')
 
@@ -245,7 +267,7 @@ class CSDAnalysis:
         Parameters
         ----------
         eps: maximum distance for points to be considered in the local neighbourhood of each other
-        min_samples: minimum number of samples within the local neighbourhood in order for the point to be considered a core part of the cluster.
+        min_samples: minimum number of samples within the local neighbourhood in order for the point to be considered a core part of the cluster
 
         Keyword Arguments
         -----------------
@@ -318,9 +340,33 @@ class CSDAnalysis:
 
         return valid_centroids
 
-    def _plot_heatmap(self, data, x_values, y_values, x_label, y_label):
-        df1 = pd.DataFrame(data, index=y_values, columns=x_values)
-        s = sb.heatmap(df1, cbar=True, xticklabels=int(self.csd.num/5), yticklabels=int(self.csd.num/5))
+    def _plot_heatmap(self, data, x_values, y_values, x_label, y_label, cbar=True, cbar_kws=dict()):
+        '''
+        Private function which formats and plots Seaborn heatmaps.
+
+        Parameters
+        ----------
+        data: Numpy array or Pandas Dataframe which contains the data to plot
+        x_values: List of x values for the heatmap. If "data" is a numpy array, can be None
+        y_values: List of y values for the heatmap. If "data" is a numpy array, can be None
+        x_label: Label to add to x axis if plot
+        y_label: Label to add to y axis of plot
+
+        Keyword Arguments
+        -----------------
+        cbar: Whether or not to display a colobar for the heatmap (Default False)
+        cbar_kws: Colorbar keyword arguments to pass to plot (Defaults to empty dictionary)
+        
+        Returns
+        -------
+        None
+
+        '''
+        # Casts to a dataframe if data is not already for ease of plotting
+        if type(data) != type(pd.DataFrame()):
+            data = pd.DataFrame(data, index=y_values, columns=x_values)
+        s = sb.heatmap(data, cbar=cbar, xticklabels=int(self.csd.num/5), yticklabels=int(self.csd.num/5), cbar_kws=cbar_kws)
+        # Flip y axis so y_values increasing from bottom to top 
         s.axes.invert_yaxis()
         s.axes.set_xlabel(x_label)
         s.axes.set_ylabel(y_label)
