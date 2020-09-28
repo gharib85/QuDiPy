@@ -187,14 +187,11 @@ class HubbardCSD:
                     continue # No tunnel coupling between states with different number of spins in each orientation
 
                 result = 0
-                term_1 = 0
-                term_2 = 0
                 for k in range(len(self.basis_labels)):
                     for l in range(k):
-                        term_1 += self.t * self._inner_product(state_1, self._create(self._annihilate(state_2, k), l))
-                        term_2 += self.t * self._inner_product(state_1, self._create(self._annihilate(state_2, l), k))
+                        result += self.t_12 * self._inner_product(state_1, self._create(self._annihilate(state_2, k), l))
+                        result += self.t_12 * self._inner_product(state_1, self._create(self._annihilate(state_2, l), k))
 
-                result += term_1 + term_2
                 h_t[i][j] = -result
                 h_t[j][i] = -result #Since matrix is symmetric
         return h_t
