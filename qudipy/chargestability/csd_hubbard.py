@@ -189,8 +189,11 @@ class HubbardCSD:
                 result = 0
                 for k in range(len(self.basis_labels)):
                     for l in range(k):
-                        result += self.t_12 * self._inner_product(state_1, self._create(self._annihilate(state_2, k), l))
-                        result += self.t_12 * self._inner_product(state_1, self._create(self._annihilate(state_2, l), k))
+                        for n in range(self.n_sites):
+                                for m in range(j):
+                                    if hasattr(self, 't_' + str(m+1) + str(n+1)):
+                                        result += getattr(self, 't_' + str(m+1) + str(n+1)) * self._inner_product(state_1, self._create(self._annihilate(state_2, k), l))
+                                        result += getattr(self, 't_' + str(m+1) + str(n+1)) * self._inner_product(state_1, self._create(self._annihilate(state_2, l), k))
 
                 h_t[i][j] = -result
                 h_t[j][i] = -result #Since matrix is symmetric
