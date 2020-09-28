@@ -279,7 +279,16 @@ class HubbardCSD:
 
     def _inner_product(self, state_1, state_2):
         '''
-        Computes the inner product
+        Computes the inner product of two orhtonormal states
+
+        Parameters
+        ----------
+        state_1: First state in the inner product
+        state_2: Second state in the inner product
+
+        Returns
+        -------
+        Either 0 or 1, depending on the inner product
         '''
         if state_1==None or state_2==None: # Deals with cases where the coefficient of state is 0, so the inner product is multiplied by 0
             return 0
@@ -290,9 +299,18 @@ class HubbardCSD:
 
     def _create(self, state, position):
         '''
-        docstring
+        Computes the creation operator acting on a state at a particular position
+
+        Parameters
+        ----------
+        state: state for the creation operator to be acted on
+        position: place where we will try to increase the electron number
+
+        Returns
+        -------
+        The state incremented by 1 in position, or None
         '''
-        state = copy.copy(state)
+        state = copy.copy(state) # to avoid overwrites onto object
         if state == None:
             pass # keep state as None
         elif state[position] == 0:
@@ -303,9 +321,18 @@ class HubbardCSD:
 
     def _annihilate(self, state, position):
         '''
-        docstring
+        Computes the annihilation operator acting on a state at a particular position
+
+        Parameters
+        ----------
+        state: state for the creation operator to be acted on
+        position: place where we will try to decrease the electron number
+
+        Returns
+        -------
+        The state reduced by 1 in position, or None
         '''
-        state = copy.copy(state)
+        state = copy.copy(state) # to avoid overwrites onto object
         if state == None:
             pass
         elif state[position] == 1:
@@ -316,7 +343,16 @@ class HubbardCSD:
 
     def _number(self, state, position):
         '''
-        docstring
+        Computes the number oparator acting on a state at a particular position
+
+        Parameters
+        ----------
+        state: state for the creation operator to be acted on
+        position: place where we will try to count the electron number
+
+        Returns
+        -------
+        The state (if it has an electron in position) or None
         '''
         return self._create(self._annihilate(state, position), position)
 
