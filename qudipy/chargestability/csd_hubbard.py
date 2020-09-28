@@ -174,7 +174,21 @@ class HubbardCSD:
         return
 
     def _generate_h_t(self):
+        '''
+        Generates the tunnel coupling term of the Hamiltonian in the Hubbard model
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        None
+        '''
+        # Create empty matrix to fill
         h_t = np.zeros(self.fixed_hamiltonian.shape)
+
+        # Go over pairs of states that are not the same (since H_t has no diagonal terms)
         for i in range(self.fixed_hamiltonian.shape[0]):
             for j in range(i):
                 state_1 = self.basis[i]
@@ -186,11 +200,14 @@ class HubbardCSD:
                 if sum(state_1[::2]) != sum(state_2[::2]):
                     continue # No tunnel coupling between states with different number of spins in each orientation
 
+                # Go over pairs of labels, which correspond to whether particular (location, spin) are occupied
                 result = 0
                 for k in range(len(self.basis_labels)):
                     for l in range(k):
+                        # Go over pairs of sites
                         for n in range(self.n_sites):
                                 for m in range(j):
+                                    # Add contribution to result is that tunnel coupling term exists (i.e non-zero)
                                     if hasattr(self, 't_' + str(m+1) + str(n+1)):
                                         result += getattr(self, 't_' + str(m+1) + str(n+1)) * self._inner_product(state_1, self._create(self._annihilate(state_2, k), l))
                                         result += getattr(self, 't_' + str(m+1) + str(n+1)) * self._inner_product(state_1, self._create(self._annihilate(state_2, l), k))
