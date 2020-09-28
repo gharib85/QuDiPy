@@ -110,8 +110,8 @@ class HubbardCSD:
         # Create a num by num DataFrame from occupation data information as entries
         self.occupation = pd.DataFrame(occupation, index=self.v_1_values, columns=self.v_2_values)
 
-    def _lowest_energy(self, v_1, v_2):
-        mu_1, mu_2 = self._volt_to_chem_pot(v_1, v_2)
+    def _lowest_energy(self, volt_vect):
+        chem_vect = self._volt_to_chem_pot(volt_vect)
         h_mu = np.zeros(self.fixed_hamiltonian.shape)
 
         for i in range(self.fixed_hamiltonian.shape[0]):
@@ -253,15 +253,14 @@ class HubbardCSD:
                 h_u[i][i] = result
         return h_u
 
-    def _volt_to_chem_pot(self, v_1, v_2):
+    def _volt_to_chem_pot(self, volt_vect):
         '''
-        Converts from supplied voltages to chemical potential for 2 coupled dots, assuming the capacitance model is valid.
+        Converts from supplied voltages to chemical potential using the 
         Requires self charging and coulomb repulsion energy terms to be loaded already
 
         Parameters
         ----------
-        v_1: voltage on plunger gate 1
-        v_2: voltage on plunger gate 2
+        volt_vect: vector of voltage on each gate
 
         Keyword Arguments
         -----------------
@@ -271,11 +270,7 @@ class HubbardCSD:
         -------
         Chemical potentials mu_1 and m_2 on site 1 and site 2 respectively
         '''
-        alpha_1 = ((self.U_22 - self.U_12) * self.U_11) / (self.U_11 * self.U_22 - self.U_12**2)
-        alpha_2 = ((self.U_11 - self.U_12) * self.U_22) / (self.U_11 * self.U_22 - self.U_12**2)
-        mu_1 = (alpha_1 * v_1 + (1 - alpha_1) * v_2)
-        mu_2 = ((1 - alpha_2) * v_1 + alpha_2 * v_2)
-        return mu_1, mu_2
+        return self.cap_matrix @ volt_vect
 
     def _inner_product(self, state_1, state_2):
         '''
@@ -325,7 +320,7 @@ class HubbardCSD:
 
         Parameters
         ----------
-        state: state for the creation operator to be acted on
+        state: state for the annihilation operator to be acted on
         position: place where we will try to decrease the electron number
 
         Returns
@@ -347,7 +342,7 @@ class HubbardCSD:
 
         Parameters
         ----------
-        state: state for the creation operator to be acted on
+        state: state for the number operator to be acted on
         position: place where we will try to count the electron number
 
         Returns
