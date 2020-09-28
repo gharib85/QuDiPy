@@ -139,7 +139,8 @@ class HubbardCSD:
         return tuple(occupation_list)
 
     def _generate_basis(self):
-        '''Creates the basis of all possible states given the constraints on the number of sites and number of electrons
+        '''
+        Creates the basis of all possible states given the constraints on the number of sites and number of electrons
 
         Parameters
         ----------
@@ -153,20 +154,21 @@ class HubbardCSD:
         # Compute all possible occupations with the cartesian product, and then
         # remove all states that exceed the number of electron specified
         # TODO make this more efficient so we only generate the states we want
-        all_combos = list(itertools.product(*[[0,1] for i in range(self.n_sites * 2)])) # * 2 is for spin degeneracy (could add another *2 for valleys)
-
+        all_combos = list(itertools.product(*[[0,1] for i in range(self.n_sites * 2)])) # * 2 is for spin degeneracy (could add another * 2 for valleys)
         basis = []
         for combo in all_combos:
             if sum(combo) <= self.n_e:
                 basis.append(list(combo))
 
-        # Labels each index in the basis state with site number and spin direction (could add valley states)
+        # Labels each index in the basis state with site number and spin direction (could add valley states in future as well)
         self.sites = [f'site_{n+1}' for n in range(self.n_sites)]
         self.spins = ['spin_up', 'spin_down']
+        basis_labels = list(itertools.product(self.sites, self.spins))
+
+        # Count number of electrons in each basis state (useful to determine occupation of ground state later on)
         for i in range(self.n_sites):
             j = 2*i
             setattr(self, 'basis_occupation_' + str(i), np.array([sum(x[j:j+2]) for x in basis]))
-        basis_labels = list(itertools.product(self.sites, self.spins))
 
         self.basis = basis
         self.basis_labels = basis_labels
@@ -217,25 +219,35 @@ class HubbardCSD:
         return h_t
 
     def _generate_h_u(self):
+        '''
+        Generates the Coulomb repulsion term of the Hamiltonian in the Hubbard model
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        None
+        '''
+
+        # Create empty matrix to fill
         h_u = np.zeros(self.fixed_hamiltonian.shape)
+
+        # Go over all states (but not pairs since H_U is diagonal)
         for i in range(self.fixed_hamiltonian.shape[0]):
                 state_1 = self.basis[i]
-
+                # Go over pairs of labels, which correspond to whether particular (location, spin) are occupied
                 result = 0
                 for k in range(len(self.basis_labels)):
                     for l in range(k):
+                        # Then, go over over all site pairs of sites and add their contribution if it is present
                         for j in range(self.n_sites):
-                            if self.basis_labels[k][0] == 'site_' + str(j+1) and self.basis_labels[l][0] == 'site_' + str(j+1): # check if electrons are on same site
-                                result += getattr(self, 'U_' + str(j+1) + str(j+1)) * self._inner_product(state_1, self._number(self._number(state_1, k), l))
-                                break
-                        else:
-                            for j in range(self.n_sites):
-                                for m in range(j):
-                                    result += getattr(self, 'U_' + str(m+1) + str(j+1)) * self._inner_product(state_1, self._number(self._number(state_1, k), l))
-                                    break
-                                else:
-                                    continue
-                                break
+                            for m in range(j+1): # j+1 to get same site repulsion
+                                if self.basis_labels[k][0] == 'site_' + str(j+1) and self.basis_labels[l][0] == 'site_' + str(m+1):
+                                    if hasattr(self, 'U_' + str(m+1) + str(j+1)): # Check if inter-dot coupling is set between these two sites, skipping if is not
+                                        result += getattr(self, 'U_' + str(m+1) + str(j+1)) * self._inner_product(state_1, self._number(self._number(state_1, k), l))
+
 
 
                 h_u[i][i] = result
