@@ -5,6 +5,7 @@ For more information about the method, see the references https://doi.org/10.110
 
 import copy
 import numpy as np
+from numpy.core.fromnumeric import transpose
 import pandas as pd
 import itertools
 from scipy import linalg as la
@@ -16,7 +17,7 @@ class HubbardCSD:
     Based on section III in https://doi.org/10.1103/PhysRevB.83.235314.
     This class is intended for use with NextNano potentials to simulate charge stability diagrams of various designs, but can also be used with analytic potentials.
     '''
-    def __init__(self, n_sites, n_e, h_mu=False, h_t=False, h_u=False, **kwargs):
+    def __init__(self, n_sites, n_e, cap_matrix, h_mu=False, h_t=False, h_u=False, **kwargs):
         '''
 
         Parameters
@@ -56,6 +57,12 @@ class HubbardCSD:
             self.n_e = n_e
             self.n_sites = n_sites
 
+        cap_matrix = np.array(cap_matrix)
+        if cap_matrix.shape != (n_sites, n_sites):
+            raise Exception(f"Expected capacitance matrix of shape ({n_sites},{n_sites}), instead got capacitance matrix of shpae {cap_matrix.shape}")
+        else:
+            self.cap_matrix = cap_matrix
+
         # Generates the basis to be used
         self._generate_basis()
 
@@ -71,22 +78,20 @@ class HubbardCSD:
         if h_u is True:
             self.fixed_hamiltonian += self._generate_h_u()
 
-    def generate_csd(self, v_g1_max, v_g2_max, v_g1_min=0, v_g2_min=0, num=100):
+    def generate_csd(self, initial_v, g1, g2, v_g1_max, v_g2_max, num=100):
         '''Generates the charge stability diagram between v_g1(2)_min and v_g1(2)_max with num by num data points in 2D
 
         Parameters
         ----------
-        v_g1_max: maximum voltage on plunger gate 1
-        v_g2_max: maximum voltage on plunger gate 2
+        initial_v: Initial voltage vector on gates
+        g1: Index of first gate to vary in the charge stability diagram
+        g2: Index of second gate to vary in the charge stability diagram
+        v_g1_max: maximum voltage on g1
+        v_g2_max: maximum voltage on g2
 
         Keyword Arguments
         -----------------
-        v_g1_max: minimum voltage on plunger gate 1 (default 0)
-        v_g2_max: minimum voltage on plunger gate 2 (default 0)
-        c_cs_1: coupling between charge sensor and dot 1 (default to None)
-        c_cs_2: coupling between charge sensor and dot 2 (default to None)
         num: number of voltage point in 1d, which leads to a num^2 charge stability diagram (default 100)
-        plotting: flag indicating whether charge stability diagram should be plotted after completion (default False)
 
         Returns
         -------
@@ -95,36 +100,50 @@ class HubbardCSD:
 
         # Stores parameters for late
         self.num = num
-        self.v_g1_min = v_g1_min
+        self.g1 = g1
+        self.g2 = g2
+        self. initial_v = initial_v
+        self.v_g1_min = initial_v[g1]
         self.v_g1_max = v_g1_max
-        self.v_g2_min = v_g2_min
+        self.v_g2_min = initial_v[g2]
         self.v_g2_max = v_g2_max
 
         # Generate voltage points to sweep over
         self.v_1_values = [round(self.v_g1_min + i/num * (v_g1_max - self.v_g1_min), 6) for i in range(num)]
         self.v_2_values = [round(self.v_g2_min + j/num * (v_g2_max - self.v_g2_min), 6) for j in range(num)]
 
+        # volt_vects = np.zeros(shape=(num**2, len(initial_v)))
+        # for i in range(num):
+        #     for j in range(num):
+        #         volt_vects[:,i][g1] == self.v_1_values[]
+        # for i in range(len(initial_v)):
+        #     if i == g1:
+        #         volt_vects[:,i] = self.v_1_values
+        #     elif i == g2:
+        #         volt_vects[:,i] = self.v_2_values
+        #     else:
+        #         volt_vects[:,i] = [initial_v[i] for _ in range(num**2)]
+
         # Loop over all voltage point combinations in list comprehension
-        occupation = [[[self._lowest_energy(v_1, v_2)] for v_1 in self.v_1_values] for v_2 in self.v_2_values]
+        occupation = [[[self._lowest_energy(self._volt_vect_gen(v_1, v_2))] for v_1 in self.v_1_values] for v_2 in self.v_2_values]
 
         # Create a num by num DataFrame from occupation data information as entries
         self.occupation = pd.DataFrame(occupation, index=self.v_1_values, columns=self.v_2_values)
+    
+    def _volt_vect_gen(self, v_1, v_2):
+        volt_vect = copy.copy((self.initial_v))
+        volt_vect[self.g1] = v_1
+        volt_vect[self.g2] = v_2
+        return np.array(volt_vect).T
 
     def _lowest_energy(self, volt_vect):
+        # Convert from voltages to chemical potentials using the capacitance matrix
         chem_vect = self._volt_to_chem_pot(volt_vect)
         h_mu = np.zeros(self.fixed_hamiltonian.shape)
 
-        for i in range(self.fixed_hamiltonian.shape[0]):
-            state_1 = self.basis[i]
-
-            result = 0
-            for k in range(len(self.basis_labels)):
-                if k == 0 or k == 1:
-                    result += - mu_1 * self._inner_product(state_1, self._number(state_1, k))
-                if k == 2 or k == 3:
-                    result += - mu_2 * self._inner_product(state_1, self._number(state_1, k))
-
-            h_mu[i][i] = result
+        # Compute the 
+        for i in range(self.basis_length):
+            h_mu[i][i] = (- chem_vect * self.basis_occupations[i]).sum()
 
         current_hamiltonian = self.fixed_hamiltonian + h_mu
         eigenvals, eigenvects = la.eig(current_hamiltonian)
@@ -135,7 +154,7 @@ class HubbardCSD:
         lowest_eigenvect_prob = np.real(lowest_eigenvect * np.conj(lowest_eigenvect))
         occupation_list = []
         for i in range(self.n_sites):
-            occupation_list.append((lowest_eigenvect_prob * getattr(self, 'basis_occupation_' + str(i))).sum())
+            occupation_list.append((lowest_eigenvect_prob * getattr(self, 'basis_occupation_' + str(i+1))).sum())
         return tuple(occupation_list)
 
     def _generate_basis(self):
@@ -165,12 +184,17 @@ class HubbardCSD:
         self.spins = ['spin_up', 'spin_down']
         basis_labels = list(itertools.product(self.sites, self.spins))
 
-        # Count number of electrons in each basis state (useful to determine occupation of ground state later on)
+        # Count number of electrons in each basis state (useful to determine occupations of states later)
+        occupations_list = []
         for i in range(self.n_sites):
             j = 2*i
-            setattr(self, 'basis_occupation_' + str(i), np.array([sum(x[j:j+2]) for x in basis]))
+            setattr(self, 'basis_occupation_' + str(i+1), np.array([sum(x[j:j+2]) for x in basis]))
+            occupations_list.append(getattr(self, 'basis_occupation_' + str(i+1)))
 
+        # Set for later use
+        self.basis_occupations = np.vstack(occupations_list).transpose()
         self.basis = basis
+        self.basis_length = len(basis)
         self.basis_labels = basis_labels
 
         return
