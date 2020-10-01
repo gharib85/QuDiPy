@@ -20,7 +20,7 @@ The below guidelines are relatively obvious. The aim of this document is to stan
 	* `import qudipy.chargestability as csd`
 
 8. Common qudipy classes should be implemented as (although in somecases this may not always be appropriate):
-	* `gparams = qd.potential.GridParameters()`
+	* `gparams = qd.potential.GridParameters()` or `gparams.pot.GridParameters()`
 	* `consts = qd.Constants()`
 
 9. Common external repositories should be loaded as:
