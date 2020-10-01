@@ -2,7 +2,7 @@
 
 The below guidelines are relatively obvious. The aim of this document is to standardize the way we write code for the qudipy module. Adopting a consistent framework will ensure that PRs are handled more easily and quickly.
 
-1. Brandon, Stephen, and Bohdan are the current maintainers of the repository. All pull requests must be reviewed and approved by at least two of them before merging into master.
+1. Brandon (@theycallmesimba), Stephen (@bleutooth65), and Bohdan (@hromecB) are the current maintainers of the repository. All pull requests must be reviewed and approved by at least two of them before merging into master.
 
 2. You should never work directly on the master branch. Always start your own development branch and submit a PR to merge with master.
 
