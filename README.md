@@ -1,3 +1,3 @@
-# Silicon-Modelling
+# QuDiPy (Quantum Dots in Python)
 
-Repo for Silicon Modelling in python
+This respository aims to be a general purpose tool for simulating electron dynamics in quantum dots. We adopt an effective mass formalism which enables simulations across a variety of material systems and heterostructures.
