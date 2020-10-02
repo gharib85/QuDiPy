@@ -31,7 +31,9 @@ class CSD:
         None
 
         '''
-
+        # TODO generatlize this number
+        self.n_sites = 2
+        
         # Capacitances between dots and resevoirs
         self.c_l = c_l
         self.c_r = c_r
