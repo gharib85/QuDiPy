@@ -9,7 +9,7 @@ const = Constants()
 e = const.e
 
 
-class CSD:
+class CIMCSD:
     '''
     Initialize the charge stability diagram class which generates charge stability diagrams based on given capacitance parameters.
     Based off of the analisys in section II.A and Appendix 3 in https://doi.org/10.1103/RevModPhys.75.1.
