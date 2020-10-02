@@ -102,7 +102,7 @@ class HubbardCSD:
         self.num = num
         self.g1 = g1
         self.g2 = g2
-        self. initial_v = initial_v
+        self.initial_v = initial_v
         self.v_g1_min = initial_v[g1]
         self.v_g1_max = v_g1_max
         self.v_g2_min = initial_v[g2]
@@ -111,18 +111,6 @@ class HubbardCSD:
         # Generate voltage points to sweep over
         self.v_1_values = [round(self.v_g1_min + i/num * (v_g1_max - self.v_g1_min), 6) for i in range(num)]
         self.v_2_values = [round(self.v_g2_min + j/num * (v_g2_max - self.v_g2_min), 6) for j in range(num)]
-
-        # volt_vects = np.zeros(shape=(num**2, len(initial_v)))
-        # for i in range(num):
-        #     for j in range(num):
-        #         volt_vects[:,i][g1] == self.v_1_values[]
-        # for i in range(len(initial_v)):
-        #     if i == g1:
-        #         volt_vects[:,i] = self.v_1_values
-        #     elif i == g2:
-        #         volt_vects[:,i] = self.v_2_values
-        #     else:
-        #         volt_vects[:,i] = [initial_v[i] for _ in range(num**2)]
 
         # Loop over all voltage point combinations in list comprehension
         occupation = [[[self._lowest_energy(self._volt_vect_gen(v_1, v_2))] for v_1 in self.v_1_values] for v_2 in self.v_2_values]
@@ -141,7 +129,7 @@ class HubbardCSD:
         chem_vect = self._volt_to_chem_pot(volt_vect)
         h_mu = np.zeros(self.fixed_hamiltonian.shape)
 
-        # Compute the 
+        # Compute the variable part of the Hamiltonian
         for i in range(self.basis_length):
             h_mu[i][i] = (- chem_vect * self.basis_occupations[i]).sum()
 
@@ -228,15 +216,20 @@ class HubbardCSD:
 
                 # Go over pairs of labels, which correspond to whether particular (location, spin) are occupied
                 result = 0
+                # count = 0
                 for k in range(len(self.basis_labels)):
                     for l in range(k):
                         # Go over pairs of sites
                         for n in range(self.n_sites):
-                                for m in range(j):
+                                for m in range(n):
                                     # Add contribution to result is that tunnel coupling term exists (i.e non-zero)
                                     if hasattr(self, 't_' + str(m+1) + str(n+1)):
                                         result += getattr(self, 't_' + str(m+1) + str(n+1)) * self._inner_product(state_1, self._create(self._annihilate(state_2, k), l))
                                         result += getattr(self, 't_' + str(m+1) + str(n+1)) * self._inner_product(state_1, self._create(self._annihilate(state_2, l), k))
+                #                         count += self._inner_product(state_1, self._create(self._annihilate(state_2, k), l))
+                #                         count += self._inner_product(state_1, self._create(self._annihilate(state_2, l), k))
+
+                # print(count)
 
                 h_t[i][j] = -result
                 h_t[j][i] = -result #Since matrix is symmetric

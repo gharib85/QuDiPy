@@ -61,17 +61,17 @@ class CSDAnalysis:
                 for j in self.csd.v_1_values:
                     self.csd.csd[i][j] = np.sum(self.capacitances * self.csd.occupation[i][j][0])
 
+            # Create derivative of charge stability diagram
+            df_der_row = self.csd.csd.diff(axis=0) # to be sensitive to changes in both the x and y direction
+            df_der_col = self.csd.csd.diff(axis=1)
+            csd_der = np.sqrt(df_der_row**2 + df_der_col**2)
+            self.csd.csd_der = csd_der.fillna(0) # Replace Nans (where derivative is not defined) with 0s
+
         if blur is True:
             if self.capacitances is None:
                 raise Warning("Blurring of data cannot occur when no capaciatnce are provided. Data will not be changed")
             else:
                 self.csd.csd = pd.DataFrame(gaussian_filter(self.csd.csd, blur_sigma), columns=self.csd.v_1_values, index=self.csd.v_2_values)
-
-        # Create derivative of charge stability diagram
-        df_der_row = self.csd.csd.diff(axis=0) # to be sensitive to changes in both the x and y direction
-        df_der_col = self.csd.csd.diff(axis=1)
-        csd_der = np.sqrt(df_der_row**2 + df_der_col**2)
-        self.csd.csd_der = csd_der.fillna(0) # Replace Nans (where derivative is not defined) with 0s
 
     def generate_bitmap(self, threshold, threshold_type='percentile', plotting=False):
         '''
