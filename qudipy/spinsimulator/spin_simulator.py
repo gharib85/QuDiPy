@@ -20,8 +20,11 @@ import qudipy.qutils.math as mth
 import qudipy.circuit as circ
 from qudipy.utils.constants import Constants 
 
-#defining system constants
-cst = Constants()       #TODO add input("Enter the system name")
+
+#material system is chosen to be GaAs by default because such parameters as 
+#effective mass or dielectric constant do not matter for spin simulations
+
+cst = Constants("GaAs")       
 
 #helper functions
 
@@ -58,13 +61,13 @@ def J_sigma_product(N, k1, k2):
     Returns
     -------
     numpy array
-        i/4\cst.hbar \vec{sigma_k1} \cdot \vec{sigma_k2}
+        1/4\cst.hbar \vec{sigma_k1} \cdot \vec{sigma_k2}
 
     """    
     if k1==k2:
         return np.zeros((2**N, 2**N))
     else:
-        return 1/(4*cst.hbar)*matr.sigma_product(N, k1, k2)
+        return 1 / (4*cst.hbar)*matr.sigma_product(N, k1, k2)
     
     
 def x_sum(N):
@@ -78,7 +81,7 @@ def x_sum(N):
     Returns
     -------
     numpy array
-        Sum of X_k-matrices for all k\in[1,N] weighted by cst.muB/cst.hbar
+        Sum of X_k-matrices for all k in [1,N] weighted by cst.muB/cst.hbar
 
     """
     return cst.muB/cst.hbar*sum( matr.x(N,k) for k in range(1, N+1) )
@@ -95,7 +98,7 @@ def y_sum(N):
     Returns
     -------
     numpy array
-        Sum of Y_k-matrices for all k\in[1,N] weighted by cst.muB/cst.hbar
+        Sum of Y_k-matrices for all k in[1,N] weighted by cst.muB/cst.hbar
 
     """
     return cst.muB/cst.hbar*sum( matr.y(N,k) for k in range(1, N+1) )
@@ -103,7 +106,9 @@ def y_sum(N):
 
 def z_sum_omega(N, B_0, f_rf):
     """
-    Sum highligted with brown in equation 2.1 of the "Simulator plan"
+    Sum highligted with brown in equation 2.1 of the "Simulator plan" Used to 
+    reduce the total number of multiplications during the time evolution 
+    simulation   
     
     Parameters
     ----------
@@ -112,7 +117,7 @@ def z_sum_omega(N, B_0, f_rf):
     Returns
     -------
     numpy array
-        Sum of Z_k-matrices for all k\in[1,N] weighted by i(omega-omega_rf)/2
+        Sum of Z_k-matrices for all k in [1,N] weighted by i(omega-omega_rf)/2
 
     """
     return (1*(cst.muB*B_0/cst.hbar-pi*f_rf)
@@ -121,7 +126,9 @@ def z_sum_omega(N, B_0, f_rf):
 
 def z_sum_p(N, B_0, T, T_1):
     """
-    Sum highligted with red in equation 2.1 of the "Simulator plan"
+    Sum highligted with red in equation 2.1 of the "Simulator plan". Used to 
+    reduce the total number of multiplications during the time evolution 
+    simulation
     
     Parameters
     ----------
@@ -140,10 +147,11 @@ def z_sum_p(N, B_0, T, T_1):
     Returns
     -------
     numpy array
-        DESCRIPTION.
+        Sum of Z_k-matrices for all k in [1,N] weighted by (2*p(B_0,T)-1)/T_1
+
 
     """
-    return (2*p(B_0,T)-1)/T_1*sum( matr.z(N,k) for k in range(1, N+1) )
+    return (2*p(B_0,T)-1)/T_1*sum(matr.z(N,k) for k in range(1, N+1))
     
 
 #list of dictionaries of constant matrices
@@ -157,7 +165,7 @@ def const_dict(N_0, T, B_0, f_rf, T_1):
     ----------
     N_0 : int
         The maximal number of quantum dots in the system that host electrons
-    ... (see previous functions)
+    ... (see previously defined functions)
 
     Returns
     -------
@@ -173,7 +181,8 @@ def const_dict(N_0, T, B_0, f_rf, T_1):
         - "y_sum" (multiplied by cst.muB/cst.hbar)
         - "z_sum_omega"
         - "Z_sum_p"
-            
+    Each dictionary corresponds to a different dimensionality of the system 
+    (from 1 to N0)
     """
     temp = []
     for N in range(1,N_0+1):
@@ -198,19 +207,15 @@ def const_dict(N_0, T, B_0, f_rf, T_1):
     return temp
 
 
-#helper functions
-
-
 
 class SpinSys:
         
-    def __init__(self, rho, N_0=None, 
-                 sys_param_dict=None):
+    def __init__(self, rho, N_0=None, sys_param_dict=None, time=0):
         """
             
         The class describes the spin system. Attributes comprise the system
-        density matrix and constant system parameters. Methods construct Hamiltonian
-        and time-evolve the system with pulses
+        density matrix and constant system parameters. Methods construct 
+        Hamiltonian  and time-evolve the system with pulses
         
         ----------
         rho : numpy 2D array
@@ -218,22 +223,24 @@ class SpinSys:
             
         N_0 : int
             Maximal number of electrons in the system (could be bigger
-            than the dimensions of rho ) 
+            than the dimensions of rho) 
             
         sys_param_dict : dictionary
             System parameter dictionary that might contain:
-        T_1: float
-            spin relaxation time [s]
-        T_2: float
-            spin dephasing time [s]
-        B_0 : float
-            Zeeman field [T]
-        T : float
-            Temperature [K]. 
-        f_rf: float
-            RF field frequency [Hz]              
+                T_1: float
+                    spin relaxation time [s]
+                T_2: float
+                    spin dephasing time [s]
+                B_0 : float
+                    Zeeman field [T]
+                T : float
+                    Temperature [K]. 
+                f_rf: float
+                    RF field frequency [Hz]              
        
-            
+        time: float
+            Point in time at which rho is defined
+        
         Returns
         -------
         None.
@@ -241,7 +248,12 @@ class SpinSys:
         """
         
         self.rho = rho
+        self.time = time
+        
         if N_0 == None:
+            
+            #assuming the current dimensionality of rho is maximum possible
+            #throughout the system evolution
             self.N_0 = int(log2(rho.shape[0]))
         else:
             self.N_0 = N_0
@@ -249,15 +261,20 @@ class SpinSys:
         if sys_param_dict is not None:
             self.T_1 = sys_param_dict.get("T_1",1)      
                 #1 s is default value (chosen randomly)
+            
             self.T_2 = sys_param_dict.get("T_2",1E-3)   
                 #1 ms is default value (chosen randomly)
+            
             self.B_0 = sys_param_dict.get("B_0", 0) 
                 # no Zeeman field by default
+            
             self.T = sys_param_dict.get("T", 4)
                 #Default value is liquid He temperature
+            
             self.f_rf = sys_param_dict.get("f_rf", 0)
             
         else:
+                #the step is needed to carefully deal with None variables
             self.T_1 = 1
             self.T_2 = 1E-3        
             self.B_0 = 0
@@ -275,7 +292,7 @@ class SpinSys:
         
     def hamiltonian(self, const_dict_N, pulse_params=None):
         """
-        Builds the system hamiltonian at a particular point of time
+        Builds the system Hamiltonian at a particular point of time
 
         Parameters
         ----------
@@ -283,7 +300,7 @@ class SpinSys:
             dictionary of constant matrices 2**N x 2**N
         pulse_params : dictionary
              dictionary of values of delta_g[i], 
-        J[i], B_x, B_y at a particular point of time
+             J[i], B_x, B_y taken at a particular point of time
 
 
         Returns
@@ -294,28 +311,33 @@ class SpinSys:
         if pulse_params is None:
             return 0
         else:
-            
+
             N = int(log2(const_dict_N["x_sum"].shape[0])) 
             
-            # building a list of delta_g values           
+            # building a list of delta_g_i values, i=1...N           
             delta_g=[0]*N
             
             delta_g_dict = {int(k[8:]):v for (k,v) in pulse_params.items() 
                      if k[:8]=="delta_g_"}      
                         #TODO could be necessary to update 8 to a diff. number
             for i in range(1, N+1):
-                delta_g[i-1]=delta_g_dict.get(i, 0)
+                delta_g[i-1] = delta_g_dict.get(i, 0)
             
-            # building a list of J values
+            # building a list of J_{i,i+1} values, i=1...N-1. For now, we  
+            # assume that the qubits are numbered sequentially so that all 
+            # nearest-neighbor exchange parameters could be indexed with
+            # a single index i
+                
+                
             if N==1:
-                J=0
+                J=[]
             else:
                 J=[0]*(N-1)
                 
                 J_dict=  {int(k[2:]):v for (k,v) in pulse_params.items() 
                          if k[:2]=="J_"}
                 for i in range(1, N):
-                    J[i-1]=J_dict.get(i, 0)
+                    J[i-1] = J_dict.get(i, 0)
             
             #Incorporating values of Bx, By
                     
@@ -324,47 +346,52 @@ class SpinSys:
             phi = pulse_params.get("phi", 0)
             
             ham = const_dict_N["z_sum_omega"].copy()
-                #copy is in order not to modify the const_dict_N entries
+                #copy is in order not to modify the const_dict_N entries; 
+                #the term z_sum_omega is always present in the Hamiltonian
             
             if delta_g != [0]*N:
                 for k in range(N):
                     ham += (cst.muB/(2*cst.hbar)*self.B_0*delta_g[k] *
                             const_dict_N["Zs"][k])
                 
-            if J != [0]*(N-1) and J != 0:
-                for k in range(N):
-                    ham += J[k]*const_dict_N["J_sigma_products"][k][k+1]
+            if J != [0]*(N-1):
+                for k in range(N-1):
+                    ham = ham + J[k] * const_dict_N["J_sigma_products"][k][k+1]
             
             if B_x != 0:
                 ham += const_dict_N["x_sum"]* B_x * cos(phi)
             
             if B_y != 0:
                 ham += const_dict_N["y_sum"]* B_y * sin(phi)
-                
+              
         return ham
     
 
     def lindbladian(self, rho_mod, const_dict_N, pulse_params=None):
         """
-        Creates right-hand side of the Lindblad equation
+        Creates right-hand side of the Lindblad equation at a particular
+        point of time
 
         Parameters
         ----------
-        rho_mod: numpy array
+        rho_mod: 1D array 
             intermediate density matrices the Runge-Kutta method is used for
         const_dict_N: dict
             dictionary of constant matrices 2**N x 2**N
+        pulse_params: 1D array
+            list of pulse parameters
 
         Returns
         -------
-        Numpy array of the right-hand side of the equation
+        2D array: the right-hand side of the Lindblad equation
 
         """
         N = int(log2(const_dict_N["x_sum"].shape[0])) 
             #automatically calculating the size
-        ham = np.zeros((2**N, 2**N))
+        
+        ham = np.zeros((2**N, 2**N), dtype=complex)
         if pulse_params is not None:
-            ham = ham + self.hamiltonian(const_dict_N, pulse_params)
+            ham += self.hamiltonian(const_dict_N, pulse_params)
         
         lin = ( 1j *( rho_mod @ ham - ham @ rho_mod) + const_dict_N["z_sum_p"] 
                - (2/self.T_1 + 1/(2*self.T_2)) * N * rho_mod )
@@ -380,8 +407,8 @@ class SpinSys:
         return lin
         
     
-    def evolve(self, pulses, 
-               rhos_expected=None, is_fidelity=False, is_purity=False,
+    def evolve(self, pulse, 
+               rho_reference=None, is_fidelity=False, is_purity=False,
                track_qubits=None, are_Bloch_vectors=False,
                 track_points_per_pulse=100
                ):
@@ -391,202 +418,184 @@ class SpinSys:
 
         Parameters
         ----------
-        pulses : dictionary of pulse details (which is also dictionary)
-            at different points of time
-        
-        optional arguments:
-        
-        rhos_expected: numpy array/ iterable of numpy arrays 
-            The theoretical (expected) density matrix after the system
-            evolution under a pulse 
+        pulse : controlPulse object 
+            contains pulse parameters at different points of time 
+                 
+        rho_reference: 2D array
+            The density matrix (initial, anticipated final, etc.) to compare 
+            with the density matrix during the simulation
             
         is_fidelity : bool
-            Indicates whether to calculate and return the 
-            fidelity of the density matrix after the pulse with rho_expected
+            Indicates whether to track the fidelity of the density matrix with 
+            respect to the specified rho_reference 
+            
         is_purity : bool
-            Indicates whether to calculate and return the purity
-            of the density matrix after the pulse
+            Indicates whether to track the purity
+            of the density matrix 
+            
         track_qubits : int / iterable of ints
-            Positions(s) of qubit(s) to track during the pulses 
+            Number(s) of qubit(s) to track during the pulses 
             (i. e. evaluate density submatrices for them)
+            
         are_Bloch_vectors: bool
             Indicates whether to calculate Bloch vectors for the tracked 
-            qubits    
+            qubits along with their density submatrices
+            
         track_points_per_pulse: int
-            Number of submatrices to save per pulse 
+            Number of points of time during the system evolution to save
+            parameters indicated above 
             
         Returns
         -------
-        dictionary containing values of fidelity and purity, if they are 
+        dictionary containing values of fidelity, purity and one-qubit 
+        submatrices (if they are tracked) as 1D arrays
 
         """
-        ret_dict = {"pulse": tuple(pulses.keys())}
-        #dictionary to be returned; copied in order to retain the
-        if rhos_expected is not None:
-            rhodict = rhos_expected.copy()
-        else:
-            rhodict = None
-
-        if is_fidelity:
-            ret_dict["fidelity"]=[]
+        ret_dict = {}
+          #dictionary to be returned 
+       
+        if rho_reference is not None:
+                #copied in order to keep the passed reference matrix unchanged
+            rho_ref = rho_reference.copy()
+  #      else: 
+#            print("Fidelity is not calculated")
+       
+    
+       
+        if is_fidelity and rho_reference is not None:
+            ret_dict["fidelity"]=[self.fidelity(rho_ref)]
         
         if is_purity:
-            ret_dict["purity_simulated"] = []
-            if rhos_expected is not None:
-                ret_dict["purity_expected"] = []
-        
-
+            ret_dict["purity"] = [self.purity()]
+            
         if track_qubits is not None:
+            track_dict = self.track_subsystem(
+                track_qubits, are_Bloch_vectors)
+            track_keys = track_dict.keys()
+            ret_dict.update({k:[track_dict[k]] for k in track_keys})
             
-            track_keys = list(self.track_subsystem(
-                track_qubits, are_Bloch_vectors).keys())
-            
-            ret_dict.update({k:[] for k in track_keys})
-            ret_dict["track_time"] = []   
-      
-        time_counter=0
+        ret_dict["time"] = [self.time]
+                     
+        N = int(log2(self.rho.shape[0]))
         
-        for pulsename in pulses:
-            pulse = pulses[pulsename].copy()
+        cdict_N = self.cdict[N-1]
+        si_pulse_length = pulse.length*1.0e-12  
+            # to comply with Brandon's code which uses picoseconds
+        
+        #number of values of delta_g, B_x, etc contained in the pulse.
+        num_values = np.shape(pulse.ctrl_pulses
+                              [list(pulse.ctrl_names)[0]])[0]
+        
+        if si_pulse_length==0:       
+            delta_t=self.T_2/100   #TODO change to an appropriate number;
+                                    #100 is chosen randomly
+        else:
+            delta_t = 1.0* si_pulse_length /  (num_values-1)
             
-            N = int(log2(self.rho.shape[0]))
-            
-            cdict_N = self.cdict[N-1]
-            pulse_time = pulse.pop("pulse_time", 0)
-            
-            #number of values of delta_g, B_x, etc contained in the pulse.
-            num_values = np.shape(pulse[list(pulse.keys())[0]])[0]
-            
-            if pulse_time==0:       
-                delta_t=self.T_2/100   #TODO change to an appropriate number
-            else:
-                delta_t = pulse_time /  num_values
+        #checking if dimensions of arrays in pulse are consistent
+        dim_correct=True
+        for name in pulse.ctrl_names:
+            dim_correct &= ( si_pulse_length / 
+                            (np.shape(pulse.ctrl_pulses[name])[0]-1) == 
+                            delta_t)
+        
+        if not dim_correct:
+            raise ValueError("Inconsistent dimensions of the pulse entry. \
+                  Please try again")
+
+        else:
+                               
+            for n in range(1, num_values):
+                #Runge-Kutta method
+                prev_pulse = {k:v[n-1] for (k,v) in pulse.ctrl_pulses.items()}
+                cur_pulse={k:v[n] for (k,v) in pulse.ctrl_pulses.items()}
+                avg_pulse={k:(0.5*(v[n-1]+v[n])) for (k,v) in 
+                           pulse.ctrl_pulses.items()}
                 
-            #checking if dimensions of arrays in pulse are consistent
-            dim_correct=True
-            for var in pulse:
-                dim_correct &= ( 
-                    pulse_time / np.shape(pulse[var])[0] == delta_t)
-            if not dim_correct:
-                print("Inconsistent dimensions of the pulse entry. Please try again")
-                break
-            else:
-                ret_dict["track_time"].append(time_counter)
-                for key in track_keys:
-                    ret_dict[key].append(self.track_subsystem( 
-                        track_qubits, are_Bloch_vectors)[key])
-                        
-                for n in range(1, num_values):
-                    #Runge-Kutta method
-                    cur_pulse = {k:v[n-1] for (k,v) in pulse.items()}
-                    next_pulse={k:v[n] for (k,v) in pulse.items()}
-                    avg_pulse={k:(0.5*(v[n-1]+v[n])) for (k,v) in pulse.items()}
-                    
-                    K1 = self.lindbladian(self.rho, cdict_N, cur_pulse)
-                    K2 = self.lindbladian(self.rho + 0.5*delta_t*K1, cdict_N, avg_pulse )
-                    K3 = self.lindbladian(self.rho + 0.5*delta_t*K2, cdict_N, avg_pulse )
-                    K4 = self.lindbladian(self.rho + delta_t*K3, cdict_N, next_pulse )
-                    #updating density matrix
-                    
-                    self.rho = self.rho + delta_t/6*(K1+2*K2+2*K3+K4)
-                    
+                K1 = self.lindbladian(self.rho, cdict_N, prev_pulse)
+                K2 = self.lindbladian(self.rho + 0.5*delta_t*K1, 
+                                          cdict_N, avg_pulse )
+                K3 = self.lindbladian(self.rho + 0.5*delta_t*K2, 
+                                          cdict_N, avg_pulse )
+                K4 = self.lindbladian(self.rho + delta_t*K3, 
+                                          cdict_N, cur_pulse)
+                #updating density matrix
+                
+                self.rho = self.rho + delta_t/6*(K1+2*K2+2*K3+K4)
+    #______________________________________________________________
+                # defining when to write values of fidelity, etc.
+                
+                # the following formulas are correct for the case
+                # track_points_per_pulse > 3
+                if (num_values-1) % (track_points_per_pulse-1) == 0:
+                    track_step = max(int((num_values-1) /  
+                                         (track_points_per_pulse-1)), 1)
+                else:
+                    track_step = max(int((num_values-1) /  
+                                         (track_points_per_pulse-2)), 1)
+                
+                #writing values in the output dictionary
+                if n % track_step == 0 or n == num_values-1:
+                    #update time point
+                    ret_dict["time"].append(self.time + n*delta_t)
+  
                     #implementing tracking:
                     if track_qubits is not None:
-                        track_step = max(int(num_values /  track_points_per_pulse), 1)
-                        
-                        if n % track_step == 0:
-                            ret_dict["track_time"].append(time_counter + n*delta_t)
-                            for key in track_keys:
-                                ret_dict[key].append(self.track_subsystem( 
-                                    track_qubits, are_Bloch_vectors)[key])
-                            
-                time_counter += pulse_time
-                
-                                      
-        #implementing additional functions
-                    #fidelity
-                if is_fidelity and rhodict is not None:
-                    if isinstance(rhodict, dict):
-                        ret_dict["fidelity"].append(
-                            self.fidelity(rhodict[pulsename]))
-                    elif isinstance(rhodict, (tuple, list)):
-                        ret_dict["fidelity"].append( 
-                                    self.fidelity(rhodict.pop(0)))
-                        
-                    # purity
-                if is_purity:
-                        purdic = {}
-                        if isinstance(rhodict, dict):
-                            purdic = self.purity(
-                                        rho_expected=rhodict[pulsename])
-                        elif isinstance(rhodict, (tuple, list)):
-                            purdic = self.purity(rho_expected=rhodict.pop(0))
-                        for key in purdic:
-                                ret_dict[key].append(purdic[key])
-                
-        # tracked single-qubit subsystems
-        if track_qubits is not None:
-                    
-            #case of only one expected matrix
-            if is_fidelity and isinstance(rhodict, np.ndarray):
-                ret_dict["fidelity"] = self.fidelity(rhodict[pulsename])
-                
-            if is_purity:
-                if isinstance(rhodict, np.ndarray) or rhodict == None:
-                    purdic = self.purity(rho_expected=rhodict)
-                    for key in purdic:
-                        ret_dict[key].append(purdic[key])
-                        
-                    
+                        for key in track_keys:
+                            ret_dict[key].append(self.track_subsystem( 
+                                track_qubits, are_Bloch_vectors)[key])  
+                    if is_fidelity and rho_reference is not None:    
+                        ret_dict["fidelity"].append(self.fidelity(rho_ref))
+                    if is_purity:
+                        ret_dict["purity"].append(self.purity())
+
+        #updating the time attribute after the pulse
+        self.time += si_pulse_length
         
-        return ret_dict
+        #making all lists 1D arrays
+        return {key:np.array(val) for key, val in ret_dict.items()}
 
 
-# optionally called functions
-
-      
+    # functions called when optional parameters are specified as True
+     
     
-    def fidelity(self, rho_expected):
+    def fidelity(self, rho_reference):
         """
         Calculates fidelity of the system density matrix with respect to 
-        the expected one.
+        the expected one
     
         Parameters
         ----------
         rho_expected : numpy array
-            The theoretical (expected) density matrix after the system
-            evolution under a pulse
+            The density matrix (initial, anticipated final, etc.) to compare 
+            with the density matrix during the simulation
     
         Returns
         -------
-        Float value of fidelity defined in simulator_plan    TODO: add formula
+        Float value of fidelity defined in simulator_plan document
     
         """
         
         return np.trace(mth.matrix_sqrt(
-                    mth.matrix_sqrt(rho_expected) 
-                             @ self.rho @ mth.matrix_sqrt(rho_expected)))**2
+                    mth.matrix_sqrt(rho_reference) 
+                             @ self.rho @ mth.matrix_sqrt(rho_reference)))**2
         
     
-    def purity(self, rho_expected=None):
+    def purity(self):
         """
         Calculates purity tr(rho^2)
     
         Returns
         -------
-        Float value of purity
+        Float value of density matrix purity
     
         """
-        if rho_expected is None:
-            return {"purity_simulated" : np.trace( self.rho @  self.rho)}
-        else:
-            return {"purity_simulated" : np.trace( self.rho @  self.rho),
-                    "purity_expected" : np.trace(rho_expected @ rho_expected) }
+        return np.trace( self.rho @  self.rho)
+        
 
                 
     
-    def track_subsystem(self, track_qubits, 
-                          are_Bloch_vectors):
+    def track_subsystem(self, track_qubits, are_Bloch_vectors):
         """
         Gives the system submatrices and Bloch vectors if tracked
 
@@ -594,39 +603,45 @@ class SpinSys:
         ----------
         pulse : dict
             Parameters of a (single) pulse
-        
-        track_qubits : int/iterable
+        track_qubits : int/iterable of ints
             Defines the qubits whose density submatrices are tracked
-        
         are_Bloch_vectors: bool 
             Indicates whether to calculate Bloch vector component(s)
         Returns
         -------
-        dictionary containing subsystem density matrices and, possibly, their 
-        Bloch vectors
+        dictionary containing subsystem density matrices, and their 
+        Bloch vectors if specified
 
         """
         ret_dict = {}
         
         N = int(log2(self.rho.shape[0]))  
+            #automatically calculating the size
+        
         Nset = set(range(1,N+1))
-        trqub = set()
+        trqub = set()   # a set of tracked qubits; using set automatically 
+                        # discard possible repetitions
         
         if isinstance(track_qubits, int):
             trqub = {track_qubits}
         elif isinstance(track_qubits, (tuple,list, set)):
-            trqub = set(track_qubits)
+            trqub = set(track_qubits) 
         else:
-            print("error")
+            print("The tracked qubits should be specified by an int\
+                             or an iterable of ints. None of the qubits\
+                                 has been tracked")
             
         for qub in trqub:
             submatrix = mth.partial_trace(self.rho, (Nset-{qub}))
             subm = "submatrix_{}".format(qub)
             ret_dict[subm] = submatrix
             if are_Bloch_vectors:
-                ret_dict["sigma_x_{}".format(qub)] = np.trace(submatrix @ matr.PAULI_X)
-                ret_dict["sigma_y_{}".format(qub)] = np.trace(submatrix @ matr.PAULI_Y)
-                ret_dict["sigma_z_{}".format(qub)] = np.trace(submatrix @ matr.PAULI_Z)
+                ret_dict["sigma_x_{}".format(qub)] = np.trace(submatrix 
+                                                              @ matr.PAULI_X)
+                ret_dict["sigma_y_{}".format(qub)] = np.trace(submatrix 
+                                                              @ matr.PAULI_Y)
+                ret_dict["sigma_z_{}".format(qub)] = np.trace(submatrix 
+                                                              @ matr.PAULI_Z)
             
         return ret_dict
             
