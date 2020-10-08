@@ -60,7 +60,7 @@ def J_sigma_product(N, k1, k2):
 
     Returns
     -------
-    numpy array
+    The following numpy 2D array:
         1/4\cst.hbar \vec{sigma_k1} \cdot \vec{sigma_k2}
 
     """    
@@ -80,7 +80,7 @@ def x_sum(N):
 
     Returns
     -------
-    numpy array
+    numpy 2D array
         Sum of X_k-matrices for all k in [1,N] weighted by cst.muB/cst.hbar
 
     """
@@ -97,7 +97,7 @@ def y_sum(N):
 
     Returns
     -------
-    numpy array
+    numpy 2D array
         Sum of Y_k-matrices for all k in[1,N] weighted by cst.muB/cst.hbar
 
     """
@@ -116,7 +116,7 @@ def z_sum_omega(N, B_0, f_rf):
 
     Returns
     -------
-    numpy array
+    numpy 2D array
         Sum of Z_k-matrices for all k in [1,N] weighted by i(omega-omega_rf)/2
 
     """
@@ -146,7 +146,7 @@ def z_sum_p(N, B_0, T, T_1):
     
     Returns
     -------
-    numpy array
+    numpy 2D array
         Sum of Z_k-matrices for all k in [1,N] weighted by (2*p(B_0,T)-1)/T_1
 
 
@@ -209,14 +209,60 @@ def const_dict(N_0, T, B_0, f_rf, T_1):
 
 
 class SpinSys:
+    """
+    The class describes the spin system. Attributes comprise the system
+    density matrix and constant system parameters. Methods construct 
+    Hamiltonian  and time-evolve the system with pulses
+    
+    Attributes
+    ----------
+    rho : 2D array
+        Density matrix. Initialized with the value before pulse
+            
+    N_0 : int
+        Maximal possible number of electrons in the system (could be bigger
+            than the dimensions of rho; useful in case we load new electrons) 
+    time: float
+        Point in time at which the system is defined
+    T_1: float
+        Spin relaxation time [s]
+    T_2: float
+        Spin dephasing time [s]
+    B_0 : float
+        Zeeman field [T]
+    T : float
+        Temperature [K]. 
+    f_rf: float
+        RF field frequency [Hz]  
+    cdict: dict of 2D arrays
+        Collection of costant matrices used to speed up the simulation
+    Methods
+    ----------
+    hamiltonian(cdict_N, pulse_params=None):
+        Creates system Hamiltonian at a particular point of time
+    lindbladian(rho_mod, const_dict_N, pulse_params=None):
+        Calculates the right-hand side of the Lindblad equation
+        at a particular point of time
+    evolve(pulse, 
+               rho_reference=None, is_fidelity=False, is_purity=False,
+               track_qubits=None, are_Bloch_vectors=False,
+                track_points_per_pulse=100):
+        Performs system evolution under a given pulse. Outputs a dictionary of
+        the specified tracking parameters
+    fidelity(rho_reference):
+        Calculates fidelity of a 2D matrix with respect to the reference one
+    purity():
+        Calculates purity (tr(rho^2)) of a 2D matrix rho
+    track_subsystem(self, track_qubits, are_Bloch_vectors=False):
+        Gives the specified system submatrices and Bloch vectors (if tracked)
+  
+    """
         
     def __init__(self, rho, N_0=None, sys_param_dict=None, time=0):
         """
-            
-        The class describes the spin system. Attributes comprise the system
-        density matrix and constant system parameters. Methods construct 
-        Hamiltonian  and time-evolve the system with pulses
+        Initializes the SpinSys class object
         
+        Parameters
         ----------
         rho : numpy 2D array
             Density matrix. Initialized with the value before pulse
@@ -305,7 +351,7 @@ class SpinSys:
 
         Returns
         -------
-        Numpy array that represents Hamiltonian
+        Numpy 2D array that represents Hamiltonian
 
         """
         if pulse_params is None:
@@ -351,7 +397,7 @@ class SpinSys:
             
             if delta_g != [0]*N:
                 for k in range(N):
-                    ham += (cst.muB/(2*cst.hbar)*self.B_0*delta_g[k] *
+                    ham = ham + (cst.muB/(2*cst.hbar)*self.B_0*delta_g[k] *
                             const_dict_N["Zs"][k])
                 
             if J != [0]*(N-1):
@@ -359,10 +405,10 @@ class SpinSys:
                     ham = ham + J[k] * const_dict_N["J_sigma_products"][k][k+1]
             
             if B_x != 0:
-                ham += const_dict_N["x_sum"]* B_x * cos(phi)
+                ham = ham + const_dict_N["x_sum"]* B_x * cos(phi)
             
             if B_y != 0:
-                ham += const_dict_N["y_sum"]* B_y * sin(phi)
+                ham = ham + const_dict_N["y_sum"]* B_y * sin(phi)
               
         return ham
     
@@ -391,13 +437,13 @@ class SpinSys:
         
         ham = np.zeros((2**N, 2**N), dtype=complex)
         if pulse_params is not None:
-            ham += self.hamiltonian(const_dict_N, pulse_params)
+            ham  = ham + self.hamiltonian(const_dict_N, pulse_params)
         
         lin = ( 1j *( rho_mod @ ham - ham @ rho_mod) + const_dict_N["z_sum_p"] 
                - (2/self.T_1 + 1/(2*self.T_2)) * N * rho_mod )
         
         for k in range(N):
-            lin += (  p(self.B_0, self.T) / self.T_1 * 
+            lin  = lin + (  p(self.B_0, self.T) / self.T_1 * 
                     const_dict_N["sigma_pluses"][k] @ 
                     rho_mod.dot(const_dict_N["sigma_minuses"][k]) +  
                     (1 - p(self.B_0, self.T)) / self.T_1 * 
@@ -562,11 +608,11 @@ class SpinSys:
     def fidelity(self, rho_reference):
         """
         Calculates fidelity of the system density matrix with respect to 
-        the expected one
+        the reference one
     
         Parameters
         ----------
-        rho_expected : numpy array
+        rho_expected : 2D array
             The density matrix (initial, anticipated final, etc.) to compare 
             with the density matrix during the simulation
     
@@ -595,9 +641,9 @@ class SpinSys:
 
                 
     
-    def track_subsystem(self, track_qubits, are_Bloch_vectors):
+    def track_subsystem(self, track_qubits, are_Bloch_vectors=False):
         """
-        Gives the system submatrices and Bloch vectors if tracked
+        Gives the specified system submatrices and Bloch vectors (if tracked)
 
         Parameters
         ----------
