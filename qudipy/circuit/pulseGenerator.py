@@ -35,8 +35,10 @@ class PulseGen:
         # helper function for adiabaticity calculation
         def adiabatic(dt, psi, psi_ground, e_ens, desired_ap, gparams):
             xi = 0
+            # log transformation
+            a = np.log10(dt)
             for m in range(2*n_ctrls-2):
-                ip = inner_prod(gparams, psi[:, m+1], dt*psi_ground)
+                ip = inner_prod(gparams, psi[:, m+1], a*psi_ground)
                 xi += hbar * np.abs(ip/(e_ens[0] - e_ens[m+1]))
             print(xi)
             return xi - desired_ap
@@ -62,16 +64,18 @@ class PulseGen:
             energies[:, i] = np.real(e_ens)
             wfns[:, :, i] = e_vecs
         # approximate ground state derivative
-        dpsi_di[:, (0, -1)] = (grounds[:, (1, -2)] - grounds[:, (0, -1)])/h  # finite diff at end points
-        dpsi_di[:, (1, -2)] = (grounds[:, (2, -1)] + grounds[:, (0, -3)] - 2*grounds[:, (1, -2)]) / (h**2)  # 3pt stencil
-        dpsi_di[:, 2:-2] = (grounds[:, 0:-4] - 8*grounds[:, 1:-3] + 8*grounds[:, 3:-1] - grounds[:, 4:]) / (12*h)  #5
+        dpsi_di[:, (0, -1)] = (grounds[:, (1, -2)] - grounds[:, (0, -1)]) / h  # finite diff at end points
+        dpsi_di[:, (1, -2)] = (grounds[:, (2, -1)] + grounds[:, (0, -3)] - 2*grounds[:, (1, -2)]) / h**2  # 3pt stencil
+        dpsi_di[:, 2:-2] = (grounds[:, 0:-4] - 8*grounds[:, 1:-3] + 8*grounds[:, 3:-1] - grounds[:, 4:]) / (12*h)  # 5pt stencil
 
         for i in range(len(indices)-1):
-            result = fsolve(adiabatic, 1e-25, args=(wfns[:, :, i+1], dpsi_di[:, i], energies[:, i+1], self.desired_ap, gparams))
+            result = fsolve(adiabatic, h, args=(wfns[:, :, i+1], dpsi_di[:, i], energies[:, i+1], self.desired_ap, gparams))
             print('done')
             di_dt[i + 1] = result
 
-        times[1:] = np.cumsum(1/di_dt[1:])
+        times[1:] = np.cumsum(h/di_dt[1:])  # output in seconds
+        self.adia_pulse = np.column_stack((times, volt_vec))
+
         plt.plot(times, volt_vec[:, 0], '-ro' )
         plt.plot(times, volt_vec[:, 1], '-bo' )
         plt.plot(times, volt_vec[:, 2], '-go' )
