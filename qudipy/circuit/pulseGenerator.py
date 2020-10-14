@@ -10,6 +10,7 @@ from qudipy.qutils.solvers import solve_schrodinger_eq
 from scipy.optimize import fsolve
 from qudipy.qutils.math import inner_prod
 from scipy.constants import hbar
+from scipy.io import savemat
 import qudipy as qd
 import qudipy.potential as pot
 
@@ -28,14 +29,14 @@ class PulseGen:
     def optimizeAP(self, h=1e-12):
         consts = self.pot_interp.constants
         X = self.pot_interp.x_coords
-        indices = np.linspace(0, self.init_ctrl.length, num=int(self.init_ctrl.length/h +1))
+        indices = np.linspace(0, self.init_ctrl.length, num=int(self.init_ctrl.length/h) +1)
         n_ctrls = self.n_ctrls
 
         # helper function for adiabaticity calculation
-        def adiabatic(dt, psi, e_ens, desired_ap, gparams):
+        def adiabatic(dt, psi, psi_ground, e_ens, desired_ap, gparams):
             xi = 0
             for m in range(2*n_ctrls-2):
-                ip = inner_prod(gparams, psi[:, m+1], dt*psi[:, 0])
+                ip = inner_prod(gparams, psi[:, m+1], dt*psi_ground)
                 xi += hbar * np.abs(ip/(e_ens[0] - e_ens[m+1]))
             print(xi)
             return xi - desired_ap
@@ -44,9 +45,9 @@ class PulseGen:
         grounds = np.zeros((len(X), len(indices)), dtype=complex)
         energies =np.zeros((2*n_ctrls-1, len(indices)), dtype=complex)
         wfns = np.zeros((len(X), 2*n_ctrls-1, len(indices)), dtype=complex)
-        dpsi_di = grounds
-        di_dt = indices
-
+        dpsi_di = np.zeros((len(X), len(indices)), dtype=complex)
+        di_dt = np.zeros((len(indices)))
+        times = np.zeros(len(indices))
         for idx, ctrl in enumerate(self.init_ctrl.ctrl_names):
             # array of interpolated control pulses at specified step
             volt_vec[:, idx] = self.ctrl_interp[ctrl](indices)
@@ -66,13 +67,15 @@ class PulseGen:
         dpsi_di[:, 2:-2] = (grounds[:, 0:-4] - 8*grounds[:, 1:-3] + 8*grounds[:, 3:-1] - grounds[:, 4:]) / (12*h)  #5
 
         for i in range(len(indices)-1):
-            result = fsolve(adiabatic, 1e-25, args=(wfns[:, :, i+1], energies[:, i+1], self.desired_ap, gparams))
+            result = fsolve(adiabatic, 1e-25, args=(wfns[:, :, i+1], dpsi_di[:, i], energies[:, i+1], self.desired_ap, gparams))
+            print('done')
             di_dt[i + 1] = result
 
-        times = np.cumsum(di_dt)
-
-
-
+        times[1:] = np.cumsum(1/di_dt[1:])
+        plt.plot(times, volt_vec[:, 0], '-ro' )
+        plt.plot(times, volt_vec[:, 1], '-bo' )
+        plt.plot(times, volt_vec[:, 2], '-go' )
+        plt.show()
 
 
 if __name__ == '__main__':
