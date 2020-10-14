@@ -7,7 +7,8 @@ Constant adiabaticity pulse generator
 import numpy as np
 import matplotlib.pyplot as plt
 from qudipy.qutils.solvers import solve_schrodinger_eq
-from scipy.optimize import fmin
+from scipy.optimize import fsolve
+from qudipy.qutils.math import inner_prod
 from scipy.constants import hbar
 import qudipy as qd
 import qudipy.potential as pot
@@ -24,55 +25,54 @@ class PulseGen:
         ctrl_pulse._generate_ctrl_interpolators()
         self.ctrl_interp = ctrl_pulse.ctrl_interps
 
-    def optimizeAP(self):
+    def optimizeAP(self, h=1e-12):
         consts = self.pot_interp.constants
         X = self.pot_interp.x_coords
-        times = np.linspace(0, self.init_ctrl.length, num=len(X))
+        indices = np.linspace(0, self.init_ctrl.length, num=int(self.init_ctrl.length/h +1))
         n_ctrls = self.n_ctrls
 
         # helper function for adiabaticity calculation
-        def adiabatic(dt, psi, psi_ground, e_ens, desired_ap):
-            xi = np.zeros(len(psi))
+        def adiabatic(dt, psi, e_ens, desired_ap, gparams):
+            xi = 0
             for m in range(2*n_ctrls-2):
-                xi += hbar * np.abs(np.divide(np.vdot(psi[:, m+1], dt * psi_ground.flatten()), (e_ens[0] - e_ens[m+1])))
-            xi = xi - desired_ap
-            return xi
+                ip = inner_prod(gparams, psi[:, m+1], dt*psi[:, 0])
+                xi += hbar * np.abs(ip/(e_ens[0] - e_ens[m+1]))
+            print(xi)
+            return xi - desired_ap
 
-        h = 1e-6  # in V
-        coeff = [1, -8, 0, +8, -1]  # for 5 pt stencil
-        delh = h*np.array([-2, -1, 0, 1, 2])  # control pulse voltage shifts
-        dpsi_dv = 0
-        volt_vec = np.zeros((len(times), n_ctrls))
+        volt_vec = np.zeros((len(indices), n_ctrls), dtype=complex)
+        grounds = np.zeros((len(X), len(indices)), dtype=complex)
+        energies =np.zeros((2*n_ctrls-1, len(indices)), dtype=complex)
+        wfns = np.zeros((len(X), 2*n_ctrls-1, len(indices)), dtype=complex)
+        dpsi_di = grounds
+        di_dt = indices
 
         for idx, ctrl in enumerate(self.init_ctrl.ctrl_names):
-            # array of interpolated control pulses (no deltaV shift)
-            volt_vec[:, idx] = self.ctrl_interp[ctrl](times)
+            # array of interpolated control pulses at specified step
+            volt_vec[:, idx] = self.ctrl_interp[ctrl](indices)
 
-        for i in range(n_ctrls):
-            for s in range(5):
-                if s == 2:
-                    int_pot = self.pot_interp(volt_vec)
-                    gparams = pot.GridParameters(X, potential=int_pot)
-                    # center of 5 point stencil, store wf and energies for all accessible states
-                    ce_ens, ce_vecs = solve_schrodinger_eq(consts, gparams, n_sols=2*n_ctrls-1)
-                else:
-                    # values of stencil, only requires ground state
-                    int_pot = self.pot_interp(volt_vec+delh[s])  # interpolate potential based on small shift of ctrl
-                    gparams = pot.GridParameters(X, potential=int_pot)
-                    _, e_vecs = solve_schrodinger_eq(consts, gparams, n_sols=1)
-                    dpsi_dv += e_vecs * coeff[s]
+        for i in range(len(indices)):
+            # calculate eigenstates for all voltage configurations
+            int_pot = self.pot_interp(volt_vec[i, :])
+            gparams = pot.GridParameters(X, potential=int_pot)
+            # store wf and energies for all accessible states
+            e_ens, e_vecs = solve_schrodinger_eq(consts, gparams, n_sols=2 * n_ctrls - 1)
+            grounds[:, i] = e_vecs[:, 0]/np.sqrt(inner_prod(gparams, e_vecs[:, 0], e_vecs[:, 0]))
+            energies[:, i] = np.real(e_ens)
+            wfns[:, :, i] = e_vecs
+        # approximate ground state derivative
+        dpsi_di[:, (0, -1)] = (grounds[:, (1, -2)] - grounds[:, (0, -1)])/h  # finite diff at end points
+        dpsi_di[:, (1, -2)] = (grounds[:, (2, -1)] + grounds[:, (0, -3)] - 2*grounds[:, (1, -2)]) / (h**2)  # 3pt stencil
+        dpsi_di[:, 2:-2] = (grounds[:, 0:-4] - 8*grounds[:, 1:-3] + 8*grounds[:, 3:-1] - grounds[:, 4:]) / (12*h)  #5
 
-            # approximate the derivative of ground state
-            dpsi_dv = dpsi_dv/(12*h)
-            dvi_dt = np.gradient(volt_vec, edge_order=2)
-            # find optimal dv/dt to achieve adiabatic parameter, set current dv/dt as initial guess
-            grad = fmin(adiabatic, dvi_dt, args=(ce_vecs, dpsi_dv, ce_ens, self.desired_ap))
-            # modify the time indices
-            opt_times = times
-            opt_times[1:] = times[:-1] + np.divide(np.diff(volt_vec[:, i]), grad[1:])
+        for i in range(len(indices)-1):
+            result = fsolve(adiabatic, 1e-25, args=(wfns[:, :, i+1], energies[:, i+1], self.desired_ap, gparams))
+            di_dt[i + 1] = result
 
-            self.adia_pulse[:, i+n_ctrls] = opt_times
-            self.adia_pulse[:, i] = volt_vec[:, i]
+        times = np.cumsum(di_dt)
+
+
+
 
 
 if __name__ == '__main__':
