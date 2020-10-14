@@ -13,34 +13,36 @@ from scipy.constants import hbar
 from scipy.io import savemat
 import qudipy as qd
 import qudipy.potential as pot
+from tqdm import tqdm
 
 
 class PulseGen:
 
     def __init__(self, ctrl_pulse, pot_interp, adia_param):
-        self.init_ctrl = ctrl_pulse
+        self.init_ctrl = ctrl_pulse.copy()
+        self.init_ctrl.ctrl_time = None
+        self.init_ctrl.set_pulse_length(1.0)
+        self.init_ctrl._generate_ctrl_interpolators()
+
         self.n_ctrls = ctrl_pulse.n_ctrls
         self.pot_interp = pot_interp
         self.desired_ap = adia_param
         self.adia_pulse = []
-        ctrl_pulse._generate_ctrl_interpolators()
-        self.ctrl_interp = ctrl_pulse.ctrl_interps
 
-    def optimizeAP(self, h=1e-12):
+    def optimizeAP(self, n=100):
         consts = self.pot_interp.constants
         X = self.pot_interp.x_coords
-        indices = np.linspace(0, self.init_ctrl.length, num=int(self.init_ctrl.length/h) +1)
+        indices = np.linspace(0, 1, num=n)
         n_ctrls = self.n_ctrls
 
         # helper function for adiabaticity calculation
         def adiabatic(dt, psi, psi_ground, e_ens, desired_ap, gparams):
             xi = 0
             # log transformation
-            a = np.log10(dt)
+            a = 10**dt
             for m in range(2*n_ctrls-2):
                 ip = inner_prod(gparams, psi[:, m+1], a*psi_ground)
                 xi += hbar * np.abs(ip/(e_ens[0] - e_ens[m+1]))
-            print(xi)
             return xi - desired_ap
 
         volt_vec = np.zeros((len(indices), n_ctrls), dtype=complex)
@@ -50,30 +52,32 @@ class PulseGen:
         dpsi_di = np.zeros((len(X), len(indices)), dtype=complex)
         di_dt = np.zeros((len(indices)))
         times = np.zeros(len(indices))
+
         for idx, ctrl in enumerate(self.init_ctrl.ctrl_names):
             # array of interpolated control pulses at specified step
-            volt_vec[:, idx] = self.ctrl_interp[ctrl](indices)
+            volt_vec[:, idx] = self.init_ctrl.ctrl_interps[ctrl](indices)
 
-        for i in range(len(indices)):
+        for i in range(n):
             # calculate eigenstates for all voltage configurations
             int_pot = self.pot_interp(volt_vec[i, :])
             gparams = pot.GridParameters(X, potential=int_pot)
             # store wf and energies for all accessible states
             e_ens, e_vecs = solve_schrodinger_eq(consts, gparams, n_sols=2 * n_ctrls - 1)
-            grounds[:, i] = e_vecs[:, 0]/np.sqrt(inner_prod(gparams, e_vecs[:, 0], e_vecs[:, 0]))
+            # normalize ground state
+            grounds[:, i] = e_vecs[:, 0]
             energies[:, i] = np.real(e_ens)
             wfns[:, :, i] = e_vecs
         # approximate ground state derivative
+        h = 1/n
         dpsi_di[:, (0, -1)] = (grounds[:, (1, -2)] - grounds[:, (0, -1)]) / h  # finite diff at end points
         dpsi_di[:, (1, -2)] = (grounds[:, (2, -1)] + grounds[:, (0, -3)] - 2*grounds[:, (1, -2)]) / h**2  # 3pt stencil
         dpsi_di[:, 2:-2] = (grounds[:, 0:-4] - 8*grounds[:, 1:-3] + 8*grounds[:, 3:-1] - grounds[:, 4:]) / (12*h)  # 5pt stencil
 
-        for i in range(len(indices)-1):
-            result = fsolve(adiabatic, h, args=(wfns[:, :, i+1], dpsi_di[:, i], energies[:, i+1], self.desired_ap, gparams))
-            print('done')
-            di_dt[i + 1] = result
+        for i in tqdm(range(n-1)):
+            di_dt[i + 1] = fsolve(adiabatic, h, args=(wfns[:, :, i+1], dpsi_di[:, i], energies[:, i+1], self.desired_ap, gparams))
+            print(di_dt[i + 1])
 
-        times[1:] = np.cumsum(h/di_dt[1:])  # output in seconds
+        times[1:] = np.cumsum(h/(10**di_dt[1:]))  # output in seconds
         self.adia_pulse = np.column_stack((times, volt_vec))
 
         plt.plot(times, volt_vec[:, 0], '-ro', markersize=2 )
@@ -171,8 +175,7 @@ if __name__ == '__main__':
     ctrl_time = pulse_length * np.array([0, 1 / 4, 1 / 2, 3 / 4, 1])
     shut_pulse.add_control_variable('Time', ctrl_time)
     shut_pulse.set_pulse_length(10e-12)
+    shut_pulse.plot()
     apulse = PulseGen(shut_pulse, pot_interp, 0.02)
-    apulse.optimizeAP(h=1e-12)
-    apulse.optimizeAP(h=1e-13)
-    apulse.optimizeAP(h=5e-14)
+    apulse.optimizeAP()
 
