@@ -76,9 +76,9 @@ class PulseGen:
         times[1:] = np.cumsum(h/di_dt[1:])  # output in seconds
         self.adia_pulse = np.column_stack((times, volt_vec))
 
-        plt.plot(times, volt_vec[:, 0], '-ro' )
-        plt.plot(times, volt_vec[:, 1], '-bo' )
-        plt.plot(times, volt_vec[:, 2], '-go' )
+        plt.plot(times, volt_vec[:, 0], '-ro', markersize=2 )
+        plt.plot(times, volt_vec[:, 1], '-bo', markersize=2)
+        plt.plot(times, volt_vec[:, 2], '-go', markersize=2 )
         plt.show()
 
 
@@ -152,7 +152,8 @@ if __name__ == '__main__':
     # the electron underneath V4
     pt9 = pt8.copy()
     pt9[1] = min_v
-    shuttle_pulse = np.array([pt1, pt2, pt3, pt4, pt5, pt6, pt7, pt8, pt9])
+    # shuttle_pulse = np.array([pt1, pt2, pt3, pt4, pt5, pt6, pt7, pt8, pt9])
+    shuttle_pulse = np.array([pt1, pt3, pt5, pt7, pt9])
 
     # Specify the total overall length of the control pulse in seconds
     pulse_length = 10E-12  # 10 ps
@@ -166,8 +167,12 @@ if __name__ == '__main__':
     shut_pulse.add_control_variable('V3', shuttle_pulse[:, 1])
     shut_pulse.add_control_variable('V4', shuttle_pulse[:, 2])
     # Specify a time array to correspond to each voltage configuration in the pulse
-    ctrl_time = pulse_length * np.array([0, 1 / 20, 1 / 4, 1 / 2 - 1 / 20, 1 / 2, 1 / 2 + 1 / 20, 3 / 4, 19 / 20, 1])
+    # ctrl_time = pulse_length * np.array([0, 1 / 20, 1 / 4, 1 / 2 - 1 / 20, 1 / 2, 1 / 2 + 1 / 20, 3 / 4, 19 / 20, 1])
+    ctrl_time = pulse_length * np.array([0, 1 / 4, 1 / 2, 3 / 4, 1])
     shut_pulse.add_control_variable('Time', ctrl_time)
     shut_pulse.set_pulse_length(10e-12)
     apulse = PulseGen(shut_pulse, pot_interp, 0.02)
-    apulse.optimizeAP()
+    apulse.optimizeAP(h=1e-12)
+    apulse.optimizeAP(h=1e-13)
+    apulse.optimizeAP(h=5e-14)
+
