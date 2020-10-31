@@ -38,7 +38,7 @@ def inner_prod(gparams, wf1, wf2):
 def project_up(rho, elem):
     """
     Projects the system density matrix onto the spin-up state of 
-    the k^th electron
+    the k^th electron (without renormalizing it)
     
     Parameters
     ----------
@@ -51,7 +51,8 @@ def project_up(rho, elem):
     Returns
     -------
     complex 2D array
-        new density matrix of the dimensions 2**m x 2**m, m = N - dim(elem) 
+        new density matrix (non-renormalized) of the dimensions 
+        2**m x 2**m, m = N - dim(elem) 
 
     """
     dim=rho.shape[0]    #dimension of the matrix
@@ -95,7 +96,7 @@ def project_up(rho, elem):
 def project_down(rho, elem):
     """
     Projects the system density matrix onto the spin-down state 
-    of the k^th electron
+    of the k^th electron (without renormalizing it)
     
     Parameters
     ----------
@@ -108,7 +109,8 @@ def project_down(rho, elem):
     Returns
     -------
     complex 2D array
-        new density matrix of the dimensions 2**m x 2**m, m = N - dim(elem) 
+        new density matrix (non-renormalized) of the dimensions 
+        2**m x 2**m, m = N - dim(elem) 
 
     """
 
