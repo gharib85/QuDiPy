@@ -191,7 +191,8 @@ class ControlPulse:
         plt.legend(lgd_names,loc='best')
         plt.xlabel('Time ' + units)
         plt.show()
-        
+
+
     def set_pulse_length(self, pulse_length):
         '''
         Change the pulse length by scaling the time axis of the pulse with 

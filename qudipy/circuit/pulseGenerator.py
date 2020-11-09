@@ -7,12 +7,10 @@ Reference: B. Buonacorsi, B. Shaw, J. Baugh. (2020) doi.org/10.1103/PhysRevB.102
 """
 
 import numpy as np
-import matplotlib.pyplot as plt
 from qudipy.qutils.solvers import solve_schrodinger_eq
 from scipy.optimize import fminbound
 from qudipy.qutils.math import inner_prod
 import qudipy.potential as pot
-import qudipy as qd
 from tqdm import tqdm
 from bisect import insort
 
@@ -64,13 +62,11 @@ class PulseGen:
 
         consts = self.pot_interp.constants
         X = self.pot_interp.x_coords
-        # indices for interpolated control pulses
-        indices = np.linspace(0, 1, num=n_pts)
+
         # list of accessible states should contain target state
         if n not in m:
             insort(m, n)
 
-        volt_vec = np.zeros((n_pts, self.init_ctrl.n_ctrls), dtype=complex)
         state = np.zeros((len(X), 5), dtype=complex)
         energies =np.zeros((len(m), 5), dtype=complex)
         wfns = np.zeros((len(X), len(m), 5), dtype=complex)
