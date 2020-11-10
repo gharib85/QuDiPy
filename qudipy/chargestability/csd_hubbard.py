@@ -27,9 +27,9 @@ class HubbardCSD:
 
         Keyword Arguments
         -----------------
-        h_mu: Whether to include chemical potential term in Hamiltonian when Hamiltonian is created (default False)
-        h_t: Whether to include tunnel coupling term in Hamiltonian when Hamiltonian is created (default False)
-        h_u: Whether to include coulomb repulsion repulsion in Hamiltoninan when hamiltonian is created (default False)
+        h_mu: Whether to include the chemical potential term in Hamiltonian when Hamiltonian is created (default False)
+        h_t: Whether to include the tunnel coupling term in Hamiltonian when Hamiltonian is created (default False)
+        h_u: Whether to include Coulomb repulsion in Hamiltonian when Hamiltonian is created (default False)
 
         Returns
         -------
@@ -48,7 +48,7 @@ class HubbardCSD:
             self.__setattr__(key, item)
 
         if self.h_mu is False:
-            raise Exception("Hamiltonian will be independent of gate volatges so no charge stability diagram can be generated")
+            raise Exception("Hamiltonian will be independent of gate voltages so no charge stability diagram can be generated")
 
         # Check that number of electrons doesn't exceed twice the amount of sites
         if n_e > 2 * n_sites:
@@ -59,7 +59,7 @@ class HubbardCSD:
 
         cap_matrix = np.array(cap_matrix)
         if cap_matrix.shape != (n_sites, n_sites):
-            raise Exception(f"Expected capacitance matrix of shape ({n_sites},{n_sites}), instead got capacitance matrix of shpae {cap_matrix.shape}")
+            raise Exception(f"Expected capacitance matrix of shape ({n_sites},{n_sites}), instead got capacitance matrix of shape {cap_matrix.shape}")
         else:
             self.cap_matrix = cap_matrix
 
@@ -273,7 +273,7 @@ class HubbardCSD:
     def _volt_to_chem_pot(self, volt_vect):
         '''
         Converts from supplied voltages to chemical potential using the 
-        Requires self charging and coulomb repulsion energy terms to be loaded already
+        Requires self-charging and Coulomb repulsion energy terms to be loaded already
 
         Parameters
         ----------
