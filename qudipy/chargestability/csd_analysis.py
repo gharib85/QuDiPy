@@ -22,14 +22,14 @@ class CSDAnalysis:
          
         Parameters
         ----------
-        csd : CSD object from csd_gen
+        csd : CSD object from csd_cim
 
         Keyword Arguments
         -----------------
-        capacitances: List used to convert from occupation to current for analysis. If no capactiacnes are supplied, a colormap will be
-                      created but this colormap will be physically meaningless and not suitbale for further analysis (default None)
-        blur: Whehter or not to do a gaussian blur on the data to simulate thermal broadening of transition lines (default False)
-        blur_sigma: Standard deviation of gaussian kernal. Larger number means more smeared out (default 1)
+        capacitances: List used to convert from occupation to current for analysis. If no capacitances are supplied, a colormap will be
+                      created but this colormap will be physically meaningless and not suitable for further analysis (default None)
+        blur: Whether or not to do a Gaussian blur on the data to simulate thermal broadening of transition lines (default False)
+        blur_sigma: Standard deviation of the Gaussian kernel. A larger number means more smeared out (default 1)
 
         Returns
         -------
@@ -37,9 +37,9 @@ class CSDAnalysis:
 
         '''
         self.capacitances = capacitances
-        self.csd = copy.copy(csd) # to avoid overwriting origianl csd object
+        self.csd = copy.copy(csd) # to avoid overwriting original csd object
 
-        # Create new empty DataFrame where we will put numbers instead of tuples correspondng to occupations
+        # Create a new empty DataFrame where we will put numbers instead of tuples corresponding to occupations
         self.csd.csd = pd.DataFrame(0, index=self.csd.v_1_values, columns=self.csd.v_2_values, dtype=np.float32)
 
         # If no capacitances are provided, create a color map using the hash of the occupation
@@ -114,7 +114,7 @@ class CSDAnalysis:
 
     def plot_csd(self):
         '''
-        Wrapper which plots the charge stability diagram, and the derivative of the charge stability diagram if it meaningful
+        Wrapper which plots the charge stability diagram, and the derivative of the charge stability diagram if it is meaningful
 
         Parameters
         ----------
