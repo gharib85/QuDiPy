@@ -21,14 +21,16 @@ class HubbardCSD:
 
         Parameters
         ----------
-        n_sites: Number of sites that a hamilt
+        n_sites: Number of sites in the system that an electron may occupy.
         n_e: Maximum number of electrons in the system. Must be less than or equal to 2*n_sites
+        cap_matrix: Dimensionless matrix which is used to convert from gate voltages to chemical potentials on individual dots
 
         Keyword Arguments
         -----------------
         h_mu: Whether to include the chemical potential term in Hamiltonian when Hamiltonian is created (default False)
         h_t: Whether to include the tunnel coupling term in Hamiltonian when Hamiltonian is created (default False)
         h_u: Whether to include Coulomb repulsion in Hamiltonian when Hamiltonian is created (default False)
+        kwargs: Dictionary of additional parameter in meV. See "Hubbard Charge Stability" tutorial for more information
 
         Returns
         -------
@@ -85,8 +87,8 @@ class HubbardCSD:
         initial_v: Initial voltage vector on all gates
         g1: Index of first gate to vary in the charge stability diagram
         g2: Index of second gate to vary in the charge stability diagram
-        v_g1_max: maximum voltage on g1
-        v_g2_max: maximum voltage on g2
+        v_g1_max: maximum voltage on g1 in volts
+        v_g2_max: maximum voltage on g2 in volts
 
         Keyword Arguments
         -----------------
@@ -99,17 +101,17 @@ class HubbardCSD:
 
         # Stores parameters for late
         self.num = num
-        self.g1 = g1
-        self.g2 = g2
+        self.g1 = g1 - 1 #For consistent indexing
+        self.g2 = g2 - 1 
         self.initial_v = initial_v
-        self.v_g1_min = initial_v[g1]
+        self.v_g1_min = initial_v[self.g1]
         self.v_g1_max = v_g1_max
-        self.v_g2_min = initial_v[g2]
+        self.v_g2_min = initial_v[self.g2]
         self.v_g2_max = v_g2_max
 
         # Generate voltage points to sweep over
-        self.v_1_values = [round(self.v_g1_min + i/num * (v_g1_max - self.v_g1_min), 6) for i in range(num)]
-        self.v_2_values = [round(self.v_g2_min + j/num * (v_g2_max - self.v_g2_min), 6) for j in range(num)]
+        self.v_1_values = np.around(np.linspace(self.v_g1_min, self.v_g1_max, num), decimals=6)
+        self.v_2_values = np.around(np.linspace(self.v_g2_min, self.v_g2_max, num), decimals=6)
 
         # Loop over all voltage point combinations in list comprehension
         occupation = [[[self._lowest_energy(self._volt_vect_gen(v_1, v_2))] for v_1 in self.v_1_values] for v_2 in self.v_2_values]
@@ -133,11 +135,9 @@ class HubbardCSD:
             h_mu[i][i] = (- chem_vect * self.basis_occupations[i]).sum()
 
         current_hamiltonian = self.fixed_hamiltonian + h_mu
-        eigenvals, eigenvects = la.eig(current_hamiltonian)
+        eigenvals, eigenvects = la.eigh(current_hamiltonian)
         eigenvects = np.transpose(eigenvects) # To get column eigenvectors not column entries
-        eigenvals = np.real(eigenvals) # Needs to be cast to real (even though Hamiltonian is Hermitian so eigenvalues are real)
         lowest_eigenvect = np.squeeze(eigenvects[np.argmin(eigenvals)])
-        lowest_eigenvect = lowest_eigenvect/la.norm(lowest_eigenvect)
         lowest_eigenvect_prob = np.real(lowest_eigenvect * np.conj(lowest_eigenvect))
         occupation_list = []
         for i in range(self.n_sites):
@@ -269,8 +269,8 @@ class HubbardCSD:
 
     def _volt_to_chem_pot(self, volt_vect):
         '''
-        Converts from supplied voltages to chemical potential using the 
-        Requires self-charging and Coulomb repulsion energy terms to be loaded already
+        Converts from supplied voltage vector to chemical potential using the capacitance matrix
+        Requires the capacitance matrix of the system to already be specified
 
         Parameters
         ----------
@@ -282,13 +282,14 @@ class HubbardCSD:
 
         Returns
         -------
-        Chemical potentials mu_1 and mu_2 on site 1 and site 2, respectively
+        Chemical potentials vector, with the same length as volt_vect
         '''
         return self.cap_matrix @ volt_vect
 
     def _inner_product(self, state_1, state_2):
         '''
-        Computes the inner product of two orhtonormal states
+        Computes the inner product of two orhtonormal states (lists with 0s and 1s only as entries)
+        Is a private function since this is not a general prupose inner product function but is useful for this file 
 
         Parameters
         ----------

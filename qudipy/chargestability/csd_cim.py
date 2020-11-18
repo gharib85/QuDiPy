@@ -84,8 +84,9 @@ class CIMCSD:
         self.v_g2_max = v_g2_max
 
         # Generates all the voltages to be swept
-        self.v_1_values = np.linspace(self.v_g1_min, self.v_g1_max, num)
-        self.v_2_values = np.linspace(self.v_g2_min, self.v_g2_max, num)
+        self.v_1_values = np.around(np.linspace(self.v_g1_min, self.v_g1_max, num), decimals=6)
+        self.v_2_values = np.around(np.linspace(self.v_g2_min, self.v_g2_max, num), decimals=6)
+        
         # Goes through all the v_1 and v_2 values and generate the csd data
         occupation = [[[self._lowest_energy(v_1, v_2)] for v_1 in self.v_1_values] for v_2 in self.v_2_values]
 
