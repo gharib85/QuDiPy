@@ -83,7 +83,7 @@ class HubbardCSD:
 
         Parameters
         ----------
-        initial_v: Initial voltage vector on gates
+        initial_v: Initial voltage vector on all gates
         g1: Index of first gate to vary in the charge stability diagram
         g2: Index of second gate to vary in the charge stability diagram
         v_g1_max: maximum voltage on g1

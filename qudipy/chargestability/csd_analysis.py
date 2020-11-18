@@ -37,9 +37,9 @@ class CSDAnalysis:
 
         '''
         self.capacitances = capacitances
-        self.csd = copy.copy(csd) # to avoid overwriting origianl csd object
+        self.csd = copy.copy(csd) # to avoid overwriting original csd object
 
-        # Create new empty DataFrame where we will put numbers instead of tuples correspondng to occupations
+        # Create a new empty DataFrame where we will put numbers instead of tuples corresponding to occupations
         self.csd.csd = pd.DataFrame(0, index=self.csd.v_1_values, columns=self.csd.v_2_values, dtype=np.float32)
 
         # If no capacitances are provided, create a color map using the hash of the occupation
