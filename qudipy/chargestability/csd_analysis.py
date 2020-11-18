@@ -62,10 +62,10 @@ class CSDAnalysis:
                     self.csd.csd[i][j] = np.sum(self.capacitances * self.csd.occupation[i][j][0])
 
             # Create derivative of charge stability diagram
-            df_der_row = self.csd.csd.diff(axis=0).fillna(0) # to be sensitive to changes in both the x and y direction
+            df_der_row = self.csd.csd.diff(axis=0).fillna(0) # Replace Nans (where derivative is not defined) with 0s
             df_der_col = self.csd.csd.diff(axis=1).fillna(0)
-            csd_der = np.sqrt(df_der_row**2 + df_der_col**2)
-            self.csd.csd_der = csd_der # Replace Nans (where derivative is not defined) with 0s
+            csd_der = np.sqrt(df_der_row**2 + df_der_col**2) # to be sensitive to changes in both the x and y direction
+            self.csd.csd_der = csd_der
 
         if blur is True:
             if self.capacitances is None:

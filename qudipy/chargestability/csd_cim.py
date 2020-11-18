@@ -1,6 +1,7 @@
 '''
 File used to generate and plot charge stability diagrams using the constant interaction model.
 '''
+import numpy as np
 import pandas as pd
 from math import floor
 from ..utils.constants import Constants
@@ -69,8 +70,6 @@ class CIMCSD:
         -----------------
         v_g1_max: minimum voltage on plunger gate 1 (default 0)
         v_g2_max: minimum voltage on plunger gate 2 (default 0)
-        c_cs_1: coupling between charge sensor and dot 1 (default to None)
-        c_cs_2: coupling between charge sensor and dot 2 (default to None)
         num: number of voltage point in 1d, which leads to a num^2 charge stability diagram (default 100)
 
         Returns
@@ -85,8 +84,8 @@ class CIMCSD:
         self.v_g2_max = v_g2_max
 
         # Generates all the voltages to be swept
-        self.v_1_values = [round(self.v_g1_min + i/num * (self.v_g1_max - self.v_g1_min), 6) for i in range(self.num)]
-        self.v_2_values = [round(self.v_g2_min + j/num * (self.v_g2_max - self.v_g2_min), 6) for j in range(self.num)]
+        self.v_1_values = np.linspace(self.v_g1_min, self.v_g1_max, num)
+        self.v_2_values = np.linspace(self.v_g2_min, self.v_g2_max, num)
         # Goes through all the v_1 and v_2 values and generate the csd data
         occupation = [[[self._lowest_energy(v_1, v_2)] for v_1 in self.v_1_values] for v_2 in self.v_2_values]
 
@@ -138,11 +137,11 @@ class CIMCSD:
             abs(e) * (self.c_g1 * v_g1 * self.e_cm/self.e_c2 + self.c_g2 * v_g2)
 
         # goes over 4 closest integer lattice points to find integer solution with lowest energy
-        n_trials = [(floor(n_1), floor(n_2)), (floor(n_1) + 1, floor(n_2)),
+        trial_occupations = [(floor(n_1), floor(n_2)), (floor(n_1) + 1, floor(n_2)),
                     (floor(n_1), floor(n_2) + 1), (floor(n_1) + 1, floor(n_2) + 1)]
         n_energies = [self.calculate_energy(
-            *occupation, v_g1, v_g2) for occupation in n_trials]
-        state = n_trials[n_energies.index(min(n_energies))]
+            *trial, v_g1, v_g2) for trial in trial_occupations]
+        state = trial_occupations[n_energies.index(min(n_energies))]
         if state[0] >= 0 and state[1] >= 0:
             return tuple(state)
         if state[0] < 0 and state[1] < 0:

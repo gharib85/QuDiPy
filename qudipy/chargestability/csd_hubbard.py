@@ -5,7 +5,6 @@ For more information about the method, see the references https://doi.org/10.110
 
 import copy
 import numpy as np
-from numpy.core.fromnumeric import transpose
 import pandas as pd
 import itertools
 from scipy import linalg as la
@@ -184,8 +183,6 @@ class HubbardCSD:
         self.basis = basis
         self.basis_length = len(basis)
         self.basis_labels = basis_labels
-
-        return
 
     def _generate_h_t(self):
         '''
