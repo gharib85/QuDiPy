@@ -114,7 +114,7 @@ class CSDAnalysis:
 
     def plot_csd(self):
         '''
-        Wrapper which plots the charge stability diagram, and the derivative of the charge stability diagram if it meaningful
+        Wrapper which plots the charge stability diagram, and the derivative of the charge stability diagram if it is meaningful
 
         Parameters
         ----------
