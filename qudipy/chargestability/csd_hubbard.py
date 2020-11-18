@@ -285,7 +285,7 @@ class HubbardCSD:
 
         Returns
         -------
-        Chemical potentials mu_1 and m_2 on site 1 and site 2 respectively
+        Chemical potentials mu_1 and mu_2 on site 1 and site 2, respectively
         '''
         return self.cap_matrix @ volt_vect
 
