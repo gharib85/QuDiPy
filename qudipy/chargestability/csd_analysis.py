@@ -26,8 +26,8 @@ class CSDAnalysis:
 
         Keyword Arguments
         -----------------
-        capacitances: List used to convert from occupation to current for analysis. If no capactiacnes are supplied, a colormap will be
-                      created but this colormap will be physically meaningless and not suitbale for further analysis (default None)
+        capacitances: List used to convert from occupation to current for analysis. If no capacitances are supplied, a colormap will be
+                      created but this colormap will be physically meaningless and not suitable for further analysis (default None)
         blur: Whether or not to do a Gaussian blur on the data to simulate thermal broadening of transition lines (default False)
         blur_sigma: Standard deviation of the Gaussian kernel. A larger number means more smeared out (default 1)
 
