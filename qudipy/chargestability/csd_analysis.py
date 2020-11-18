@@ -22,7 +22,7 @@ class CSDAnalysis:
          
         Parameters
         ----------
-        csd : CSD object from csd_gen
+        csd : CSD object from csd_cim
 
         Keyword Arguments
         -----------------
