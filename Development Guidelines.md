@@ -18,6 +18,8 @@ The below guidelines are relatively obvious. The aim of this document is to stan
 	* `import qudipy as qd`
 	* `import qudipy.potential as pot`
 	* `import qudipy.chargestability as csd`
+	* `import qudipy.qutils.math as qmath`
+	* `import qudipy.qutils.matrices as matr`
 
 8. Common qudipy classes should be implemented as (although in somecases this may not always be appropriate):
 	* `gparams = qd.potential.GridParameters()` or `gparams.pot.GridParameters()`
