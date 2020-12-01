@@ -42,7 +42,7 @@ var_ret: type
 	* `import qudipy.spinsimulator.spin_simulator as sps`
 
 8. Common qudipy classes should be implemented as (although in somecases this may not always be appropriate):
-	* `gparams = qd.potential.GridParameters()` or `gparams.pot.GridParameters()`
+	* `gparams = qd.potential.GridParameters()` or `gparams = pot.GridParameters()`
 	* `consts = qd.Constants()`
 
 9. Common external repositories should be loaded as:
