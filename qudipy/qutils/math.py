@@ -38,7 +38,7 @@ def inner_prod(gparams, wf1, wf2):
 def project_up(rho, elem):
     """
     Projects the system density matrix onto the spin-up state of 
-    the k^th electron (without renormalizing it)
+    the specified electron(s) (without renormalizing it)
     
     Parameters
     ----------
@@ -96,7 +96,7 @@ def project_up(rho, elem):
 def project_down(rho, elem):
     """
     Projects the system density matrix onto the spin-down state 
-    of the k^th electron (without renormalizing it)
+    of the specified electron(s) (without renormalizing it)
     
     Parameters
     ----------
@@ -206,7 +206,7 @@ def matrix_sqrt(A):
     
 
 
-def partial_trace_general(rho, dim, sys):
+def partial_trace_general(rho, dim, traced_subsystem):
     '''
     This code takes the partial trace of a density matrix.  It is adapted from
     the open-source TrX file written by Toby Cubitt for MATLAB.
@@ -219,7 +219,7 @@ def partial_trace_general(rho, dim, sys):
     dim : 1D array
         An array of the dimensions of each subsystem for the whole system for
         psi. [2,4,2] corresponds to a system of size 2x4x2 with 3 subsystems.
-    sys : 1D array
+    traced_subsystem : 1D array
         An array of the subsystems to trace out. For dim=[2,4,2], sys=[1,3] 
         would trace out the first and third subsystems leaving only a subspace
         with size 4.
@@ -232,32 +232,36 @@ def partial_trace_general(rho, dim, sys):
     '''
     # Convert inputs to numpy arrays if not already inputted as such.
     rho = np.array(rho)
-    sys = np.array(sys)-1  #-1 is added in order to accommodate conventional 
-        # enumeration (starting with 1) on the user's side
+    traced_subsystem = np.array(traced_subsystem)-1  #-1 is added in order 
+        # to accommodate conventional numbering rule
+        # (starting with 1) on the user's side
     dim = np.array(dim)
     
     # Check inputs
-    if any(sys > len(dim)-1) or any(sys < 0):
-        print(sys > len(dim))
-        print(any(sys < 0))
+    if any(traced_subsystem > len(dim)-1) or any(traced_subsystem < 0):
+        print(traced_subsystem > len(dim))
+        print(any(traced_subsystem < 0))
         # Error with sys variable
-        raise ValueError("Invalid subsytem in sys.")
-    if ((len(dim) == 1 and np.mod(len(rho)/dim,1) != 0) 
-        and len(rho) != np.prod(dim)):
+        raise ValueError("Invalid subsytem in traced_qubits.")
+    
+    #if ((len(dim) == 1 and np.mod(len(rho)/dim,1) != 0) 
+    #    and len(rho) != np.prod(dim)):
+        
+    if (rho.shape[0] != np.prod(dim) or rho.shape[1] != np.prod(dim)):
         # Error with dim or psi variables
         raise ValueError("Size of rho inconsistent with dim.")
     
     # Get rid of any singleton dimensions in dim
-    sys = np.setdiff1d(sys, np.argwhere(dim == 1))
+    traced_subsystem = np.setdiff1d(traced_subsystem, np.argwhere(dim == 1))
     dim = np.concatenate([dim[idx] for idx in np.argwhere(dim != 1)])
     
     # Number of subsystems
     n = len(dim)
     dim_reversed = dim[::-1]
     subsystems_keep = np.array([idx for idx in np.linspace(0,n-1,n) 
-                                if idx not in sys])
+                                if idx not in traced_subsystem])
     # Dimension of psi to trace out
-    dim_trace = dim[sys].prod()
+    dim_trace = dim[traced_subsystem].prod()
     # Dimension of psi leftover after partial trace
     dim_keep = len(rho)/dim_trace
     
@@ -267,7 +271,7 @@ def partial_trace_general(rho, dim, sys):
     # kept subsystems and third index is a flatted index for traced subsytems,
     # then sum third index over "diagonal" entries.
     perm = n-1 - np.concatenate([subsystems_keep[::-1], subsystems_keep[::-1]-n,
-                               sys, sys-n])
+                               traced_subsystem, traced_subsystem - n])
     rho1 = np.reshape(rho, np.concatenate([dim_reversed, dim_reversed]),
                       order='F')
     rho2 = np.transpose(rho1, perm.astype(int))

@@ -73,7 +73,8 @@ def J_sigma_product(N, k1, k2):
     
 def x_sum(N):
     """
-    Sum highligted with green in equation 2.1 of the "Simulator plan"
+    Sum highligted with green in equation 2.1 of the "Simulator plan". Used to 
+    reduce the total number of multiplications during the time evolution 
     
     Parameters
     ----------
@@ -90,7 +91,8 @@ def x_sum(N):
 
 def y_sum(N):
     """
-    Sum highligted with cyan in equation 2.1 of the "Simulator plan"
+    Sum highligted with cyan in equation 2.1 of the "Simulator plan". Used to 
+    reduce the total number of multiplications during the time evolution 
     
     Parameters
     ----------
@@ -107,7 +109,7 @@ def y_sum(N):
 
 def z_sum_omega(N, B_0, f_rf):
     """
-    Sum highligted with brown in equation 2.1 of the "Simulator plan" Used to 
+    Sum highligted with brown in equation 2.1 of the "Simulator plan". Used to 
     reduce the total number of multiplications during the time evolution 
     simulation   
     
@@ -297,8 +299,7 @@ class SpinSys:
         self.rho = rho
         self.time = time
         
-        if N_0 == None:
-            
+        if N_0 == None: 
             #assuming the current dimensionality of rho is maximum possible
             #throughout the system evolution
             self.N_0 = int(log2(rho.shape[0]))

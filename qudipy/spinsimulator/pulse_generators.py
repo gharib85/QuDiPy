@@ -50,23 +50,22 @@ def rot(qubits, axis, theta, sys, B_rf, delta_g=0., num_val=300):
         ControlPulse object / tuple of such objects corresponding to 
         a given rotation
     """
-    #if axis=="X":
-           
+          
     if axis=="X" or axis=="Y":
-        phis = [0.]*num_val
+        phis = np.full(num_val, 0.)
         if axis=="Y":
-            phis = [math.pi/2]*num_val
-        if theta<0:
-            phis = [(phi + math.pi) for phi in phis]
-        bs = [B_rf]*num_val
+            phis = np.full(num_val, math.pi/2)
+        if theta < 0:
+            phis = phis + math.pi
+        bs = np.full(num_val, B_rf)
         
         si_pulse_length = abs((theta*math.pi/180) * 
                     cst.hbar / (2*cst.muB*B_rf))
         
         rotpulse = ControlPulse("ROT{}_{}".format(axis, theta), 
                     "effective", pulse_length= si_pulse_length *1e12)
-        rotpulse.add_control_variable("phi", np.array(phis))
-        rotpulse.add_control_variable("B_rf", np.array(bs))
+        rotpulse.add_control_variable("phi", phis)
+        rotpulse.add_control_variable("B_rf", bs)
         
         # adding deviation g-factors to make unused qubits 
         # effectively "idle" under the pulse
@@ -84,16 +83,17 @@ def rot(qubits, axis, theta, sys, B_rf, delta_g=0., num_val=300):
                              "by an int or an iterable of ints. None of the"  
                                  "qubits has been detuned to idle")
         
-        #tuning the target qubit(s) on resonance
+        # tuning the target qubit(s) on resonance, the variables are named in 
+        # compliance with the write-up
         omega = 2 * cst.muB * sys.B_0 / cst.hbar
-        Omega = 2 * cst.muB * B_rf / cst.hbar
+        omega_capital = 2 * cst.muB * B_rf / cst.hbar
         
         if sys.B_0 != 0:
             dg0 = 2.0*(2*math.pi*sys.f_rf/omega -1)
             
             for qub in set_qubits:
                 rotpulse.add_control_variable("delta_g_{}".format(qub), 
-                                             np.array(([dg0] * num_val)))         
+                                                  np.full(num_val, dg0))        
         
         N = int(math.log2(sys.rho.shape[0])) 
         idle_qubs = set(range(1, N +1)) - set_qubits
@@ -102,21 +102,21 @@ def rot(qubits, axis, theta, sys, B_rf, delta_g=0., num_val=300):
 
         #number of full rotations on the Bloch sphere for the idling qubit
         nrot = int(math.sqrt((omega * (1+0.5 * delta_g)-2 * math.pi * 
-                              sys.f_rf)**2 + Omega ** 2) * 
+                              sys.f_rf)**2 + omega_capital ** 2) * 
                                si_pulse_length / (2*math.pi) ) + 1
         
         dg1 = (math.sqrt((2 * math.pi * nrot/si_pulse_length)**2 
-                   - Omega**2) - omega +2 * math.pi *sys.f_rf ) * 2 / omega
+               - omega_capital**2) - omega +2 * math.pi *sys.f_rf ) * 2 / omega
         
         dg2 =  (-math.sqrt((2 * math.pi * nrot/si_pulse_length)**2
-                   - Omega**2) - omega +2 * math.pi *sys.f_rf ) * 2 / omega
+               - omega_capital**2) - omega +2 * math.pi *sys.f_rf ) * 2 / omega
         
         #choosing the closest value
         exact_delta_g = dg1 if abs(dg1-delta_g) < abs(dg2-delta_g) else dg2
             
         for qub in idle_qubs:
             rotpulse.add_control_variable("delta_g_{}".format(qub), 
-                                          np.array(([exact_delta_g] * num_val)))
+                                         np.full(num_val, exact_delta_g))
                 
         return rotpulse
         #del rotpulse
@@ -146,11 +146,11 @@ def swap(qubit, J, sys, num_val=300):
         ControlPulse object corresponding to the SWAP between two 
         neighboring qubits
     """
-    Js = [J]*num_val
+    Js = np.full(num_val, J)
     swappulse = ControlPulse("SWAP_{}_{}".format(qubit, qubit+1), 
                                 "effective", pulse_length = cst.h/(2*J) * 1e12) 
     swappulse.add_control_variable("J_{}".format(qubit),
-                                                       np.array(Js))
+                                                       Js)
     #tuning all qubits on resonance
     N = int(math.log2(sys.rho.shape[0]))
     if sys.B_0 != 0:
@@ -158,7 +158,7 @@ def swap(qubit, J, sys, num_val=300):
         dg0 = 2.0*(2*math.pi*sys.f_rf/omega -1)
         for qub in range(1,N+1):
             swappulse.add_control_variable("delta_g_{}".format(qub), 
-                                         np.array(([dg0] * num_val)))
+                                         np.full(num_val, dg0))
     
     return swappulse
 
@@ -176,11 +176,11 @@ def rswap(qubit, J, sys, num_val=100):
         ControlPulse object corresponding to the SWAP between
         two neighboring qubits
     """
-    Js = [J]*num_val
+    Js =  np.full(num_val, J)
     rswappulse = ControlPulse("RSWAP_{}_{}".format(qubit, qubit+1), 
                                 "effective", pulse_length = cst.h/(4*J) *1e12) 
     rswappulse.add_control_variable("J_{}".format(qubit), 
-                                                        np.array(Js))
+                                                        Js)
     #tuning all qubits on resonance
     N = int(math.log2(sys.rho.shape[0])) 
     if sys.B_0 != 0:
@@ -188,6 +188,6 @@ def rswap(qubit, J, sys, num_val=100):
         dg0 = 2.0*(2*math.pi*sys.f_rf/omega -1)
         for qub in range(1,N+1):
             rswappulse.add_control_variable("delta_g_{}".format(qub), 
-                                         np.array(([dg0] * num_val)))
+                                         np.full(num_val, dg0))
     return rswappulse
 
