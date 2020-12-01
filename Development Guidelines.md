@@ -39,6 +39,7 @@ var_ret: type
 	* `import qudipy.chargestability as csd`
 	* `import qudipy.qutils.math as qmath`
 	* `import qudipy.qutils.matrices as matr`
+	* `import qudipy.spinsimulator.spin_simulator as sps`
 
 8. Common qudipy classes should be implemented as (although in somecases this may not always be appropriate):
 	* `gparams = qd.potential.GridParameters()` or `gparams.pot.GridParameters()`
