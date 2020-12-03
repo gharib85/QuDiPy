@@ -7,10 +7,11 @@ Functions for calculating the exchange interaction.
 import numpy as np
 import math
 import qudipy as qd
+from scipy.linalg import eig
 from scipy.optimize import minimize
 
-def optimize_HO_omega(gparams, nx, ny=None, omega_guess=1E15, n_SE_orbs=2,
-                   opt_tol=1E-7, consts=qd.Constants("vacuum")):
+def optimize_HO_omega(gparams, nx, ny=None, ecc=1.0, omega_guess=1E15, 
+                      n_SE_orbs=2, opt_tol=1E-7, consts=qd.Constants("vacuum")):
     '''
     Find an optimal choice of omega used when building a basis of harmonic 
     orbitals centered at the origin which are used to approximate the single 
@@ -30,6 +31,9 @@ def optimize_HO_omega(gparams, nx, ny=None, omega_guess=1E15, n_SE_orbs=2,
     ny : int, optional
         Number of modes along the y direction to include in the harmonic 
         orbital basis set. The default is nx.
+    ecc : float, optional
+        Specify the eccentricity of the harmonic orbitals defined as 
+        ecc = omega_y/omega_x. The default is 1.0 (omega_y = omega_x).
     omega_guess : float, optional
         Initial guess for omega in the optimization. If the grid was infinitely
         large and dense, then choice of omega_guess is not important. For finite
@@ -43,26 +47,24 @@ def optimize_HO_omega(gparams, nx, ny=None, omega_guess=1E15, n_SE_orbs=2,
         the harmonic orbitals approximate the single electron orbitals for a 
         given choice of omega. The default is 2.
     opt_tol : float, optional
-    
         Optimality tolerance for the BFGS algorithm. The default is 1E-7.
     consts : Constants object, optional
-        Specify the material system constants. The default is 
-        qd.Constants("vacuum").
+        Specify the material system constants. The default is "vacuum".
 
     Returns
     -------
     opt_omega : float
         The optimal omega found. If the optimization could not be completed, 
         then None is returned.
+    opt_HOs : n-d array
+        The basis of optimal harmonic orbitals. The first dimension of the 
+        array corresponds to the index of the harmonic orbital.
 
     '''
     
     # Set default behavior of ny=nx
     if ny is None and gparams.grid_type == '2D':
         ny = nx
-    
-    print('Optimizing choice of omega in approximating the single electron ' +
-          'orbitals...\n')
     
     # First thing to do is find the first few single electron orbitals from
     # the potential landscape.
@@ -75,7 +77,7 @@ def optimize_HO_omega(gparams, nx, ny=None, omega_guess=1E15, n_SE_orbs=2,
         curr_w = 10**curr_log_w
         
         # Find current basis of HOs
-        curr_HOs = build_HO_basis(gparams, curr_w, nx, ny, ecc=1.0,
+        curr_HOs = build_HO_basis(gparams, curr_w, nx, ny, ecc=ecc,
                                   consts=consts)
         
         # Get current overlap matrix between HOs and SE orbitals
@@ -85,10 +87,10 @@ def optimize_HO_omega(gparams, nx, ny=None, omega_guess=1E15, n_SE_orbs=2,
         # S contains all <SE_i|HO_j> inner products. If we have chosen a good 
         # omega, then SUM(|<SE_i|HO_j>|^2) will be close to 1. Therefore, we
         # want to maximize this value.
-        min_condition = np.sum(np.abs(1-np.diag(S_matrix.conj().T @ S_matrix)))
+        min_condition = np.abs(1-np.diag(S_matrix.conj().T @ S_matrix))
         # Average the min condition with respect to the number of SE orbitals
         # so the ideal min condition = 1
-        min_condition /= n_SE_orbs
+        min_condition = np.sum(min_condition)/n_SE_orbs
         
         return min_condition
         
@@ -99,17 +101,21 @@ def optimize_HO_omega(gparams, nx, ny=None, omega_guess=1E15, n_SE_orbs=2,
                              x0=np.log10(omega_guess), method='BFGS',
                              options={'gtol': opt_tol})
             
-    # If optimzation was successful, return optimal omega
+    # If optimzation was successful, return optimal omega and optimal basis
     if 'success' in opt_result.message:
         print(opt_result.message)
         opt_omega = 10**opt_result.x
         
-        return opt_omega
+        opt_HOs = build_HO_basis(gparams, opt_omega, nx, ny, ecc=ecc,
+                                  consts=consts)
+        
+        return opt_omega, opt_HOs
+    
     # If optimization failed, return None
     else:
         print(opt_result.message)
         
-        return None
+        return None, None
 
 def build_HO_basis(gparams, omega, nx, ny=0, ecc=1.0,
                    consts=qd.Constants('vacuum')):
@@ -130,7 +136,7 @@ def build_HO_basis(gparams, omega, nx, ny=0, ecc=1.0,
     -----------------
     ny : int, optional
         Number of modes along the y direction to include in the basis set. 
-        Only applicable is gparams is for a '2D' system. The default is 0.
+        Only applicable if gparams is for a '2D' system. The default is 0.
     ecc : float, optional
         Specify the eccentricity of the harmonic orbitals defined as 
         ecc = omega_y/omega_x. The default is 1.0 (omega_y = omega_x).
@@ -261,6 +267,135 @@ def build_HO_basis(gparams, omega, nx, ny=0, ecc=1.0,
                 idx_cnt += 1
                 
     return HOs
+        
+# HELP WITH COMING UP WITH A SHORTER NAME 
+# Also, this is a good example of a code that should be "generalized" to 
+# handle a Hamiltonian class
+def find_H_unitary_transformation(gparams, new_basis, 
+                              consts=qd.Constants('vacuum'), unitary=True,
+                              ortho_basis=False):
+    '''
+    This function takes an inputted Hamiltonian (gparams) and does a
+    transformation into a new basis (new_basis).
+
+    Parameters
+    ----------
+    gparams : GridParameters object
+        Contains grid and potential information.
+    new_basis : n-d array
+        A multi-dimensional array corresponding to the basis we will transform
+        the Hamiltonian into. The first dimension should correspond to the 
+        index of each basis state.
+        
+    Keyword Arguments
+    -----------------
+    consts : Constants object, optional
+        Specify the material system constants. The default is "vacuum".
+    unitary : bool
+        Specify if you want the unitary transformation that performs the basis
+        transformation to be returned. Requires evaluation of the eigenvalue 
+        probem. The default is True.
+    ortho_basis : bool
+        Specify if the new_basis is orthogonal or not. When False, we will 
+        calculate the overlap matrix during the transformation.  When True, no
+        overlap matrix is calculated. If you know ahead of time that your basis
+        is orthogonal, specifying True can save some computation overhead by 
+        not calculating the overlap matrix. The default is False.
+
+    Returns
+    -------
+    ham_new : 2d array
+        The Hamiltonian written in the new basis.
+    U : 2d array
+        The unitary transformation that yields U*H*U^-1 = H' where H is the
+        original hamiltonian and H' is the hamiltonian in the new basis. This
+        is only returned when unitary=True.
+
+    '''
+    
+    # First thing is to build the Hamiltonian
+    if gparams.grid_type == '1D':
+        ham = qd.qutils.solvers.build_1DSE_hamiltonian(consts, gparams)
+    elif gparams.grid_type == '2D':
+        ham = qd.qutils.solvers.build_2DSE_hamiltonian(consts, gparams)
+        
+    # Intialize hamiltonian for the basis transformation
+    n_basis_states = new_basis.shape[0]
+    ham_new = np.zeros((n_basis_states,n_basis_states), dtype=complex)
+    
+    # Now rewrite Hamiltonian in new basis by evaluating inner products <i|H|j>
+    # First upper triangular elements
+    for i in range(n_basis_states):
+        # Ket state
+        state_R = new_basis[i,:]
+        # Convert to NO if a 2D state
+        if gparams.grid_type == '2D':
+            state_R = gparams.convert_MG_to_NO(state_R)
+            
+        # Evaluate H|j>
+        state_R = ham @ state_R
+        
+        # Convert back to MG if a 2D state
+        if gparams.grid_type == '2D':
+            state_R = gparams.convert_NO_to_MG(state_R)
+            
+        for j in range(i+1,n_basis_states):
+            # Bra state
+            state_L = new_basis[j,:]
+
+            # Evaluate <i|H|j>
+            ham_new[i,j] = qd.qutils.qmath.inner_prod(gparams, state_L, state_R)
+
+    # Now lower triangular elements
+    ham_new += ham_new.conj().T
+    
+    # Now diagonal elements
+    for i in range(n_basis_states):
+        # Ket and bra states
+        state_R = new_basis[i,:]
+        state_L = state_R
+        
+        # Convert ket to NO if a 2D state
+        if gparams.grid_type == '2D':
+            state_R = gparams.convert_MG_to_NO(state_R)
+            
+        # Evaluate H|i>
+        state_R = ham @ state_R
+        
+        # Convert back to MG if a 2D state
+        if gparams.grid_type == '2D':
+            state_R = gparams.convert_NO_to_MG(state_R)
+
+        # Evaluate <i|H|i>
+        ham_new[i,i] = qd.qutils.qmath.inner_prod(gparams, state_L, state_R)
+            
+    # Correct any numerical issues and force Hamiltonian to be hermitian
+    ham_new = (ham_new + ham_new.conj().T)/2;
+    
+    # Now calculate the unitary transformation to convert H -> H' (if desired)
+    # U*H*U^-1 = H'
+    if unitary is False:
+        return ham_new
+    else:
+        # If basis is declared to be orthogonal, assuming overlap matrix
+        # is identity, otherwise calculate it.
+        if ortho_basis is True:
+            eig_ens, U = eig(ham_new)
+        else:
+            S_matrix = qd.qutils.qmath.find_overlap_matrix(gparams, new_basis,
+                                                           new_basis)
+            eig_ens, U = eig(ham_new, S_matrix)
+
+    # Sort unitary by eigenvalue
+    U = U[:,eig_ens.argsort()]
+
+    return ham_new, U
+        
+        
+        
+        
+        
+        
         
         
         
