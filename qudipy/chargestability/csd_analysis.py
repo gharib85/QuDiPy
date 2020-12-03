@@ -8,7 +8,7 @@ import copy
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-import seaborn as sb
+import seaborn as sns
 from scipy.ndimage import gaussian_filter
 from sklearn import cluster
 from sklearn.neighbors import NearestCentroid
@@ -17,7 +17,7 @@ class CSDAnalysis:
     '''
     Initialize the charge stability diagram analysis class which analyzes charge stability diagrams to extract parameters. 
     '''
-    def __init__(self, csd, capacitances=None, blur=False, blur_sigma=1):
+    def __init__(self, csd, capacitances=None, blur_sigma=None):
         '''
          
         Parameters
@@ -27,9 +27,9 @@ class CSDAnalysis:
         Keyword Arguments
         -----------------
         capacitances: List used to convert from occupation to current for analysis. If no capacitances are supplied, a colormap will be
-                      created but this colormap will be physically meaningless and not suitable for further analysis (default None)
-        blur: Whether or not to do a Gaussian blur on the data to simulate thermal broadening of transition lines (default False)
-        blur_sigma: Standard deviation of the Gaussian kernel. A larger number means more smeared out (default 1)
+                      created but this colormap will be arbitrary and thus not suitable for further analysis (default None)
+        blur_sigma: If not None, do a Gaussian blur on the data to simulate thermal broadening of transition lines with standard deviation of
+                    the Gaussian kernel as blur_sigma. A larger number means more smeared out (default None)
 
         Returns
         -------
@@ -317,7 +317,7 @@ class CSDAnalysis:
                         points_to_plot_x.append(temp_points[0][i])
                         points_to_plot_y.append(temp_points[1][i])
 
-                sb.scatterplot(x=points_to_plot_x, y=points_to_plot_y, color=tuple(col), s=100)
+                sns.scatterplot(x=points_to_plot_x, y=points_to_plot_y, color=tuple(col), s=100)
 
             plt.title('Estimated number of clusters: %d' % n_clusters_)
             plt.ylabel(r'$\rho$ (V)')
@@ -365,7 +365,7 @@ class CSDAnalysis:
         # Casts to a dataframe if data is not already for ease of plotting
         if type(data) != type(pd.DataFrame()):
             data = pd.DataFrame(data, index=y_values, columns=x_values)
-        s = sb.heatmap(data, cbar=cbar, xticklabels=int(self.csd.num/5), yticklabels=int(self.csd.num/5), cbar_kws=cbar_kws)
+        s = sns.heatmap(data, cbar=cbar, xticklabels=int(self.csd.num/5), yticklabels=int(self.csd.num/5), cbar_kws=cbar_kws)
         # Flip y axis so y_values increasing from bottom to top 
         s.axes.invert_yaxis()
         s.axes.set_xlabel(x_label)
@@ -389,7 +389,7 @@ class CSDAnalysis:
 
         # Create the heatmap figure
         f, ax = plt.subplots(1,1)
-        sb.heatmap(self.csd.csd, cbar=False, xticklabels=int(num/5), yticklabels=int(num/5))
+        sns.heatmap(self.csd.csd, cbar=False, xticklabels=int(num/5), yticklabels=int(num/5))
         ax.axes.invert_yaxis()
 
         # Create second axis with same x and y axis as the heatmap
@@ -403,7 +403,7 @@ class CSDAnalysis:
             m = -np.cos(theta)/np.sin(theta)
             b = rho/np.sin(theta)
             y = m * x + b
-            sb.lineplot(x=x, y=y, ax=ax2)
+            sns.lineplot(x=x, y=y, ax=ax2)
 
         # format the secodn axis and show the plot
         ax2.set_xlim([self.csd.v_g1_min,self.csd.v_g1_max])
@@ -503,7 +503,7 @@ class CSDAnalysis:
         # Create the heatmap figure
         f, ax = plt.subplots(1,1)
         num = self.csd.csd.shape[0]
-        sb.heatmap(self.csd.csd, cbar=False, xticklabels=int(num/5), yticklabels=int(num/5))
+        sns.heatmap(self.csd.csd, cbar=False, xticklabels=int(num/5), yticklabels=int(num/5))
         ax.axes.invert_yaxis()
 
         # Create second axis with same x and y axis as the heatmap
@@ -525,10 +525,10 @@ class CSDAnalysis:
 
         for x_range, line in zip(x_ranges, self.line_params):
             y = line[0] * x_range + line[1]
-            sb.lineplot(x=x_range, y=y, ax=ax2)
+            sns.lineplot(x=x_range, y=y, ax=ax2)
 
         # Plot the two triple points
-        sb.scatterplot(x=[x_hole, x_electron], y=[y_hole, y_electron], ax=ax2)
+        sns.scatterplot(x=[x_hole, x_electron], y=[y_hole, y_electron], ax=ax2)
 
         # format the secodn axis and show the plot
         ax2.set_xlim([self.csd.v_g1_min,self.csd.v_g1_max])
