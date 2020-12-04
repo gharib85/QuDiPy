@@ -67,7 +67,7 @@ class CSDAnalysis:
             csd_der = np.sqrt(df_der_row**2 + df_der_col**2) # to be sensitive to changes in both the x and y direction
             self.csd.csd_der = csd_der
 
-        if blur is True:
+        if blur_sigma is not None:
             if self.capacitances is None:
                 raise Warning("Blurring of data cannot occur when no capaciatnce are provided. Data will not be changed")
             else:
@@ -110,9 +110,9 @@ class CSDAnalysis:
         # Make bitmap
         self.csd_bitmap = self.csd.csd_der.mask(abs(self.csd.csd_der) > threshold, other=1).mask(abs(self.csd.csd_der) <= threshold, other=0)
         if plotting is True:
-            self._plot_heatmap(self.csd_bitmap, self.csd.v_1_values, self.csd.v_2_values, r'V$_1$', r'V$_2$')
+            self.__plot_heatmap(self.csd_bitmap, self.csd.v_1_values, self.csd.v_2_values, r'V$_1$', r'V$_2$')
 
-    def plot_csd(self):
+    def plot(self, derivative=False):
         '''
         Wrapper which plots the charge stability diagram, and the derivative of the charge stability diagram if it is meaningful
 
@@ -125,19 +125,19 @@ class CSDAnalysis:
         None
 
         '''
-        # Plot colobar and indicate "current" if results are physically meaningful
-        if self.capacitances is not None:
+        # Plot colobar and indicate "current" if that result is requested
+        if derivative is True:
             cbar_flag = True
             cbar_kws={'label': 'Current (arb.)'}
         else:
             cbar_flag = False
             cbar_kws = dict()
         # Plot the chagre stability diagram
-        self._plot_heatmap(self.csd.csd, None, None, r'V$_1$', r'V$_2$', cbar=cbar_flag, cbar_kws=cbar_kws)
+        self.__plot_heatmap(self.csd.csd, None, None, r'V$_1$', r'V$_2$', cbar=cbar_flag, cbar_kws=cbar_kws)
 
-        # Plot the "derivative" of the charge stability diagram, if capatitances are provided
-        if self.capacitances is not None:
-            self._plot_heatmap(self.csd.csd_der, None, None, r'V$_1$', r'V$_2$', cbar=cbar_flag, cbar_kws=cbar_kws)
+        # Plot the "derivative" of the charge stability diagram, if desired
+        if derivative is True:
+            self.__plot_heatmap(self.csd.csd_der, None, None, r'V$_1$', r'V$_2$', cbar=cbar_flag, cbar_kws=cbar_kws)
 
     def hough_transform(self, num_thetas=180, theta_min=0, theta_max=90, plotting=False):
         '''
@@ -206,7 +206,7 @@ class CSDAnalysis:
             rhos = np.round(self.rhos, 6)
             thetas = np.round(self.thetas, 6)
             # Call heatmap plotting function
-            self._plot_heatmap(self.accumulator, thetas, rhos, r'$\theta$ (rad)', r'$\rho$ (V)')
+            self.__plot_heatmap(self.accumulator, thetas, rhos, r'$\theta$ (rad)', r'$\rho$ (V)')
 
         return accumulator, thetas, rhos
 
@@ -256,7 +256,7 @@ class CSDAnalysis:
             rhos = np.round(self.rhos, 6)
             thetas = np.round(self.thetas, 6)
             # Call heatmap plotting function
-            self._plot_heatmap(accumulator_threshold, thetas, rhos, r'$\theta$ (rad)', r'$\rho$ (V)')
+            self.__plot_heatmap(accumulator_threshold, thetas, rhos, r'$\theta$ (rad)', r'$\rho$ (V)')
 
         return accumulator_threshold
 
@@ -340,7 +340,7 @@ class CSDAnalysis:
 
         return valid_centroids
 
-    def _plot_heatmap(self, data, x_values, y_values, x_label, y_label, cbar=True, cbar_kws=dict()):
+    def __plot_heatmap(self, data, x_values, y_values, x_label, y_label, cbar=True, cbar_kws=dict()):
         '''
         Private function which formats and plots Seaborn heatmaps.
 
@@ -479,7 +479,7 @@ class CSDAnalysis:
 
         return triple_points
 
-    def plot_csd_with_lines_and_triple_points(self):
+    def plot_triple_points(self):
         '''
         Plots charge stability diagram with fitted lines (terminated at the correct triple points)
         This function is NOT general and only works in the case of 4 main transition lines with a middle transition that is missing.

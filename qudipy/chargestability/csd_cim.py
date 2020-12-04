@@ -1,14 +1,12 @@
 '''
-File used to generate and plot charge stability diagrams using the constant interaction model.
+File used to generate and plot charge stability diagrams for double dot systems using the constant interaction model.
 '''
 import numpy as np
 import pandas as pd
 from math import floor
 from ..utils.constants import Constants
 
-const = Constants()
-e = const.e
-
+consts = Constants("vacuum")
 
 class CIMCSD:
     '''
@@ -52,11 +50,11 @@ class CIMCSD:
         self.c_2 = self.c_r + self.c_g2 + self.c_m
 
         # Dot charging energy
-        self.e_c1 = e**2 * self.c_1 / (self.c_1 * self.c_2 - self.c_m**2)
-        self.e_c2 = e**2 * self.c_2 / (self.c_1 * self.c_2 - self.c_m**2)
+        self.e_c1 = consts.e**2 * self.c_1 / (self.c_1 * self.c_2 - self.c_m**2)
+        self.e_c2 = consts.e**2 * self.c_2 / (self.c_1 * self.c_2 - self.c_m**2)
 
         # Electrostatic coupling energy
-        self.e_cm = e**2 * self.c_m / (self.c_1 * self.c_2 - self.c_m**2)
+        self.e_cm = consts.e**2 * self.c_m / (self.c_1 * self.c_2 - self.c_m**2)
 
     def generate_csd(self, v_g1_max, v_g2_max, v_g1_min=0, v_g2_min=0, num=100):
         ''' Generates the charge stability diagram between v_g1(2)_min and v_g1(2)_max with num by num data points in 2D
@@ -109,9 +107,9 @@ class CIMCSD:
         Energy of system in joules
         '''
         # This is formula A12 from Appendix 3 of the paper references at the top of the file
-        f = - 1/abs(e) * (
+        f = - 1/consts.e * (
             self.c_g1 * v_g1 * (n_1 * self.e_c1 + n_2 * self.e_cm) + self.c_g2 * v_g2 * (
-                n_1 * self.e_cm + n_2 * self.e_c2)) + 1/e**2 * (1/2 * self.c_g1**2 * v_g1**2 * self.e_c1 + 1/2 * self.c_g2**2 *
+                n_1 * self.e_cm + n_2 * self.e_c2)) + 1/consts.e**2 * (1/2 * self.c_g1**2 * v_g1**2 * self.e_c1 + 1/2 * self.c_g2**2 *
                                                                 v_g2**2 * self.e_c2 + self.c_g1 * v_g1 * self.c_g2 * v_g2 * self.e_cm)
 
         return 1/2 * n_1**2 * self.e_c1 + 1/2 * n_2**2 * self.e_c2 + n_1 * n_2 * self.e_cm + f
@@ -132,10 +130,10 @@ class CIMCSD:
         '''
 
         # get occupation giving lowest energy assuming a continuous variable function (i.e derivative of 0)
-        n_1 = 1/(1 - self.e_cm ** 2/(self.e_c1 * self.e_c2)) * 1/abs(e) * (self.c_g1 * v_g1 * (
+        n_1 = 1/(1 - self.e_cm ** 2/(self.e_c1 * self.e_c2)) * 1/consts.e * (self.c_g1 * v_g1 * (
              1 - self.e_cm ** 2 / (self.e_c1 * self.e_c2)) + self.c_g2 * v_g2 * (self.e_cm/self.e_c2 - self.e_cm/self.e_c1))
         n_2 = -n_1 * self.e_cm/self.e_c2 + 1 / \
-            abs(e) * (self.c_g1 * v_g1 * self.e_cm/self.e_c2 + self.c_g2 * v_g2)
+            consts.e * (self.c_g1 * v_g1 * self.e_cm/self.e_c2 + self.c_g2 * v_g2)
 
         # goes over 4 closest integer lattice points to find integer solution with lowest energy
         trial_occupations = [(floor(n_1), floor(n_2)), (floor(n_1) + 1, floor(n_2)),
