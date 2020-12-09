@@ -81,7 +81,7 @@ class ControlPulse:
         # Check if the interpolators have been constructed. If not, then 
         # make them.
         if not hasattr(self,'ctrl_interps'):
-            self._generate_ctrl_interpolators()
+            self.__generate_ctrl_interpolators()
         
         # Loop through each control variable and get the interpolated pulse
         # for each time point.
@@ -226,7 +226,7 @@ class ControlPulse:
         # Check if the interpolators have been constructed. If they have, 
         # then we need to update them with the new ctrl_time attribute
         if hasattr(self,'ctrl_interps'):
-            self._generate_ctrl_interpolators()
+            self.__generate_ctrl_interpolators()
         
     def add_control_variable(self, var_name, var_pulse):
         '''
@@ -274,7 +274,7 @@ class ControlPulse:
             self.ctrl_names.append(var_name)
             self.n_ctrls = len(self.ctrl_names)
             
-    def _generate_ctrl_interpolators(self):
+    def __generate_ctrl_interpolators(self):
         '''
         Loop through every control variable and make a 1D time interpolation 
         object.
@@ -299,7 +299,9 @@ class ControlPulse:
         for ctrl in self.ctrl_names:
             curr_pulse = self.ctrl_pulses[ctrl]
                 
-            self.ctrl_interps[ctrl] = interp1d(self.ctrl_time, curr_pulse)        
+            self.ctrl_interps[ctrl] = interp1d(self.ctrl_time, curr_pulse)
+            
+    
             
         
         
