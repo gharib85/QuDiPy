@@ -6,7 +6,7 @@ Class for a control pulse
 
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.interpolate import interp1d
+from scipy.interpolate import interp1d, RegularGridInterpolator
 from copy import deepcopy
 
 class ControlPulse:
@@ -54,6 +54,8 @@ class ControlPulse:
         
         self.ctrl_time = None
         
+        self.map_exists = False
+        
     def __call__(self, time_pts):
                 
         '''
@@ -88,8 +90,20 @@ class ControlPulse:
         interp_pulse = np.zeros((len(time_pts),len(self.ctrl_names)))
         for ctrl_idx, ctrl in enumerate(self.ctrl_names):
             interp_pulse[:,ctrl_idx] = self.ctrl_interps[ctrl](time_pts)
-
-        return interp_pulse    
+            
+        # If there is a mapping between the outer control variables and an
+        # inner control variable layer, then we need to do an additional
+        # interpolation to get those values.
+        interp_pulse_inner = np.zeros((len(time_pts), 
+                                       len(self.ctrl_names_inner)))
+        if self.map_exists:
+            for ctrl_idx, ctrl_inner in enumerate(self.ctrl_names_inner):
+                interp_pulse_inner[:,ctrl_idx] = \
+                    self.ctrl_interps_inner[ctrl_inner](interp_pulse)
+            
+            return interp_pulse_inner, self.ctrl_names_inner
+        else:
+            return interp_pulse, self.ctrl_names 
     
     def copy(self):
         '''
@@ -301,6 +315,64 @@ class ControlPulse:
                 
             self.ctrl_interps[ctrl] = interp1d(self.ctrl_time, curr_pulse)
             
+    def define_ctrl_mapping(self, map_grid, map_data, ctrl_name, 
+                            overwrite=False):
+        '''
+        This method creates an "inner" layer for the control pulse to translate
+        between the control variables used to original define the object and 
+        the control variables used in the actual Hamiltonian. If the object
+        was originally created using the actual Hamiltonian control variables,
+        then this method is not needed. The original control variables are
+        referred to as the "outer" layer.
+        
+        This method will only create a mapping between the outer control
+        variables and a single inner control variable. To add more inner
+        control variables, this function must be called repeatedly.
+
+        Parameters
+        ----------
+        map_data : TYPE
+            DESCRIPTION.
+        ctrl_name : TYPE
+            DESCRIPTION.
+
+        Returns
+        -------
+        None.
+
+        '''
+        
+        # Check if there already exists a mapping for this variable and
+        # warn user about overwriting it.
+        if hasattr(self, 'ctrl_names_inner'):
+            if ctrl_name in self.ctrl_names_inner and not overwrite:
+                raise Warning(f"There already exists a mapping for the control \
+                              variable {ctrl_name}. \n If you wish to overwrite \
+                              this mapping, set the keyword arg overwrite=True.")
+
+                return
+        
+        # Make the regular grid interpolator object to convert from the 
+        # original control variables to this new control variable
+        if not isinstance(map_grid, tuple):
+            map_grid = tuple(map_grid)
+        interp_obj = RegularGridInterpolator(map_grid, map_data)
+        
+        self.ctrl_interps_inner[ctrl_name] = interp_obj
+        
+        # Now that the interpolator has been made, let's update the names 
+        # of this inner control pulse layer
+        if not hasattr(self,'ctrl_names_inner'):
+            # Initialize the inner control variable names list
+            self.ctrl_names_inner = []
+            
+            # We have created a mapping, so change the attribute flag
+            self.map_exists = True
+            
+        if not ctrl_name in self.ctrl_names_inner:
+            self.ctrl_names_inner.append(ctrl_name)
+        
+        
     
             
         
