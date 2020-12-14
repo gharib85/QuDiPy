@@ -56,7 +56,7 @@ class ControlPulse:
         
         self.map_exists = False
         
-    def __call__(self, time_pts):
+    def __call__(self, time_pts, call_inner=True):
                 
         '''
         Call method for class.
@@ -65,6 +65,14 @@ class ControlPulse:
         ----------
         time_pts : 1D float array
             Time points where we want to obtain the interpolated pulse values.
+            
+        Keyword Arguments
+        -----------------
+        call_inner : bool, optional
+            When True, this will use the mappings between the outer and inner 
+            control variable layers if the mappings exists. When False, this 
+            will only use the outer layer for the __call__ method. The default
+            is True.
 
         Returns
         -------
@@ -94,16 +102,19 @@ class ControlPulse:
         # If there is a mapping between the outer control variables and an
         # inner control variable layer, then we need to do an additional
         # interpolation to get those values.
-        interp_pulse_inner = np.zeros((len(time_pts), 
-                                       len(self.ctrl_names_inner)))
-        if self.map_exists:
+        if self.map_exists and call_inner:
+            # Intialize inner layer of interpolated pulse
+            interp_pulse_inner = np.zeros((len(time_pts), 
+                                           len(self.ctrl_names_inner)))
+            
+            # Go ahead and do the outer-inner layer interpolation
             for ctrl_idx, ctrl_inner in enumerate(self.ctrl_names_inner):
                 interp_pulse_inner[:,ctrl_idx] = \
                     self.ctrl_interps_inner[ctrl_inner](interp_pulse)
             
-            return interp_pulse_inner, self.ctrl_names_inner
+            return interp_pulse_inner
         else:
-            return interp_pulse, self.ctrl_names 
+            return interp_pulse
     
     def copy(self):
         '''
@@ -117,7 +128,7 @@ class ControlPulse:
         '''
         return deepcopy(self)
     
-    def plot(self, plot_ctrls='all', time_int='full', n=250):
+    def plot(self, plot_ctrls='all', time_int='full', n=250, show_inner=False):
         '''
         Plot the control pulse. Can plot a subset of the control variables 
         and within some time interval.
@@ -134,6 +145,10 @@ class ControlPulse:
         n : int, optional
             Number of points to use in the pulse when plotting. The default is
             250.
+        show_inner : bool, optional
+            Will show the pulse in terms of the inner control variable layer
+            if it exists. The default is False which plots the outer control
+            variable layer.
 
         Returns
         -------
@@ -152,12 +167,15 @@ class ControlPulse:
         t_pts = np.linspace(min_time,max_time,n)
         
         # Get the actual pulse
-        pulse = self(t_pts)
+        pulse = self(t_pts, show_inner)
         
         # Check the plot_ctrls input
         if not isinstance(plot_ctrls,(list,tuple,set)):
             if plot_ctrls.lower() == 'all':
-                plot_ctrls = self.ctrl_names
+                if show_inner:
+                    plot_ctrls = self.ctrl_names_inner
+                else:
+                    plot_ctrls = self.ctrl_names
             # A single control variable was inputted but wasn't wrapped in a
             # list, tuple, or set, so we will wrap it in a list
             elif plot_ctrls in self.ctrl_names:
@@ -169,16 +187,21 @@ class ControlPulse:
                                  f' {self.ctrl_names}')
         # If a list of names was specified, check that all are valid ctrl 
         # variable names
-        elif not set(plot_ctrls).issubset(self.ctrl_names):
+        elif not (set(plot_ctrls).issubset(self.ctrl_names) or 
+                  set(plot_ctrls).issubset(self.ctrl_names_inner)):
             raise ValueError('Unrecognized input for control variables '+
                              f'to plot {plot_ctrls}.\nAllowed inputs are '+
-                             'either ''all'' or a list of allowed names:\n'+
-                             f'{self.ctrl_names}')
+                             'either ''all'' or a list of allowed names.\n'+
+                             f'Outer layer variables: {self.ctrl_names}\n'+
+                             f'Inner layer variables: {self.ctrl_names_inner}')
            
         # For each pulse specified by ctrl_vars, plot those pulses
         ctrl_idxs = []
         for ctrl in plot_ctrls:
-            ctrl_idxs.append(self.ctrl_names.index(ctrl))
+            if show_inner:
+                ctrl_idxs.append(self.ctrl_names_inner.index(ctrl))
+            else:
+                ctrl_idxs.append(self.ctrl_names.index(ctrl))
             
         # Figure out scale to apply (if any) on time axis to make more
         # readable as default length units are ps
@@ -201,7 +224,10 @@ class ControlPulse:
         # Generate figure
         plt.figure()
         plt.plot(t_pts*scale, pulse[:,ctrl_idxs])   
-        lgd_names = [self.ctrl_names[idx] for idx in ctrl_idxs]
+        if show_inner:
+            lgd_names = [self.ctrl_names_inner[idx] for idx in ctrl_idxs]
+        else:
+            lgd_names = [self.ctrl_names[idx] for idx in ctrl_idxs]
         plt.legend(lgd_names,loc='best')
         plt.xlabel('Time ' + units)
         plt.show()
@@ -346,11 +372,15 @@ class ControlPulse:
         # warn user about overwriting it.
         if hasattr(self, 'ctrl_names_inner'):
             if ctrl_name in self.ctrl_names_inner and not overwrite:
-                raise Warning(f"There already exists a mapping for the control \
-                              variable {ctrl_name}. \n If you wish to overwrite \
-                              this mapping, set the keyword arg overwrite=True.")
+                raise Warning("There already exists a mapping for the control "+
+                              f"variable {ctrl_name}. \n If you wish to overwrite "+
+                              "this mapping, set the keyword arg overwrite=True.")
 
                 return
+        # Otherwise, this is our first time making a mapping and need to 
+        # initialize the dictionary for all the inner layer interpolants
+        else:
+            self.ctrl_interps_inner = {}
         
         # Make the regular grid interpolator object to convert from the 
         # original control variables to this new control variable
