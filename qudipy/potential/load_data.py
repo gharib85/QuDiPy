@@ -1,117 +1,23 @@
+"""
+Functions for loading data from files.
+
+@author: simba
+"""
+
 import numpy as np
 import pandas as pd
-from scipy.interpolate import RegularGridInterpolator, interp2d
+from collections import namedtuple
+from scipy.interpolate import interp2d
 from itertools import product
 
-class Mod_RegularGridInterpolator:
-    
-    def __init__(self, ctrl_vals, interp_data, single_dim_idx):
-        '''
-        Initialize the class which is basically a wrapper for the scipy
-        RegularGridInterpolator class.
-
-        Parameters
-        ----------
-        ctrl_vals : 2D list
-            List of grid vectors for each control variable (gate voltages AND
-            x and y coords).
-        interp_data : nd array
-            Array of 2D potential (or electric field) data which is to be
-            interpolated. Number of dimensions should be num_ctrls + 2 (for x
-            and y coords)
-        single_dim_idx : list of ints
-            List of all control indices which only have a singleton dimension.
-
-        Returns
-        -------
-        None.
-
-        '''
-        # Build interpolator object (spline is not supported...)
-        self.interp_obj = RegularGridInterpolator(tuple(ctrl_vals),
-                                                  interp_data)
+import qudipy as qd
+from qudipy.potential.potentialinterpolator import PotentialInterpolator
         
-        # Track how many of the originally inputted grid vectors had only a 
-        # single dimension
-        self.single_dims = single_dim_idx
-        self.n_voltage_ctrls = len(ctrl_vals)-2
-        
-        # Extract grid vectors
-        self.gate_values = ctrl_vals[:-2]
-        self.x_coords = ctrl_vals[-1]
-        self.y_coords = ctrl_vals[-2]
-        
-        # Get min/max values for each voltage control
-        self.min_max_vals = []
-        for idx in range(self.n_voltage_ctrls):
-            curr_unique_volts = set(self.gate_values[idx])
-            
-            self.min_max_vals.append([min(curr_unique_volts),
-                                      max(curr_unique_volts)])
-    
-    def __call__(self, volt_vec):
-        '''
-        Call method for class
-
-        Parameters
-        ----------
-        volt_vec : 1D float array
-            Array of voltage vectors at which we wish to find the interpolated
-            2D potential.
-
-        Returns
-        -------
-        result : 2D array
-            Interpolated 2D potential at the supplied voltage vector.
-
-        '''
-        
-        # First check if the singleton dimensions were included in volt_vec
-        # and remove if so (
-        # if True ==> they were NOT included
-        if len(volt_vec) != self.n_voltage_ctrls:
-            # Double check that the inputted voltage vector has at least the
-            # original amount of voltages inputted (including the single dim
-            # voltages)
-            exp_num = self.n_voltage_ctrls + len(self.single_dims)
-            if len(volt_vec) != exp_num:
-                raise ValueError('Input voltage vector does not have' +
-                                 ' correct number of elements.\n' + 
-                                 f"Expected {exp_num} or {exp_num-2} number" +
-                                 f" of elements, got {len(volt_vec)} instead.")
-            else:
-                volt_vec = [volt_vec[idx] for idx in range(len(volt_vec)) if
-                            idx not in self.single_dims]
-        
-        # Check if values are out of min/max range
-        for idx in range(self.n_voltage_ctrls):
-            if (volt_vec[idx] >= self.min_max_vals[idx][0] and
-                volt_vec[idx] <= self.min_max_vals[idx][1]):
-                pass
-            else:
-                raise ValueError('Input voltage vector values are out of' +
-                                 ' range of grid vectors.')
-            
-        # Add the x and y coordinates so we interpolate the whole 2D potenial
-        volt_vec.extend([self.y_coords, self.x_coords])
-        
-        # Now build up meshgrid of points we want to query the interpolant
-        # object at
-        points = np.meshgrid(*volt_vec)
-        # Flatten it so the interpolator is happy
-        flat = np.array([m.flatten() for m in points])
-        # Do the interpolation
-        out_array = self.interp_obj(flat.T)
-        # Reshape back to our original shape
-        result = np.squeeze(out_array.reshape(*points[0].shape))
-        
-        return result
-
-def build_interpolator(load_data_dict):
+def build_interpolator(load_data_dict, constants=qd.Constants(), 
+                       y_slice=None):
     '''
     This function constructs an interpolator object for either a group of 
     potential or electric field files.
-
     Parameters
     ----------
     all_data_sep : dict
@@ -119,12 +25,22 @@ def build_interpolator(load_data_dict):
         the potential data for each loaded file, and the corresponding votlage
         vector for each file.
         Fields = ['coords', 'potentials', 'ctrl_vals']
-
+        
+    Keyword Arguments
+    ----------
+    constants : Constants object, optional
+        Constants object containing material parameter details. The default is
+        a Constants object assuming air as the material system.
+    y_slice : float, optional
+        Used to create a interpolator of only 1D poetentials. Specify a slice 
+        along the y-axis at which to take the 1D potential when constructing
+        the interpolator. Units should be specified in [m]. 
+        The default is None.
+    
     Returns
     -------
     interp_obj : Mod_RegularGridInterpolator class
         Interpolant object for the data inputted into the function.
-
     '''
     
     # Get first set of x and y coordinates
@@ -155,68 +71,39 @@ def build_interpolator(load_data_dict):
     
     # Add the y and x coordinate lengths so we know the expected dimensions of 
     # the total nd array of data to interpolate
-    all_data_stacked = np.zeros((np.prod(n_dims),len(y_coords),len(x_coords)))
-    n_dims.extend([len(y_coords),len(x_coords)])  
+    if y_slice is None:
+        all_data_stacked = np.zeros((np.prod(n_dims),len(y_coords),len(x_coords)))
+        n_dims.extend([len(y_coords),len(x_coords)])  
+    else:
+        all_data_stacked = np.zeros((np.prod(n_dims),len(x_coords)))
+        n_dims.extend([len(x_coords)])  
 
     # Go and stack the potential data together and then reshape it into
-    # correct format    
+    # correct format
+    if y_slice is not None:
+        y_idx = qd.utils.find_nearest(y_coords, y_slice)[0]
     for idx, curr_gate_idx in enumerate(product(*temp_n_dims)):
-        all_data_stacked[idx,:,:] = load_data_dict['potentials'][idx]
+        if y_slice is None:
+            all_data_stacked[idx,:,:] = load_data_dict['potentials'][idx]
+        else:
+            all_data_stacked[idx,:] = np.squeeze(
+                load_data_dict['potentials'][idx][y_idx,:])
     
     all_data_stacked = np.reshape(all_data_stacked,(n_dims))
     
     # Construct the interpolator
-    ctrl_values.extend([y_coords,x_coords])
-    interp_obj = Mod_RegularGridInterpolator(ctrl_values, all_data_stacked,
-                                             single_dims)
+    if y_slice is None:
+        ctrl_values.extend([y_coords,x_coords])
+    else:
+        ctrl_values.extend([x_coords])
+    interp_obj = PotentialInterpolator(ctrl_values, load_data_dict['ctrl_names'],
+                                        all_data_stacked, single_dims, constants,
+                                        y_slice)
     
     return interp_obj
-    
-def _load_one_file(fname):
-    '''
-    This function loads a single file of either potential or electric field
-    data and returns the coordinate and 2D data. The data is always upsampled
-    via a spline interpolation to the next power of 2.
 
-    Parameters
-    ----------
-    fname : string
-        Name of file to be loaded.
-
-    Returns
-    -------
-    new_x_coord : float 1D array
-        x-coordinate data after loading and interpolation.
-    new_y_coord : float 1D array
-        y-coordinate data after loading and interpolation.
-    new_pot_xy : float 2D array
-        Potential or electric field data after loading and interpolation.
-
-    '''
-
-    # Load file
-    data = pd.read_csv(fname, header=None).to_numpy()
-    
-    # Extract items
-    x_coord = data[0,1:]
-    y_coord = data[1:,0]
-    pot_xy = data[1:,1:]
-    
-    # Do a spline interpolation to increase number of x/y coordinates to the
-    # highest power of 2 (for faster ffts if needed)
-    new_x_len = 1 if len(x_coord) == 0 else 2**(len(x_coord) - 1).bit_length()
-    new_y_len = 1 if len(y_coord) == 0 else 2**(len(y_coord) - 1).bit_length()
-    
-    new_x_coord = np.linspace(x_coord.min(), x_coord.max(), new_x_len)
-    new_y_coord = np.linspace(y_coord.min(), y_coord.max(), new_y_len)
-    
-    f = interp2d(x_coord, y_coord, pot_xy, kind='cubic')
-    new_pot_xy = f(new_x_coord, new_y_coord)
-    
-    return new_x_coord, new_y_coord, new_pot_xy
-
-
-def load_potentials(ctrl_vals, ctrl_names, f_type='pot', f_dir=None):
+def load_potentials(ctrl_vals, ctrl_names, f_type='pot', f_dir=None, 
+                    f_pot_units='J', f_dis_units='m', trim_x=None, trim_y=None):
     '''
     This function loads many potential files specified by all combinations of 
     the control values given in ctrl_vals and the control names given in
@@ -226,7 +113,7 @@ def load_potentials(ctrl_vals, ctrl_names, f_type='pot', f_dir=None):
     'TYPE_C1NAME_C1VAL_C2NAME_C2VAL_..._CNNAME_CNVAL.txt'
     where TYPE = 'Uxy' or 'Ez'. 
     Refer to tutorial for a more explicit example.
-
+    
     Parameters
     ----------
     ctrl_vals : list of list of floats
@@ -236,6 +123,9 @@ def load_potentials(ctrl_vals, ctrl_names, f_type='pot', f_dir=None):
     ctrl_names : list of strings
         List of each ctrl variable name. Must be the same length as ctrl_vals 
         first dimension.
+        
+    Keyword Arguments
+    -----------------
     f_type : string, optional
         Type of file to load (either potential or electric field). Acceptable 
         arguments include ['pot','potential','Uxy','electric','field','Ez'].
@@ -243,6 +133,22 @@ def load_potentials(ctrl_vals, ctrl_names, f_type='pot', f_dir=None):
     f_dir : string, optional
         Path to find files specified in f_list. The default is is the current
         working directory.
+    f_pot_units : string, optional
+        Units of the potential in the files to load. Units from file will be
+        converted to J.
+        Supported inputs are 'J' and 'eV'.
+    f_dis_units : string, optional
+        Units of the x and y coordinates in the files to load. Units from file
+        will be converted to m. 
+        Supported inputs are 'm' and 'nm'. 
+    trim_x : list of floats, optional
+        Specify min and max bounds of x-axis in [m] to save when loading the 
+        files. Data points outside this window will be trimmed and not saved 
+        in the loaded files. The default is None.
+    trim_y : list of floats, optional
+        Specify min and max bounds of y-axis in [m] to save when loading the 
+        files. Data points outside this window will be trimmed and not saved 
+        in the loaded files. The default is None.
     
     Returns
     -------
@@ -251,7 +157,6 @@ def load_potentials(ctrl_vals, ctrl_names, f_type='pot', f_dir=None):
         the potential data for each loaded file, and the corresponding votlage
         vector for each file.
         Fields = ['coords', 'potentials', 'ctrl_vals']
-
     '''
 
     # Check inputs
@@ -283,23 +188,62 @@ def load_potentials(ctrl_vals, ctrl_names, f_type='pot', f_dir=None):
         
         # After file name is constructed, load the data from file into a larger
         # list containing information about all the loaded files.
-        x, y, pot = _load_one_file(f_dir + f_name)
+
+        # Load file
+        data = pd.read_csv(f_dir+f_name, header=None).to_numpy()
+        
+        # Extract items
+        x = data[0,1:]
+        y = data[1:,0]
+        pot = data[1:,1:]        
+
+        # Convert units if needed
+        if f_pot_units == 'eV':
+            # Just need to get electron charge
+            constants = qd.Constants('vacuum')
+            pot *= constants.e
+            
+        if f_dis_units == 'nm':
+            x *= 1E-9
+            y *= 1E-9
         
         if idx == 0:
-            all_files['coords'] = (x,y)
+            # If trim wasn't specified then we want to store the whole x axis
+            if trim_x is None:
+                trim_x = [np.min(x), np.max(x)]
+            # If trim wasn't specified then we want to store the whole y axis
+            if trim_y is None:
+                trim_y = [np.min(y), np.max(y)]
+                
+            # Get bool mask and trim coordinates
+            x_idx_mask = np.logical_and(x >= trim_x[0], x <= trim_x[1])
+            y_idx_mask = np.logical_and(y >= trim_y[0], y <= trim_y[1])
+            
+            new_x = x[x_idx_mask]
+            new_y = y[y_idx_mask]
+            
+            # Get new coordinate points by rounding number of coordinates 
+            # points to a power of 2 for both x and y (for faster ffts).
+            new_x_len = 1 if len(new_x) == 0 else 2**(len(new_x) - 1).bit_length()
+            new_y_len = 1 if len(new_y) == 0 else 2**(len(new_y) - 1).bit_length()
+            new_x = np.linspace(new_x.min(), new_x.max(), new_x_len)
+            new_y = np.linspace(new_y.min(), new_y.max(), new_y_len)
+            
+            # Have coordinates be a namedtuple
+            Coordinates = namedtuple('Coordinates',['x','y'])
+            all_files['coords'] = Coordinates(new_x,new_y)
             
         cval_array.append(list(curr_cvals))
-        pots_array.append(pot)
+
+        # Do a spline interpolation to find potential at the 'trimmed' and 
+        # power of 2 coordiante points.
+        f = interp2d(x, y, pot, kind='cubic')
+        new_pot = f(new_x, new_y)
+        pots_array.append(new_pot)
         
     all_files['ctrl_vals'] = cval_array
+    all_files['ctrl_names'] = ctrl_names
     all_files['potentials'] = pots_array
     
     
     return all_files
-
-    
-    
-
-
-
-
