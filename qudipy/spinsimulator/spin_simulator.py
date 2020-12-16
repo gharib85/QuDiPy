@@ -15,6 +15,7 @@ import numpy as np
 from math import pi, log2, exp, sin, cos, inf
 
 import warnings
+import tqdm  #for progress bar
 
 import qudipy.qutils.matrices as matr
 import qudipy.qutils.math as qmath
@@ -304,12 +305,12 @@ class SpinSys:
     lindbladian(rho_mod, const_dict_N, pulse_params=None):
         Calculates the right-hand side of the Lindblad equation
         at a particular point of time
-    evolve(pulse, rho_reference=None, is_fidelity=False, is_purity=False,
-               track_qubits=None, are_Bloch_vectors=False, 
+    evolve(pulse, rho_reference=None, eval_fidelity=False, eval_purity=False,
+               track_qubits=None, eval_Bloch_vectors=False, 
                    track_points_per_pulse=100):
         Performs system evolution under a given pulse. Outputs a dictionary of
         the specified tracking parameters
-    track_subsystem(self, track_qubits, are_Bloch_vectors=False):
+    track_subsystem(self, track_qubits, eval_Bloch_vectors=False):
         Gives the specified system submatrices and Bloch vectors (if tracked)
   
     """
@@ -369,39 +370,44 @@ class SpinSys:
             """
             while (num % 2 == 0):  
                 num = num / 2
-            return num == 0
-        
+            return num == 1
         
         # checking the correctness of input
         err_msg = "The state is defined incorrectly. Please try again"
-        if isinstance(state, np.ndarray): 
-            state = [state]
-        if not (isinstance(state, (tuple, list))
-            and all(isinstance(entry, np.ndarray) for entry in state)):
+        if isinstance(state, list):
+            stat = state.copy()
+        elif isinstance(state, tuple):
+            stat = list(state)
+        elif isinstance(state, np.ndarray): 
+            stat = [np.copy(state),]
+        else: 
             raise ValueError(err_msg)
-        else:
-            for entry in state:    
+            
+        if (isinstance(stat, (tuple, list))
+                    and all(isinstance(entry, np.ndarray) for entry in stat)):
+            for i in range(len(stat)):    
                 # making all entries 2D arrays
-                if entry.ndim == 1:
-                    entry = np.array([entry])
-                elif entry.ndim != 2:
+                if stat[i].ndim == 1:
+                    stat[i] = np.array([stat[i]])
+                elif stat[i].ndim != 2:
                     raise ValueError(err_msg)
                     
                 #transforming all wavefunctions into density matrices
-                if np.shape(entry)[0] == 1:
-                    entry = np.kron(entry.conj(), entry.T)
-                elif np.shape(entry)[1] == 1:
-                    entry = np.kron(entry.T.conj(), entry)
-                if not (np.shape(entry)[0] == np.shape(entry)[1] and 
-                           __is_power_2(np.shape(entry)[0])):
+                if np.shape(stat[i])[0] == 1:
+                    stat[i] = np.kron(stat[i].T, stat[i].conj())
+                elif np.shape(stat[i])[1] == 1:
+                    stat[i] = np.kron(stat[i], stat[i].T.conj())
+                if not (np.shape(stat[i])[0] == np.shape(stat[i])[1] and 
+                           __is_power_2(np.shape(stat[i])[0])):
                     raise ValueError(err_msg)
-        
+        else:       
+            raise ValueError(err_msg)
+            
         #creating the density matrix of the whole system
         rho = np.array([[1]])
-        for entry in state:
+        for entry in stat:
             rho = np.kron(rho, entry)
-            
-        
+
         self.rho = rho
         self.time = time
         
@@ -491,8 +497,8 @@ class SpinSys:
                     ham += J[k] * const_dict_N["J_sigma_products"][k][k+1]
             
             if B_rf != 0:
-                ham += const_dict_N["x_sum"]* B_rf * cos(phi)
-                ham += const_dict_N["y_sum"]* B_rf * sin(phi)
+                ham += const_dict_N["x_sum"]* B_rf * cos(pi * phi / 180)
+                ham += const_dict_N["y_sum"]* B_rf * sin(pi * phi / 180)
               
         return ham
     
@@ -545,8 +551,8 @@ class SpinSys:
         
     
     def evolve(self, pulses, 
-               rho_reference=None, is_fidelity=False, is_purity=False,
-               track_qubits=None, are_Bloch_vectors=False,
+               rho_reference=None, eval_fidelity=False, eval_purity=False,
+               track_qubits=None, eval_Bloch_vectors=False,
                 track_points_per_pulse=100
                ):
         """
@@ -568,11 +574,11 @@ class SpinSys:
             with the density matrix during the simulation. If specified, the
             fidelity of system density matrix with respect to it can be 
             calculated. The default is None.
-        is_fidelity : bool, optional
+        eval_fidelity : bool, optional
             Indicates whether to track the fidelity of the density matrix with 
             respect to the specified rho_reference (if it is specified). 
             The default is False.
-        is_purity : bool, optional
+        eval_purity : bool, optional
             Indicates whether to track the purity
             of the density matrix. 
             The default is False.   
@@ -580,7 +586,7 @@ class SpinSys:
             Index (indices) of qubit(s) to track during the pulse(s) 
             (i. e. evaluate 1-qubit density submatrices for them).
             The default is None.            
-        are_Bloch_vectors: bool, optional
+        eval_Bloch_vectors: bool, optional
             Indicates whether to calculate Bloch vectors for the tracked 
             qubits along with their density submatrices.
             The default is False.            
@@ -598,10 +604,10 @@ class SpinSys:
                   Points of time that correspond to the values contained in 
                   the other arrays defined below.
             - "purity": 1D float array
-                  Purity of the system density matrix (if is_purity is True).
+                  Purity of the system density matrix (if eval_purity is True).
             - "fidelity": 1D float array
                   Fidelity of the system density matrix with respect to 
-                  rho_reference (if it is defined, and if is_fidelity is True).
+                  rho_reference (if it is defined, and if eval_fidelity is True).
             - "submatrix_{i}": 1D array of complex 2D arrays
                   Density submatrix of the i-th electron, if i is in 
                   track_qubits iterable.
@@ -609,13 +615,13 @@ class SpinSys:
               "sigma_y_{i}" : 1D float array
               "sigma_z_{i}" : 1D float array
                   Bloch vector components of the i-th electron, if i
-                  is in track_qubits iterable, and are_Bloch_vectors is True.
+                  is in track_qubits iterable, and eval_Bloch_vectors is True.
 
         """
         ret_dict = {}    #dictionary to be returned 
               
         #calculating the values at the beginning of the evolution
-        if is_fidelity:
+        if eval_fidelity:
             if rho_reference is not None:
                 rho_ref = rho_reference.copy()
                     #copied just in case to keep the 
@@ -625,15 +631,15 @@ class SpinSys:
                 print("The reference matrix is not specified. "
                       "Fidelity has not been calculated")
                     
-        if is_purity:
+        if eval_purity:
             ret_dict["purity"] = [qmath.purity(self.rho)]
             
         if track_qubits is not None:
             track_dict = self.track_subsystem(
-                track_qubits, are_Bloch_vectors)
+                track_qubits, eval_Bloch_vectors)
             track_keys = track_dict.keys()
             ret_dict.update({k:[track_dict[k]] for k in track_keys})
-        elif are_Bloch_vectors:
+        elif eval_Bloch_vectors:
             warnings.warn("Qubits are not specified; "
                           "Bloch vectors are not tracked")
             
@@ -674,55 +680,60 @@ class SpinSys:
                     raise ValueError("Inconsistent dimensions of the pulse "
                                      "entry. Please try again")
         
-                else:               
-                    for n in range(1, num_values):
-                        #Runge-Kutta method
-                        prev_pulse = {k:v[n-1] for (k,v) 
-                                       in pulse.ctrl_pulses.items()}
-                        cur_pulse={k:v[n] for (k,v) 
-                                       in pulse.ctrl_pulses.items()}
-                        avg_pulse={k:(0.5 * (v[n-1]+v[n])) for (k,v) 
-                                       in pulse.ctrl_pulses.items()}
-                        
-                        K1 = self.lindbladian(self.rho, cdict_N, prev_pulse)
-                        K2 = self.lindbladian(self.rho + 0.5 * delta_t * K1, 
-                                                  cdict_N, avg_pulse )
-                        K3 = self.lindbladian(self.rho + 0.5 * delta_t * K2, 
-                                                  cdict_N, avg_pulse )
-                        K4 = self.lindbladian(self.rho + delta_t * K3, 
-                                                  cdict_N, cur_pulse)
-                        #updating density matrix
-                        
-                        self.rho = self.rho + delta_t/6 * (K1 + 2 * K2 + 
-                                                              2 * K3 + K4)
-            #______________________________________________________________
-                        # defining when to write values of fidelity, etc.
-                        
-                        # the following formulas are correct for the case
-                        # track_points_per_pulse > 3
-                        if (num_values - 1) % (track_points_per_pulse - 1) == 0:
-                            track_step = max(int((num_values - 1) /  
-                                              (track_points_per_pulse - 1)), 1)
-                        else:
-                            track_step = max(int((num_values-1) /  
-                                              (track_points_per_pulse - 2)), 1)
-                        
-                        #writing values in the output dictionary
-                        if n % track_step == 0 or n == num_values-1:
-                            #update time point
-                            retdict["time"].append(self.time + n*delta_t)
-          
-                            #implementing tracking:
-                            if track_qubits is not None:
-                                for key in track_keys:
-                                    retdict[key].append(self.track_subsystem( 
-                                        track_qubits, are_Bloch_vectors)[key])  
-                            if is_fidelity and rho_reference is not None:    
-                                retdict["fidelity"].append(
-                                    qmath.fidelity(self.rho, rho_ref))
-                            if is_purity:
-                                retdict["purity"].append(qmath.purity(self.rho))
-        
+                else:
+                    tran = tqdm.tqdm(range(num_values))
+                    #range starts with 0 for a proper display of progress bar
+                    for n in tran:
+                        #progress bar
+                        tran.set_description(pulse.name + ", step %i" % (n+1))
+                        if n != 0:   
+                            #Runge-Kutta method
+                            prev_pulse = {k:v[n-1] for (k,v) 
+                                           in pulse.ctrl_pulses.items()}
+                            cur_pulse={k:v[n] for (k,v) 
+                                           in pulse.ctrl_pulses.items()}
+                            avg_pulse={k:(0.5 * (v[n-1]+v[n])) for (k,v) 
+                                           in pulse.ctrl_pulses.items()}
+                            
+                            K1 = self.lindbladian(self.rho, cdict_N, prev_pulse)
+                            K2 = self.lindbladian(self.rho + 0.5 * delta_t * K1, 
+                                                      cdict_N, avg_pulse )
+                            K3 = self.lindbladian(self.rho + 0.5 * delta_t * K2, 
+                                                      cdict_N, avg_pulse )
+                            K4 = self.lindbladian(self.rho + delta_t * K3, 
+                                                      cdict_N, cur_pulse)
+                            #updating density matrix
+                            
+                            self.rho = self.rho + delta_t/6 * (K1 + 2 * K2 + 
+                                                                  2 * K3 + K4)
+                #______________________________________________________________
+                            # defining when to write values of fidelity, etc.
+                            
+                            # the following formulas are correct for the case
+                            # track_points_per_pulse > 3
+                            if (num_values - 1) % (track_points_per_pulse - 1) == 0:
+                                track_step = max(int((num_values - 1) /  
+                                                  (track_points_per_pulse - 1)), 1)
+                            else:
+                                track_step = max(int((num_values-1) /  
+                                                  (track_points_per_pulse - 2)), 1)
+                            
+                            #writing values in the output dictionary
+                            if n % track_step == 0 or n == num_values-1:
+                                #update time point
+                                retdict["time"].append(self.time + n * delta_t)
+              
+                                #implementing tracking:
+                                if track_qubits is not None:
+                                    for key in track_keys:
+                                        retdict[key].append(self.track_subsystem( 
+                                            track_qubits, eval_Bloch_vectors)[key])  
+                                if eval_fidelity and rho_reference is not None:    
+                                    retdict["fidelity"].append(
+                                        qmath.fidelity(self.rho, rho_ref))
+                                if eval_purity:
+                                    retdict["purity"].append(qmath.purity(self.rho))
+            
                 #updating the time attribute after the pulse
                 self.time += pulse_length
                 
@@ -745,7 +756,7 @@ class SpinSys:
 
 ###### called when optional parameters of 'evolve' are specified as True ######
    
-    def track_subsystem(self, track_qubits=None, are_Bloch_vectors=False):
+    def track_subsystem(self, track_qubits=None, eval_Bloch_vectors=False):
         """
         Gives the specified system submatrices and Bloch vectors (if tracked)
 
@@ -757,7 +768,7 @@ class SpinSys:
         -----------------
         track_qubits : int/iterable of ints, optional
             Defines the qubit(s) whose density submatrices are tracked
-        are_Bloch_vectors: bool, optional
+        eval_Bloch_vectors: bool, optional
             Indicates whether to calculate Bloch vector component(s)
             
         Returns
@@ -795,7 +806,7 @@ class SpinSys:
                 submatrix = qmath.partial_trace(self.rho, (Nset-{qub}))
                 subm = "submatrix_{}".format(qub)
                 ret_dict[subm] = submatrix
-                if are_Bloch_vectors:
+                if eval_Bloch_vectors:
                     ret_dict["sigma_x_{}".format(qub)] = np.trace(submatrix 
                                                                 @ matr.PAULI_X)
                     ret_dict["sigma_y_{}".format(qub)] = np.trace(submatrix 

@@ -65,9 +65,9 @@ def rot_square(qubits, N, axis, theta, B_0, B_rf, f_rf=None,
     if axis == "X" or axis == "Y":
         phis = np.full(num_val, 0.)
         if axis == "Y":
-            phis = np.full(num_val, math.pi / 2)
+            phis = np.full(num_val, 90)
         if theta < 0:
-            phis = phis + math.pi
+            phis = phis + 180
         bs = np.full(num_val, B_rf)
         
         pulse_length = abs((theta * math.pi / 180) * 
@@ -235,7 +235,7 @@ def rswap(qubits, N, J, B_0=0, f_rf=None, num_val=300):
                          "qubits is supported")
     qubit = min(qubits)    
     Js = np.full(num_val, J)
-    rswappulse = ControlPulse("SWAP_{}_{}".format(qubit, qubit + 1), 
+    rswappulse = ControlPulse("RSWAP_{}_{}".format(qubit, qubit + 1), 
                                 "effective", pulse_length = consts.h / (4 * J)) 
     rswappulse.add_control_variable("J_{}".format(qubit), Js)
     
