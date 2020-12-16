@@ -58,7 +58,7 @@ class Constants:
             self.eps = self.eps0*self.epsR  # Permitivity [F/m]
             self.me = self.m0               # Effective mass [kg]
         else:
-            # If no/unrecognized material system specified assume "air"
+            # If no or unrecognized material system specified assume "air"
             self.epsR = 1                   # Dielectric constant
             self.eps = self.eps0*self.epsR  # Permitivity [F/m]
             self.me = self.m0               # Effective mass [kg]
