@@ -357,9 +357,13 @@ class ControlPulse:
 
         Parameters
         ----------
+        map_grid : TYPE
+            DESCRIPTION.
         map_data : TYPE
             DESCRIPTION.
         ctrl_name : TYPE
+            DESCRIPTION.
+        overwrite : TYPE
             DESCRIPTION.
 
         Returns
