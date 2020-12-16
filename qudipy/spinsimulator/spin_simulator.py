@@ -367,9 +367,13 @@ class SpinSys:
                 True if num is a power of 2, False otherwise
 
             """
-            while (num % 2 == 0):  
-                num = num / 2
-            return num == 0
+            
+            # Use bit manipulation to check if power of 2
+            # If num is a power of 2, it has exactly 1 bit = 1 (rest are 0).
+            # We subtract 1 to flip all of the bits which means the -1 number
+            # is exactly the negation of the original number. So & == 0. We
+            # add an additional check that the original number was not 0.
+            return (num & (num-1) == 0) and num != 0
         
         
         # checking the correctness of input

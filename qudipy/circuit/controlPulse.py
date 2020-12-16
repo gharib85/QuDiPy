@@ -172,7 +172,7 @@ class ControlPulse:
         # Check the plot_ctrls input
         if not isinstance(plot_ctrls,(list,tuple,set)):
             if plot_ctrls.lower() == 'all':
-                if show_inner:
+                if show_inner and self.map_exists:
                     plot_ctrls = self.ctrl_names_inner
                 else:
                     plot_ctrls = self.ctrl_names
