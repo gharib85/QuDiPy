@@ -65,9 +65,9 @@ def rot_square(qubits, N, axis, theta, B_0, B_rf, f_rf=None,
     if axis == "X" or axis == "Y":
         phis = np.full(num_val, 0.)
         if axis == "Y":
-            phis = np.full(num_val, math.pi / 2)
+            phis = np.full(num_val, 90)
         if theta < 0:
-            phis = phis + math.pi
+            phis = phis + 180
         bs = np.full(num_val, B_rf)
         
         pulse_length = abs((theta * math.pi / 180) * 
