@@ -399,13 +399,24 @@ class ControlPulse:
         if not hasattr(self,'ctrl_names_inner'):
             # Initialize the inner control variable names list
             self.ctrl_names_inner = []
+            # Initialize a new dictionary of inner control pulses
+            self.ctrl_pulses_inner = {
+                }
             
             # We have created a mapping, so change the attribute flag
             self.map_exists = True
             
         if not ctrl_name in self.ctrl_names_inner:
             self.ctrl_names_inner.append(ctrl_name)
-        
+            self.n_ctrls_inner = len(self.ctrl_names_inner)
+            
+        # Now populate the inner dictionary of inner control pulses
+        outer_pulse = np.zeros((len(list(self.ctrl_pulses.values())[0]),
+                               len(self.ctrl_names)))
+        for idx, ctrl_outer in enumerate(self.ctrl_names):
+            outer_pulse[:,idx] = self.ctrl_pulses[ctrl_outer]
+
+        self.ctrl_pulses_inner[ctrl_name] = interp_obj(outer_pulse)
         
     
             

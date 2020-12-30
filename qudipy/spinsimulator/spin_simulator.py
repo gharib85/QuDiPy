@@ -369,9 +369,9 @@ class SpinSys:
             """
             
             # Use bit manipulation to check if power of 2
-            # If num is a power of 2, it has exactly 1 bit = 1 (rest are 0).
-            # We subtract 1 to flip all of the bits which means the -1 number
-            # is exactly the negation of the original number. So & == 0. We
+            # If num is a power of 2, it has exactly 1 bit equal to 1 (rest are 0).
+            # We subtract 1 to flip all of the bits which means the new number
+            # is exactly the negation of the original number, so & == 0. We
             # add an additional check that the original number was not 0.
             return (num & (num-1) == 0) and num != 0
         
@@ -649,6 +649,7 @@ class SpinSys:
         # nested function that deals with the evolution of a single pulse,
         # or recursively calls each single pulse one after another
         def __nested_evolve(pulse, retdict):
+            
             #evolution when a single pulse is specified
             
             if isinstance(pulse, ControlPulse):                
